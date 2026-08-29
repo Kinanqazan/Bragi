@@ -1,9 +1,9 @@
 export function createPwaManifest({ development = false } = {}) {
   return {
-    name: 'Navidrome',
-    short_name: 'Navidrome',
+    name: 'Bragi',
+    short_name: 'Bragi',
     description:
-      'Navidrome, an open source web-based music collection server and streamer',
+      'Bragi, a modern music collection server and streamer',
     categories: ['music', 'entertainment'],
     display: 'standalone',
     ...(development

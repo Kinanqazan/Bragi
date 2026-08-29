@@ -714,8 +714,8 @@ const Menu = ({ dense = false }) => {
               role="button"
               tabIndex={0}
             >
-              <img src={Logo} alt="Navidrome" className={classes.brandLogo} />
-              <Typography className={classes.brandTitle}>Navidrome</Typography>
+              <img src={Logo} alt="Bragi" className={classes.brandLogo} />
+              <Typography className={classes.brandTitle}>Bragi</Typography>
             </div>
             <Tooltip title="Collapse sidebar">
               <IconButton
@@ -730,14 +730,14 @@ const Menu = ({ dense = false }) => {
           </div>
         ) : (
           <div className={classes.brandHeaderClosed}>
-            <Tooltip title="Expand sidebar (Navidrome)" placement="right">
+            <Tooltip title="Expand sidebar (Bragi)" placement="right">
               <IconButton
                 size="small"
                 className={classes.brandClosedButton}
                 onClick={() => dispatch(toggleSidebar())}
                 aria-label="Expand sidebar"
               >
-                <img src={Logo} alt="Navidrome" className={classes.brandLogoSmall} />
+                <img src={Logo} alt="Bragi" className={classes.brandLogoSmall} />
               </IconButton>
             </Tooltip>
           </div>

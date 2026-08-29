@@ -111,7 +111,7 @@ describe('<Menu />', () => {
     )
   })
 
-  it('renders brand header with Navidrome title and logo at the top left when sidebar is expanded', () => {
+  it('renders brand header with Bragi title and logo at the top left when sidebar is expanded', () => {
     render(
       <Provider store={store}>
         <MemoryRouter>
@@ -120,8 +120,8 @@ describe('<Menu />', () => {
       </Provider>,
     )
 
-    expect(screen.getByText('Navidrome')).toBeInTheDocument()
-    expect(screen.getByAltText('Navidrome')).toBeInTheDocument()
+    expect(screen.getByText('Bragi')).toBeInTheDocument()
+    expect(screen.getByAltText('Bragi')).toBeInTheDocument()
     expect(screen.getByLabelText('Collapse sidebar')).toBeInTheDocument()
   })
 
