@@ -1,0 +1,54 @@
+.DS_Store
+.idea
+.vscode
+.envrc
+/navidrome
+/iTunes*.xml
+/tmp
+/bin
+data/*
+vendor/*/
+node_modules/
+wiki
+TODO.md
+var
+navidrome.toml
+!release/linux/navidrome.toml
+master.zip
+testDB
+cache/*
+*.swp
+coverage.out
+dist
+music
+music.old
+*.db*
+.gitinfo
+docker-compose.yml
+!contrib/docker-compose.yml
+binaries
+navidrome-*
+/ndpgen
+AGENTS.md
+.github/prompts
+.github/instructions
+.github/git-commit-instructions.md
+*.exe
+*.test
+*.wasm
+*.ndp
+openspec/
+.agents
+go.work*
+.worktrees/
+.playwright-mcp/
+
+# Temp benchmark files
+zz_*_test.go
+.pnpm-store/
+
+# Personal music copied into the test fixture library
+/tests/fixtures/artist/Classical & Soundtracks/
+/tests/fixtures/artist/Jazz, Blues, Roots & R&B/
+/tests/fixtures/test_songs files/
+/tests/fixtures/test_songs*/

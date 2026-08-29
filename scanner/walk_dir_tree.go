@@ -1,0 +1,326 @@
+package scanner
+
+import (
+	"context"
+	"io/fs"
+	"maps"
+	"path"
+	"path/filepath"
+	"slices"
+	"sort"
+	"strings"
+
+	"github.com/navidrome/navidrome/conf"
+	"github.com/navidrome/navidrome/core/storage"
+	"github.com/navidrome/navidrome/log"
+	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/utils"
+)
+
+// walkDirTree recursively walks the directory tree starting from the given targetFolders.
+// If no targetFolders are provided, it starts from the root folder (".").
+// It returns a channel of folderEntry pointers representing each folder found.
+func walkDirTree(ctx context.Context, job *scanJob, targetFolders ...string) (<-chan *folderEntry, error) {
+	results := make(chan *folderEntry)
+	folders := targetFolders
+	if len(targetFolders) == 0 {
+		// No specific folders provided, scan the root folder
+		folders = []string{"."}
+	}
+	go func() {
+		defer close(results)
+		for _, folderPath := range folders {
+			if utils.IsCtxDone(ctx) {
+				return
+			}
+
+			// Check if target folder exists before walking it
+			// If it doesn't exist (e.g., deleted between watcher detection and scan execution),
+			// skip it so it remains in job.lastUpdates and gets handled in following steps
+			_, err := fs.Stat(job.fs, folderPath)
+			if err != nil {
+				log.Warn(ctx, "Scanner: Target folder does not exist.", "path", folderPath, err)
+				continue
+			}
+
+			// Create checker and push patterns from root to this folder
+			checker := newIgnoreChecker(job.fs)
+			err = checker.PushAllParents(ctx, folderPath)
+			if err != nil {
+				log.Error(ctx, "Scanner: Error pushing ignore patterns for target folder", "path", folderPath, err)
+				continue
+			}
+
+			// Recursively walk this folder and all its children
+			err = walkFolder(ctx, job, folderPath, checker, results)
+			if err != nil {
+				log.Error(ctx, "Scanner: Error walking target folder", "path", folderPath, err)
+				continue
+			}
+		}
+		log.Debug(ctx, "Scanner: Finished reading target folders", "lib", job.lib.Name, "path", job.lib.Path, "numFolders", job.numFolders.Load())
+	}()
+	return results, nil
+}
+
+func walkFolder(ctx context.Context, job *scanJob, currentFolder string, checker *IgnoreChecker, results chan<- *folderEntry) error {
+	// Push patterns for this folder onto the stack
+	_ = checker.Push(ctx, currentFolder)
+	defer checker.Pop() // Pop patterns when leaving this folder
+
+	folder, children, err := loadDir(ctx, job, currentFolder, checker)
+	if err != nil {
+		log.Warn(ctx, "Scanner: Error loading dir. Skipping", "path", currentFolder, err)
+		return nil
+	}
+	for _, c := range children {
+		err := walkFolder(ctx, job, c, checker, results)
+		if err != nil {
+			return err
+		}
+	}
+
+	dir := path.Clean(currentFolder)
+	log.Trace(ctx, "Scanner: Found directory", " path", dir, "audioFiles", maps.Keys(folder.audioFiles),
+		"images", maps.Keys(folder.imageFiles), "playlists", folder.numPlaylists, "imagesUpdatedAt", folder.imagesUpdatedAt,
+		"updTime", folder.updTime, "modTime", folder.modTime, "numChildren", len(children))
+	folder.path = dir
+	folder.elapsed.Start()
+
+	results <- folder
+
+	return nil
+}
+
+func loadDir(ctx context.Context, job *scanJob, dirPath string, checker *IgnoreChecker) (folder *folderEntry, children []string, err error) {
+	// Check if directory exists before creating the folder entry
+	// This is important to avoid removing the folder from lastUpdates if it doesn't exist
+	dirInfo, err := fs.Stat(job.fs, dirPath)
+	if err != nil {
+		log.Warn(ctx, "Scanner: Error stating dir", "path", dirPath, err)
+		return nil, nil, err
+	}
+
+	// Now that we know the folder exists, create the entry (which removes it from lastUpdates)
+	folder = job.createFolderEntry(dirPath)
+	folder.modTime = dirInfo.ModTime()
+
+	dir, err := job.fs.Open(dirPath)
+	if err != nil {
+		log.Warn(ctx, "Scanner: Error in Opening directory", "path", dirPath, err)
+		return folder, children, err
+	}
+	defer dir.Close()
+	dirFile, ok := dir.(fs.ReadDirFile)
+	if !ok {
+		log.Error(ctx, "Not a directory", "path", dirPath)
+		return folder, children, err
+	}
+
+	entries := fullReadDir(ctx, dirFile)
+	children = make([]string, 0, len(entries))
+	for _, entry := range entries {
+		entryPath := path.Join(dirPath, entry.Name())
+		if checker.ShouldIgnore(ctx, entryPath) {
+			log.Trace(ctx, "Scanner: Ignoring entry", "path", entryPath)
+			continue
+		}
+		if ctx.Err() != nil {
+			return folder, children, ctx.Err()
+		}
+		isDir, err := isDirOrSymlinkToDir(job.fs, dirPath, entry)
+		// Skip invalid symlinks
+		if err != nil {
+			log.Warn(ctx, "Scanner: Invalid symlink", "dir", entryPath, err)
+			continue
+		}
+		if isIgnoredEntry(entry.Name(), isDir) {
+			continue
+		}
+		if isDir && isDirReadable(ctx, job.fs, entryPath) {
+			children = append(children, entryPath)
+			folder.numSubFolders++
+		} else {
+			fileInfo, err := entry.Info()
+			if err != nil {
+				log.Warn(ctx, "Scanner: Error getting fileInfo", "name", entry.Name(), err)
+				return folder, children, err
+			}
+			if fileInfo.ModTime().After(folder.modTime) {
+				folder.modTime = fileInfo.ModTime()
+			}
+			name, ok := resolveEntryName(ctx, job.fs, dirPath, entry)
+			if !ok {
+				continue
+			}
+			switch {
+			case model.IsAudioFile(name):
+				folder.audioFiles[entry.Name()] = entry
+			case model.IsValidPlaylist(name):
+				folder.numPlaylists++
+			case model.IsImageFile(name):
+				folder.imageFiles[entry.Name()] = entry
+				folder.imagesUpdatedAt = utils.TimeNewest(folder.imagesUpdatedAt, fileInfo.ModTime(), folder.modTime)
+			}
+		}
+	}
+	return folder, children, nil
+}
+
+// fullReadDir reads all files in the folder, skipping the ones with errors.
+// It also detects when it is "stuck" with an error in the same directory over and over.
+// In this case, it stops and returns whatever it was able to read until it got stuck.
+// See discussion here: https://github.com/navidrome/navidrome/issues/1164#issuecomment-881922850
+func fullReadDir(ctx context.Context, dir fs.ReadDirFile) []fs.DirEntry {
+	var allEntries []fs.DirEntry
+	var prevErrStr = ""
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+		entries, err := dir.ReadDir(-1)
+		allEntries = append(allEntries, entries...)
+		if err == nil {
+			break
+		}
+		log.Warn(ctx, "Skipping DirEntry", err)
+		if prevErrStr == err.Error() {
+			log.Error(ctx, "Scanner: Duplicate DirEntry failure, bailing", err)
+			break
+		}
+		prevErrStr = err.Error()
+	}
+	sort.Slice(allEntries, func(i, j int) bool { return allEntries[i].Name() < allEntries[j].Name() })
+	return allEntries
+}
+
+// isDirOrSymlinkToDir returns true if and only if the dirEnt represents a file
+// system directory, or a symbolic link to a directory. Note that if the dirEnt
+// is not a directory but is a symbolic link, this method will resolve by
+// sending a request to the operating system to follow the symbolic link.
+// originally copied from github.com/karrick/godirwalk, modified to use dirEntry for
+// efficiency for go 1.16 and beyond
+func isDirOrSymlinkToDir(fsys fs.FS, baseDir string, dirEnt fs.DirEntry) (bool, error) {
+	if dirEnt.IsDir() {
+		return true, nil
+	}
+	if dirEnt.Type()&fs.ModeSymlink == 0 {
+		return false, nil
+	}
+	// If symlinks are disabled, return false for symlinks
+	if !conf.Server.Scanner.FollowSymlinks {
+		return false, nil
+	}
+	// Does this symlink point to a directory?
+	fileInfo, err := fs.Stat(fsys, path.Join(baseDir, dirEnt.Name()))
+	if err != nil {
+		return false, err
+	}
+	return fileInfo.IsDir(), nil
+}
+
+const maxSymlinkHops = 40
+
+// resolveEntryName returns the name to classify the entry by, and whether to
+// consider it at all. Symlinks are resolved to their final target so the caller
+// classifies by the target's extension, not the link's name. Returns ok=false
+// when symlinks are disabled or the target can't be resolved.
+func resolveEntryName(ctx context.Context, fsys fs.FS, dirPath string, entry fs.DirEntry) (string, bool) {
+	if entry.Type()&fs.ModeSymlink == 0 {
+		return entry.Name(), true
+	}
+	linkPath := path.Join(dirPath, entry.Name())
+	if !conf.Server.Scanner.FollowSymlinks {
+		log.Trace(ctx, "Scanner: Skipping symlink, following is disabled", "path", linkPath)
+		return "", false
+	}
+	// OS-backed filesystems can resolve the whole chain, even when it leaves the FS root
+	// (e.g. a link into another folder/drive), so the final target is always what gets
+	// classified. The fs.ReadLink loop below can't see past the root: it classifies by the
+	// last in-chain name it can reach.
+	if resolver, ok := fsys.(storage.SymlinkResolverFS); ok {
+		target, err := resolver.ResolveSymlink(linkPath)
+		if err != nil {
+			log.Trace(ctx, "Scanner: Skipping symlink, cannot resolve target", "path", linkPath, err)
+			return "", false
+		}
+		resolved := filepath.Base(target)
+		log.Trace(ctx, "Scanner: Resolved symlink", "path", linkPath, "target", target, "name", resolved)
+		return resolved, true
+	}
+	cur := linkPath
+	for hop := 0; hop < maxSymlinkHops; hop++ {
+		target, err := fs.ReadLink(fsys, cur)
+		if err != nil {
+			if hop == 0 {
+				log.Trace(ctx, "Scanner: Skipping symlink, cannot resolve target", "path", linkPath, err)
+				return "", false
+			}
+			resolved := path.Base(cur)
+			log.Trace(ctx, "Scanner: Resolved symlink", "path", linkPath, "target", cur, "name", resolved)
+			return resolved, true
+		}
+		if path.IsAbs(target) {
+			// Absolute targets are not valid fs.FS paths, so the next ReadLink fails and
+			// resolution stops here, leaving cur as the target to classify by name.
+			cur = target
+		} else {
+			cur = path.Join(path.Dir(cur), target)
+		}
+	}
+	log.Trace(ctx, "Scanner: Skipping symlink, too many hops (possible loop)", "path", linkPath)
+	return "", false
+}
+
+// isDirReadable returns true if the directory represented by dirEnt is readable
+func isDirReadable(ctx context.Context, fsys fs.FS, dirPath string) bool {
+	dir, err := fsys.Open(dirPath)
+	if err != nil {
+		log.Warn("Scanner: Skipping unreadable directory", "path", dirPath, err)
+		return false
+	}
+	err = dir.Close()
+	if err != nil {
+		log.Warn(ctx, "Scanner: Error closing directory", "path", dirPath, err)
+	}
+	return true
+}
+
+// List of special directories to ignore
+var ignoredDirs = []string{
+	"$RECYCLE.BIN",
+	"#snapshot",
+	"@Recycle",
+	"@Recently-Snapshot",
+	".git",
+	".streams",
+	"lost+found",
+}
+
+// isIgnoredEntry returns true if a directory entry with the given name should be
+// skipped during scanning. It centralizes all name- and type-based ignore policy:
+//   - special system directories in ignoredDirs are always ignored;
+//   - dot-prefixed files are always ignored;
+//   - dot-prefixed folders are ignored unless Scanner.IgnoreDotFolders is disabled,
+//     allowing albums like ".Hack Sign" to be scanned when the option is off.
+func isIgnoredEntry(name string, isDir bool) bool {
+	if isDir && isDirIgnored(name) {
+		return true
+	}
+	return isDotEntry(name) && (!isDir || conf.Server.Scanner.IgnoreDotFolders)
+}
+
+// isDirIgnored returns true if the directory name is in the explicit ignoredDirs
+// blocklist. Used both while walking the tree and by the file watcher.
+func isDirIgnored(name string) bool {
+	return slices.ContainsFunc(ignoredDirs, func(s string) bool { return strings.EqualFold(s, name) })
+}
+
+// isDotEntry returns true only for names with exactly one leading dot (the
+// convention for hidden entries), e.g. ".hidden". Names with two or more leading
+// dots are not considered hidden: "." and ".." are the special self/parent
+// references, and anything like "..foo" or "...Album" is a regular name (album
+// folders sometimes start with ellipses), so all of these return false.
+func isDotEntry(name string) bool {
+	return name != "." && strings.HasPrefix(name, ".") && !strings.HasPrefix(name, "..")
+}

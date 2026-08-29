@@ -1,0 +1,80 @@
+version: "2"
+run:
+  build-tags:
+    - netgo
+    - sqlite_fts5
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - durationcheck
+    - errorlint
+    - forbidigo
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - misspell
+    - nakedret
+    - nilerr
+    - rowserrcheck
+    - unconvert
+    - whitespace
+  disable:
+    - staticcheck
+  settings:
+    gocritic:
+      disable-all: true
+      enabled-checks:
+        - deprecatedComment
+    gosec:
+      excludes:
+        - G501
+        - G401
+        - G505
+        - G115
+    forbidigo:
+      forbid:
+        - pattern: 'tx\.Exec$'
+          msg: "use tx.ExecContext(ctx, ...) in migrations to propagate context"
+        - pattern: 'tx\.Query$'
+          msg: "use tx.QueryContext(ctx, ...) in migrations to propagate context"
+        - pattern: 'tx\.QueryRow$'
+          msg: "use tx.QueryRowContext(ctx, ...) in migrations to propagate context"
+    govet:
+      enable:
+        - nilness
+  exclusions:
+    rules:
+      - linters:
+          - gosec
+        path: _test\.go
+        text: "G703"
+      - path-except: 'db/migrations/'
+        linters:
+          - forbidigo
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - node_modules
+      - _gen\.go$
+      - .worktrees
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - node_modules

@@ -1,0 +1,48 @@
+# Version control & CI
+.git
+.github
+.devcontainer
+.worktrees
+
+# Documentation & IDE
+docs
+*.md
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Tests & development configs
+tests
+scripts
+.golangci.yml
+.git-blame-ignore-revs
+reflex.conf
+Procfile.dev
+.nvmrc
+context7.json
+
+# Node & Frontend build artifacts
+ui/node_modules
+ui/build
+!ui/build/.gitkeep
+.pnpm-store
+
+# Local database, configs & runtime files
+*.db
+*.db-shm
+*.db-wal
+data
+music
+music.old
+testDB
+navidrome
+navidrome.toml
+docker-compose*.yml
+
+# Build outputs & caches
+dist
+binaries
+cache
+tmp
+!tmp/taglib

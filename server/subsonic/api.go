@@ -1,0 +1,410 @@
+package subsonic
+
+import (
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+
+	"github.com/deluan/rest"
+	"github.com/go-chi/chi/v5"
+	"github.com/navidrome/navidrome/conf"
+	"github.com/navidrome/navidrome/core"
+	"github.com/navidrome/navidrome/core/artwork"
+	"github.com/navidrome/navidrome/core/external"
+	lyricssvc "github.com/navidrome/navidrome/core/lyrics"
+	"github.com/navidrome/navidrome/core/metrics"
+	"github.com/navidrome/navidrome/core/playback"
+	playlistsvc "github.com/navidrome/navidrome/core/playlists"
+	"github.com/navidrome/navidrome/core/scrobbler"
+	sonicsvc "github.com/navidrome/navidrome/core/sonic"
+	"github.com/navidrome/navidrome/core/stream"
+	"github.com/navidrome/navidrome/log"
+	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/server"
+	"github.com/navidrome/navidrome/server/events"
+	"github.com/navidrome/navidrome/server/subsonic/responses"
+	"github.com/navidrome/navidrome/utils/req"
+)
+
+const Version = "1.16.1"
+
+var validJSIdentifier = regexp.MustCompile(`^[a-zA-Z_$][a-zA-Z0-9_$.]*$`)
+
+type handler = func(*http.Request) (*responses.Subsonic, error)
+type handlerRaw = func(http.ResponseWriter, *http.Request) (*responses.Subsonic, error)
+
+type Router struct {
+	http.Handler
+	ds                model.DataStore
+	artwork           artwork.Artwork
+	streamer          stream.MediaStreamer
+	archiver          core.Archiver
+	players           core.Players
+	provider          external.Provider
+	playlists         playlistsvc.Playlists
+	scanner           model.Scanner
+	broker            events.Broker
+	scrobbler         scrobbler.PlayTracker
+	share             core.Share
+	playback          playback.PlaybackServer
+	metrics           metrics.Metrics
+	lyrics            lyricssvc.Lyrics
+	transcodeDecision stream.TranscodeDecider
+	sonic             *sonicsvc.Sonic
+}
+
+func New(ds model.DataStore, artwork artwork.Artwork, streamer stream.MediaStreamer, archiver core.Archiver,
+	players core.Players, provider external.Provider, scanner model.Scanner, broker events.Broker,
+	playlists playlistsvc.Playlists, scrobbler scrobbler.PlayTracker, share core.Share, playback playback.PlaybackServer,
+	metrics metrics.Metrics, lyrics lyricssvc.Lyrics, transcodeDecision stream.TranscodeDecider,
+	sonic *sonicsvc.Sonic,
+) *Router {
+	r := &Router{
+		ds:                ds,
+		artwork:           artwork,
+		streamer:          streamer,
+		archiver:          archiver,
+		players:           players,
+		provider:          provider,
+		playlists:         playlists,
+		scanner:           scanner,
+		broker:            broker,
+		scrobbler:         scrobbler,
+		share:             share,
+		playback:          playback,
+		metrics:           metrics,
+		lyrics:            lyrics,
+		transcodeDecision: transcodeDecision,
+		sonic:             sonic,
+	}
+	r.Handler = r.routes()
+	return r
+}
+
+func (api *Router) routes() http.Handler {
+	r := chi.NewRouter()
+
+	if conf.Server.Prometheus.Enabled {
+		r.Use(recordStats(api.metrics))
+	}
+
+	r.Use(postFormToQueryParams)
+
+	// Public
+	h(r, "getOpenSubsonicExtensions", api.GetOpenSubsonicExtensions)
+
+	// Protected
+	r.Group(func(r chi.Router) {
+		r.Use(checkRequiredParameters)
+		r.Use(authenticate(api.ds))
+		r.Use(server.UpdateLastAccessMiddleware(api.ds))
+
+		// Subsonic endpoints, grouped by controller
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "ping", api.Ping)
+			h(r, "getLicense", api.GetLicense)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getMusicFolders", api.GetMusicFolders)
+			h(r, "getIndexes", api.GetIndexes)
+			h(r, "getArtists", api.GetArtists)
+			h(r, "getGenres", api.GetGenres)
+			h(r, "getMusicDirectory", api.GetMusicDirectory)
+			h(r, "getArtist", api.GetArtist)
+			h(r, "getAlbum", api.GetAlbum)
+			h(r, "getSong", api.GetSong)
+			h(r, "getAlbumInfo", api.GetAlbumInfo)
+			h(r, "getAlbumInfo2", api.GetAlbumInfo)
+			h(r, "getArtistInfo", api.GetArtistInfo)
+			h(r, "getArtistInfo2", api.GetArtistInfo2)
+			h(r, "getTopSongs", api.GetTopSongs)
+			h(r, "getSimilarSongs", api.GetSimilarSongs)
+			h(r, "getSimilarSongs2", api.GetSimilarSongs2)
+			hr(r, "getSonicSimilarTracks", api.GetSonicSimilarTracks)
+			hr(r, "findSonicPath", api.FindSonicPath)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			hr(r, "getAlbumList", api.GetAlbumList)
+			hr(r, "getAlbumList2", api.GetAlbumList2)
+			h(r, "getStarred", api.GetStarred)
+			h(r, "getStarred2", api.GetStarred2)
+			h(r, "getNowPlaying", api.GetNowPlaying)
+			h(r, "getRandomSongs", api.GetRandomSongs)
+			h(r, "getSongsByGenre", api.GetSongsByGenre)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "setRating", api.SetRating)
+			h(r, "star", api.Star)
+			h(r, "unstar", api.Unstar)
+			h(r, "scrobble", api.Scrobble)
+			h(r, "reportPlayback", api.ReportPlayback)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getPlaylists", api.GetPlaylists)
+			h(r, "getPlaylist", api.GetPlaylist)
+			h(r, "createPlaylist", api.CreatePlaylist)
+			h(r, "deletePlaylist", api.DeletePlaylist)
+			h(r, "updatePlaylist", api.UpdatePlaylist)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getBookmarks", api.GetBookmarks)
+			h(r, "createBookmark", api.CreateBookmark)
+			h(r, "deleteBookmark", api.DeleteBookmark)
+			h(r, "getPlayQueue", api.GetPlayQueue)
+			h(r, "getPlayQueueByIndex", api.GetPlayQueueByIndex)
+			h(r, "savePlayQueue", api.SavePlayQueue)
+			h(r, "savePlayQueueByIndex", api.SavePlayQueueByIndex)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "search2", api.Search2)
+			h(r, "search3", api.Search3)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getUser", api.GetUser)
+			h(r.With(adminOnly), "getUsers", api.GetUsers)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getScanStatus", api.GetScanStatus)
+			h(r.With(adminOnly), "startScan", api.StartScan)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			hr(r, "getAvatar", api.GetAvatar)
+			h(r, "getLyrics", api.GetLyrics)
+			h(r, "getLyricsBySongId", api.GetLyricsBySongId)
+			hr(r, "stream", api.Stream)
+			hr(r, "download", api.Download)
+			hr(r, "getTranscodeDecision", api.GetTranscodeDecision)
+			hr(r, "getTranscodeStream", api.GetTranscodeStream)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(server.ThrottleBacklog(conf.Server.DevArtworkMaxRequests, conf.Server.DevArtworkThrottleBacklogLimit,
+				conf.Server.DevArtworkThrottleBacklogTimeout))
+			hr(r, "getCoverArt", api.GetCoverArt)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(getPlayer(api.players))
+			h(r, "getInternetRadioStations", api.GetInternetRadios)
+			r.Group(func(r chi.Router) {
+				r.Use(adminOnly)
+				h(r, "createInternetRadioStation", api.CreateInternetRadio)
+				h(r, "deleteInternetRadioStation", api.DeleteInternetRadio)
+				h(r, "updateInternetRadioStation", api.UpdateInternetRadio)
+			})
+		})
+		if conf.Server.EnableSharing {
+			r.Group(func(r chi.Router) {
+				r.Use(getPlayer(api.players))
+				h(r, "getShares", api.GetShares)
+				h(r, "createShare", api.CreateShare)
+				h(r, "updateShare", api.UpdateShare)
+				h(r, "deleteShare", api.DeleteShare)
+			})
+		} else {
+			h501(r, "getShares", "createShare", "updateShare", "deleteShare")
+		}
+
+		if conf.Server.Jukebox.Enabled {
+			r.Group(func(r chi.Router) {
+				r.Use(getPlayer(api.players))
+				h(r, "jukeboxControl", api.JukeboxControl)
+			})
+		} else {
+			h501(r, "jukeboxControl")
+		}
+
+		// Not Implemented (yet?)
+		h501(r, "getPodcasts", "getNewestPodcasts", "refreshPodcasts", "createPodcastChannel", "deletePodcastChannel",
+			"deletePodcastEpisode", "downloadPodcastEpisode")
+		h501(r, "createUser", "updateUser", "deleteUser", "changePassword")
+
+		// Deprecated/Won't implement/Out of scope endpoints
+		h410(r, "search")
+		h410(r, "getChatMessages", "addChatMessage")
+		h410(r, "getVideos", "getVideoInfo", "getCaptions", "hls")
+	})
+	return r
+}
+
+// Add a Subsonic handler
+func h(r chi.Router, path string, f handler) {
+	hr(r, path, func(_ http.ResponseWriter, r *http.Request) (*responses.Subsonic, error) {
+		return f(r)
+	})
+}
+
+// Add a Subsonic handler that requires an http.ResponseWriter (ex: stream, getCoverArt...)
+func hr(r chi.Router, path string, f handlerRaw) {
+	handle := func(w http.ResponseWriter, r *http.Request) {
+		res, err := f(w, r)
+		if err != nil {
+			sendError(w, r, err)
+			return
+		}
+		if r.Context().Err() != nil {
+			if log.IsGreaterOrEqualTo(log.LevelDebug) {
+				log.Warn(r.Context(), "Request was interrupted", "endpoint", r.URL.Path, r.Context().Err())
+			}
+			return
+		}
+		if res != nil {
+			sendResponse(w, r, res)
+		}
+	}
+	addHandler(r, path, handle)
+}
+
+// Add a handler that returns 501 - Not implemented. Used to signal that an endpoint is not implemented yet
+func h501(r chi.Router, paths ...string) {
+	for _, path := range paths {
+		handle := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Cache-Control", "no-cache")
+			w.WriteHeader(http.StatusNotImplemented)
+			_, _ = w.Write([]byte("This endpoint is not implemented, but may be in future releases"))
+		}
+		addHandler(r, path, handle)
+	}
+}
+
+// Add a handler that returns 410 - Gone. Used to signal that an endpoint will not be implemented
+func h410(r chi.Router, paths ...string) {
+	for _, path := range paths {
+		handle := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusGone)
+			_, _ = w.Write([]byte("This endpoint will not be implemented"))
+		}
+		addHandler(r, path, handle)
+	}
+}
+
+func addHandler(r chi.Router, path string, handle func(w http.ResponseWriter, r *http.Request)) {
+	r.HandleFunc("/"+path, handle)
+	r.HandleFunc("/"+path+".view", handle)
+}
+
+func mapToSubsonicError(err error) subError {
+	switch {
+	case errors.Is(err, errSubsonic): // do nothing
+	case errors.Is(err, req.ErrMissingParam):
+		err = newError(responses.ErrorMissingParameter, err.Error())
+	case errors.Is(err, req.ErrInvalidParam):
+		err = newError(responses.ErrorGeneric, err.Error())
+	case errors.Is(err, model.ErrNotFound), errors.Is(err, rest.ErrNotFound):
+		err = newError(responses.ErrorDataNotFound, "data not found")
+	case errors.Is(err, model.ErrNotAuthorized), errors.Is(err, rest.ErrPermissionDenied):
+		err = newError(responses.ErrorAuthorizationFail)
+	case errors.Is(err, stream.ErrTooManyTranscodes):
+		err = newError(responses.ErrorGeneric, "too many concurrent transcodes, please retry shortly")
+	default:
+		err = newError(responses.ErrorGeneric, fmt.Sprintf("Internal Server Error: %s", err))
+	}
+	var subErr subError
+	errors.As(err, &subErr)
+	return subErr
+}
+
+func sendError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, stream.ErrTooManyTranscodes) {
+		w.Header().Set("Retry-After", strconv.Itoa(stream.RetryAfterSeconds))
+		sendResponseWithStatus(w, r, errorResponse(err), http.StatusTooManyRequests)
+		return
+	}
+	sendResponse(w, r, errorResponse(err))
+}
+
+func errorResponse(err error) *responses.Subsonic {
+	subErr := mapToSubsonicError(err)
+	response := newResponse()
+	response.Status = responses.StatusFailed
+	response.Error = &responses.Error{Code: subErr.code, Message: subErr.Error()}
+	return response
+}
+
+func sendResponse(w http.ResponseWriter, r *http.Request, payload *responses.Subsonic) {
+	sendResponseWithStatus(w, r, payload, 0)
+}
+
+// sendResponseWithStatus writes the response body in the format requested by
+// the client. When status is non-zero, WriteHeader is called with that code
+// before the body is written; callers that need to set additional headers
+// (e.g. Retry-After) must set them before calling.
+func sendResponseWithStatus(w http.ResponseWriter, r *http.Request, payload *responses.Subsonic, status int) {
+	p := req.Params(r)
+	f, _ := p.String("f")
+	var response []byte
+	var err error
+	switch f {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		wrapper := &responses.JsonWrapper{Subsonic: *payload}
+		response, err = json.Marshal(wrapper)
+	case "jsonp":
+		callback, _ := p.String("callback")
+		if !validJSIdentifier.MatchString(callback) {
+			log.Warn(r.Context(), "Invalid JSONP callback parameter", "callback", callback)
+			w.Header().Set("Content-Type", "application/json")
+			errResp := newResponse()
+			errResp.Status = responses.StatusFailed
+			errResp.Error = &responses.Error{Code: responses.ErrorGeneric, Message: "invalid callback parameter"}
+			response, _ = json.Marshal(responses.JsonWrapper{Subsonic: *errResp})
+			break
+		}
+		w.Header().Set("Content-Type", "application/javascript")
+		wrapper := &responses.JsonWrapper{Subsonic: *payload}
+		response, err = json.Marshal(wrapper)
+		response = fmt.Appendf(nil, "%s(%s)", callback, response)
+	default:
+		w.Header().Set("Content-Type", "application/xml")
+		response, err = xml.Marshal(payload)
+	}
+	// This should never happen, but if it does, we need to know
+	if err != nil {
+		log.Error(r.Context(), "Error marshalling response", "format", f, err)
+		sendError(w, r, err)
+		return
+	}
+	if status != 0 {
+		w.WriteHeader(status)
+	}
+
+	if payload.Status == responses.StatusOK {
+		if log.IsGreaterOrEqualTo(log.LevelTrace) {
+			log.Debug(r.Context(), "API: Successful response", "endpoint", r.URL.Path, "status", "OK", "body", string(response))
+		} else {
+			log.Debug(r.Context(), "API: Successful response", "endpoint", r.URL.Path, "status", "OK")
+		}
+	} else {
+		log.Warn(r.Context(), "API: Failed response", "endpoint", r.URL.Path, "error", payload.Error.Code, "message", payload.Error.Message)
+	}
+
+	statusPointer, ok := r.Context().Value(subsonicErrorPointer).(*int32)
+
+	if ok && statusPointer != nil {
+		if payload.Status == responses.StatusOK {
+			*statusPointer = 0
+		} else {
+			*statusPointer = payload.Error.Code
+		}
+	}
+
+	if _, err := w.Write(response); err != nil { //nolint:gosec
+		if log.IsGreaterOrEqualTo(log.LevelTrace) {
+			log.Error(r, "Error sending response to client", "endpoint", r.URL.Path, "payload", string(response), err)
+		} else {
+			log.Error(r, "Error sending response to client", "endpoint", r.URL.Path, err)
+		}
+	}
+}

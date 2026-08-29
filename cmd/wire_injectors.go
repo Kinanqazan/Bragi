@@ -1,0 +1,164 @@
+//go:build wireinject
+
+package cmd
+
+import (
+	"context"
+
+	"github.com/google/wire"
+	"github.com/navidrome/navidrome/adapters/lastfm"
+	"github.com/navidrome/navidrome/adapters/listenbrainz"
+	"github.com/navidrome/navidrome/core"
+	"github.com/navidrome/navidrome/core/agents"
+	"github.com/navidrome/navidrome/core/artwork"
+	"github.com/navidrome/navidrome/core/lyrics"
+	"github.com/navidrome/navidrome/core/metrics"
+	"github.com/navidrome/navidrome/core/playback"
+	"github.com/navidrome/navidrome/core/playlists"
+	"github.com/navidrome/navidrome/core/scrobbler"
+	"github.com/navidrome/navidrome/core/sonic"
+	"github.com/navidrome/navidrome/db"
+	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/persistence"
+	"github.com/navidrome/navidrome/plugins"
+	"github.com/navidrome/navidrome/scanner"
+	"github.com/navidrome/navidrome/server"
+	"github.com/navidrome/navidrome/server/events"
+	"github.com/navidrome/navidrome/server/jellyfin"
+	"github.com/navidrome/navidrome/server/nativeapi"
+	"github.com/navidrome/navidrome/server/public"
+	"github.com/navidrome/navidrome/server/subsonic"
+)
+
+var allProviders = wire.NewSet(
+	core.Set,
+	artwork.Set,
+	server.New,
+	subsonic.New,
+	jellyfin.New,
+	nativeapi.New,
+	public.New,
+	persistence.New,
+	lastfm.NewRouter,
+	listenbrainz.NewRouter,
+	events.GetBroker,
+	scanner.New,
+	scanner.GetWatcher,
+	metrics.GetPrometheusInstance,
+	db.Db,
+	plugins.GetManager,
+	sonic.New,
+	wire.Bind(new(agents.PluginLoader), new(*plugins.Manager)),
+	wire.Bind(new(scrobbler.PluginLoader), new(*plugins.Manager)),
+	wire.Bind(new(lyrics.PluginLoader), new(*plugins.Manager)),
+	wire.Bind(new(sonic.PluginLoader), new(*plugins.Manager)),
+	wire.Bind(new(sonic.Engine), new(*sonic.Sonic)),
+	wire.Bind(new(nativeapi.PluginManager), new(*plugins.Manager)),
+	wire.Bind(new(core.PluginUnloader), new(*plugins.Manager)),
+	wire.Bind(new(plugins.PluginMetricsRecorder), new(metrics.Metrics)),
+	wire.Bind(new(core.Watcher), new(scanner.Watcher)),
+	wire.Bind(new(playlists.ImageUploadService), new(artwork.Uploader)),
+)
+
+func CreateDataStore() model.DataStore {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateServer() *server.Server {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateNativeAPIRouter(ctx context.Context) *nativeapi.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateSubsonicAPIRouter(ctx context.Context) *subsonic.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateJellyfinAPIRouter(ctx context.Context) *jellyfin.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreatePublicRouter() *public.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateLastFMRouter() *lastfm.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateListenBrainzRouter() *listenbrainz.Router {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateInsights() metrics.Insights {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreatePrometheus() metrics.Metrics {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateScanner(ctx context.Context) model.Scanner {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateScanWatcher(ctx context.Context) scanner.Watcher {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func GetPlaybackServer() playback.PlaybackServer {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateArtworkWorker() *artwork.Worker {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func CreateArtworkResolver(trace *artwork.ChainTrace, live bool) *artwork.TracingResolver {
+	panic(wire.Build(
+		allProviders,
+		artwork.NewTracingResolver,
+	))
+}
+
+func getPluginManager() *plugins.Manager {
+	panic(wire.Build(
+		allProviders,
+	))
+}
+
+func GetPluginManager(ctx context.Context) *plugins.Manager {
+	manager := getPluginManager()
+	manager.SetSubsonicRouter(CreateSubsonicAPIRouter(ctx))
+	return manager
+}

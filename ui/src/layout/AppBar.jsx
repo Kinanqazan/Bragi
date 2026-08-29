@@ -1,0 +1,366 @@
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react'
+import clsx from 'clsx'
+import {
+  toggleSidebar,
+  changeListParams,
+} from 'react-admin'
+import { MdClose } from 'react-icons/md'
+import MenuIcon from '@material-ui/icons/Menu'
+import { useDispatch } from 'react-redux'
+import { useHistory, useLocation } from 'react-router-dom'
+import {
+  makeStyles,
+  useMediaQuery,
+  IconButton,
+  InputBase,
+  AppBar as MuiAppBar,
+} from '@material-ui/core'
+import { alpha } from '@material-ui/core/styles'
+import { Dialogs } from '../dialogs/Dialogs'
+import CastButton from '../cast/CastButton'
+
+const useStyles = makeStyles(
+  (theme) => {
+    const isDark = theme.palette.type === 'dark'
+    return {
+      appBar: {
+        paddingTop: 'env(safe-area-inset-top)',
+        backgroundColor: `${theme.palette.background.default} !important`,
+        color: `${theme.palette.text.primary} !important`,
+        boxShadow: 'none !important',
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)} !important`,
+        position: 'fixed !important',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: `${theme.zIndex.drawer + 1} !important`,
+        '& .MuiToolbar-root': {
+          backgroundColor: `${theme.palette.background.default} !important`,
+          color: `${theme.palette.text.primary} !important`,
+          paddingRight: `${theme.spacing(1)}px !important`,
+          paddingLeft: `${theme.spacing(1)}px !important`,
+          minHeight: '48px !important',
+          height: '48px !important',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          '& #react-admin-title': {
+            minWidth: 0,
+            flex: '1 1 auto',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: '1.05rem',
+            fontWeight: 600,
+          },
+        },
+        '& .RaLoadingIndicator-loadedIcon, & [class*="RaLoadingIndicator"], & .RaLoadingIndicator-loader':
+          {
+            flexShrink: '0 !important',
+            display: 'inline-flex !important',
+            visibility: 'visible !important',
+            color: 'inherit',
+          },
+        '& .RaUserMenu-user, & [class*="UserMenu"], & [class*="RaUserMenu"]': {
+          flexShrink: '0 !important',
+          display: 'inline-flex !important',
+          visibility: 'visible !important',
+          color: 'inherit',
+        },
+      },
+      // Sticky Minimalistic Mobile Header with generous top spacing from phone edge
+      mobileAppBar: {
+        paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        paddingBottom: '8px',
+        paddingLeft: 'calc(10vw - 14px)',
+        paddingRight: 'calc(10vw - 14px)',
+        backgroundColor: `${theme.palette.background.default} !important`,
+        color: `${theme.palette.text.primary} !important`,
+        boxShadow: 'none !important',
+        border: 'none !important',
+        borderBottom: 'none !important',
+        position: 'sticky !important',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: `${theme.zIndex.drawer + 1} !important`,
+        width: '100vw',
+        maxWidth: '100vw',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      },
+      // Floating Dynamic Search Pill
+      searchPill: {
+        width: '100%',
+        height: 52,
+        borderRadius: 26,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 6px 0 10px',
+        backgroundColor: isDark
+          ? 'rgba(255, 255, 255, 0.08)'
+          : 'rgba(0, 0, 0, 0.05)',
+        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: isDark
+          ? '0 4px 20px rgba(0, 0, 0, 0.35)'
+          : '0 2px 12px rgba(0, 0, 0, 0.08)',
+        transition: 'all 0.2s ease',
+        boxSizing: 'border-box',
+      },
+      searchPillFocused: {
+        borderColor: `${theme.palette.primary.main} !important`,
+        backgroundColor: isDark
+          ? 'rgba(255, 255, 255, 0.12) !important'
+          : 'rgba(0, 0, 0, 0.08) !important',
+        boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)} !important`,
+      },
+      pillIconButton: {
+        padding: 6,
+        color: theme.palette.text.primary,
+        flexShrink: 0,
+        '&:hover': {
+          backgroundColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.08)',
+        },
+      },
+      pillInput: {
+        flex: 1,
+        minWidth: 0,
+        marginLeft: 8,
+        marginRight: 8,
+        fontSize: '1rem',
+        fontWeight: 400,
+        color: theme.palette.text.primary,
+        '& input': {
+          padding: '10px 0',
+          fontSize: '1rem',
+          color: `${theme.palette.text.primary} !important`,
+          '&::placeholder': {
+            color: theme.palette.text.secondary,
+            opacity: 0.85,
+          },
+        },
+      },
+      root: {
+        color: theme.palette.text.secondary,
+      },
+      active: {
+        color: theme.palette.text.primary,
+      },
+      icon: { minWidth: theme.spacing(5) },
+    }
+  },
+  {
+    name: 'NDAppBar',
+  },
+)
+
+
+const MobileTopBar = () => {
+  const classes = useStyles()
+  const dispatch = useDispatch()
+  const history = useHistory()
+  const location = useLocation()
+
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const filterParam = searchParams.get('filter')
+    if (filterParam) {
+      try {
+        const parsed = JSON.parse(filterParam)
+        return parsed.title || ''
+      } catch {
+        return ''
+      }
+    }
+    return ''
+  })
+  const [inputFocused, setInputFocused] = useState(false)
+  const debounceTimerRef = useRef(null)
+
+  const handleToggleSidebar = (e) => {
+    e.currentTarget?.blur()
+    dispatch(toggleSidebar())
+  }
+
+  // Update filter in URL and Redux state
+  const applySearchFilter = useCallback(
+    (query) => {
+      const trimmed = query.trim()
+      let currentFilters = {}
+      const searchParams = new URLSearchParams(history.location.search)
+      const filterParam = searchParams.get('filter')
+      if (filterParam) {
+        try {
+          currentFilters = JSON.parse(filterParam)
+        } catch {
+          currentFilters = {}
+        }
+      }
+
+      const newFilters = { ...currentFilters }
+      if (trimmed) {
+        newFilters.title = trimmed
+      } else {
+        delete newFilters.title
+      }
+
+      const isSongPage = history.location.pathname.startsWith('/song')
+      const targetPath = isSongPage ? history.location.pathname : '/song'
+
+      const newQueryString =
+        Object.keys(newFilters).length > 0
+          ? `?filter=${encodeURIComponent(JSON.stringify(newFilters))}`
+          : ''
+
+      history.replace(`${targetPath}${newQueryString}`)
+
+      dispatch(
+        changeListParams('song', {
+          filter: newFilters,
+        }),
+      )
+    },
+    [history, dispatch],
+  )
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    setSearchQuery(value)
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    if (value === '') {
+      // Immediate reset when input is cleared or backspaced to empty
+      applySearchFilter('')
+    } else {
+      // 200ms debounce while typing
+      debounceTimerRef.current = setTimeout(() => {
+        applySearchFilter(value)
+      }, 200)
+    }
+  }
+
+  const handleClearSearch = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    setSearchQuery('')
+    applySearchFilter('')
+  }
+
+  // Sync searchQuery with location search if modified externally
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const filterParam = searchParams.get('filter')
+    if (filterParam) {
+      try {
+        const parsed = JSON.parse(filterParam)
+        if (parsed.title !== undefined && parsed.title !== searchQuery) {
+          setSearchQuery(parsed.title)
+        }
+      } catch {
+        // Ignore malformed filter state from an external URL update.
+      }
+    } else if (searchQuery !== '') {
+      setSearchQuery('')
+    }
+  }, [location.pathname, location.search, searchQuery])
+
+  return (
+    <MuiAppBar position="sticky" className={classes.mobileAppBar}>
+      {/* Hidden React-Admin Title Portal anchor */}
+      <span id="react-admin-title" style={{ display: 'none' }} />
+
+      {/* Floating Dynamic Search Pill */}
+      <div
+        className={clsx(
+          classes.searchPill,
+          inputFocused && classes.searchPillFocused,
+        )}
+      >
+        <IconButton
+          className={classes.pillIconButton}
+          onClick={handleToggleSidebar}
+          aria-label="Open menu"
+          tabIndex={-1}
+        >
+          <MenuIcon style={{ fontSize: 29 }} />
+        </IconButton>
+
+        <InputBase
+          className={classes.pillInput}
+          placeholder="Search your music"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
+          inputProps={{ 'aria-label': 'Search your music' }}
+        />
+
+        {searchQuery ? (
+          <IconButton
+            className={classes.pillIconButton}
+            onClick={handleClearSearch}
+            aria-label="Clear search"
+            tabIndex={-1}
+          >
+            <MdClose size={24} />
+          </IconButton>
+        ) : null}
+
+        <CastButton
+          className={classes.pillIconButton}
+          tabIndex={-1}
+        />
+      </div>
+
+      <Dialogs />
+    </MuiAppBar>
+  )
+}
+
+const NO_SEARCH_BAR_PREFIXES = ['/personal', '/user', '/player', '/library']
+
+const shouldHideSearchBar = (pathname) => {
+  return NO_SEARCH_BAR_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+}
+
+const AppBar = (props) => {
+  const classes = useStyles()
+  const location = useLocation()
+  const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
+
+  if (isMobile) {
+    if (shouldHideSearchBar(location.pathname)) {
+      return (
+        <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
+          <Dialogs />
+        </div>
+      )
+    }
+    return <MobileTopBar />
+  }
+
+  // Desktop mode: No top header bar. Consolidate all controls into the sidebar.
+  return (
+    <>
+      <span id="react-admin-title" style={{ display: 'none' }} />
+      <Dialogs />
+    </>
+  )
+}
+
+export default AppBar

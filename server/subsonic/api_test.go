@@ -1,0 +1,213 @@
+package subsonic
+
+import (
+	"context"
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"math"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
+	"github.com/deluan/rest"
+	"github.com/navidrome/navidrome/core/stream"
+	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/server/subsonic/responses"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("sendResponse", func() {
+	var (
+		w       *httptest.ResponseRecorder
+		r       *http.Request
+		payload *responses.Subsonic
+	)
+
+	BeforeEach(func() {
+		w = httptest.NewRecorder()
+		r = httptest.NewRequest("GET", "/somepath", nil)
+		payload = &responses.Subsonic{
+			Status:  responses.StatusOK,
+			Version: "1.16.1",
+		}
+	})
+
+	When("format is JSON", func() {
+		It("should set Content-Type to application/json and return the correct body", func() {
+			q := r.URL.Query()
+			q.Add("f", "json")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+			Expect(w.Body.String()).NotTo(BeEmpty())
+
+			var wrapper responses.JsonWrapper
+			err := json.Unmarshal(w.Body.Bytes(), &wrapper)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(wrapper.Subsonic.Status).To(Equal(payload.Status))
+			Expect(wrapper.Subsonic.Version).To(Equal(payload.Version))
+		})
+	})
+
+	When("format is JSONP", func() {
+		It("should set Content-Type to application/javascript and return the correct callback body", func() {
+			q := r.URL.Query()
+			q.Add("f", "jsonp")
+			q.Add("callback", "testCallback")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			Expect(w.Header().Get("Content-Type")).To(Equal("application/javascript"))
+			body := w.Body.String()
+			Expect(body).To(SatisfyAll(
+				HavePrefix("testCallback("),
+				HaveSuffix(")"),
+			))
+
+			// Extract JSON from the JSONP response
+			jsonBody := body[strings.Index(body, "(")+1 : strings.LastIndex(body, ")")]
+			var wrapper responses.JsonWrapper
+			err := json.Unmarshal([]byte(jsonBody), &wrapper)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(wrapper.Subsonic.Status).To(Equal(payload.Status))
+		})
+
+		It("should accept valid callback names with dots", func() {
+			q := r.URL.Query()
+			q.Add("f", "jsonp")
+			q.Add("callback", "jQuery.callback_123")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			body := w.Body.String()
+			Expect(body).To(HavePrefix("jQuery.callback_123("))
+		})
+
+		It("should reject callback with invalid characters", func() {
+			q := r.URL.Query()
+			q.Add("f", "jsonp")
+			q.Add("callback", "alert(1)//")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+			var wrapper responses.JsonWrapper
+			err := json.Unmarshal(w.Body.Bytes(), &wrapper)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(wrapper.Subsonic.Status).To(Equal(responses.StatusFailed))
+			Expect(wrapper.Subsonic.Error.Message).To(ContainSubstring("invalid callback parameter"))
+		})
+
+		It("should reject empty callback parameter", func() {
+			q := r.URL.Query()
+			q.Add("f", "jsonp")
+			q.Add("callback", "")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			Expect(w.Header().Get("Content-Type")).To(Equal("application/json"))
+			var wrapper responses.JsonWrapper
+			err := json.Unmarshal(w.Body.Bytes(), &wrapper)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(wrapper.Subsonic.Status).To(Equal(responses.StatusFailed))
+		})
+	})
+
+	When("format is XML or unspecified", func() {
+		It("should set Content-Type to application/xml and return the correct body", func() {
+			// No format specified, expecting XML by default
+			sendResponse(w, r, payload)
+
+			Expect(w.Header().Get("Content-Type")).To(Equal("application/xml"))
+			var subsonicResponse responses.Subsonic
+			err := xml.Unmarshal(w.Body.Bytes(), &subsonicResponse)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(subsonicResponse.Status).To(Equal(payload.Status))
+			Expect(subsonicResponse.Version).To(Equal(payload.Version))
+		})
+	})
+
+	When("an error occurs during marshalling", func() {
+		It("should return a fail response", func() {
+			payload.Song = &responses.Child{OpenSubsonicChild: &responses.OpenSubsonicChild{}}
+			// An +Inf value will cause an error when marshalling to JSON
+			payload.Song.ReplayGain = responses.ReplayGain{TrackGain: new(math.Inf(1))}
+			q := r.URL.Query()
+			q.Add("f", "json")
+			r.URL.RawQuery = q.Encode()
+
+			sendResponse(w, r, payload)
+
+			Expect(w.Code).To(Equal(http.StatusOK))
+			var wrapper responses.JsonWrapper
+			err := json.Unmarshal(w.Body.Bytes(), &wrapper)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(wrapper.Subsonic.Status).To(Equal(responses.StatusFailed))
+			Expect(wrapper.Subsonic.Version).To(Equal(payload.Version))
+			Expect(wrapper.Subsonic.Error.Message).To(ContainSubstring("json: unsupported value: +Inf"))
+		})
+	})
+
+	It("responds with HTTP 429 and Retry-After when the transcode limiter rejects", func() {
+		w = httptest.NewRecorder()
+		r = httptest.NewRequest("GET", "/rest/stream", nil)
+
+		sendError(w, r, fmt.Errorf("rejected: %w", stream.ErrTooManyTranscodes))
+
+		Expect(w.Code).To(Equal(http.StatusTooManyRequests))
+		Expect(w.Header().Get("Retry-After")).ToNot(BeEmpty())
+
+		var subsonicResponse responses.Subsonic
+		err := xml.Unmarshal(w.Body.Bytes(), &subsonicResponse)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(subsonicResponse.Status).To(Equal(responses.StatusFailed))
+		Expect(subsonicResponse.Error).ToNot(BeNil())
+		Expect(subsonicResponse.Error.Code).To(Equal(responses.ErrorGeneric))
+		Expect(subsonicResponse.Error.Message).To(ContainSubstring("transcode"))
+	})
+
+	It("updates status pointer when an error occurs", func() {
+		pointer := int32(0)
+
+		ctx := context.WithValue(r.Context(), subsonicErrorPointer, &pointer) //nolint:govet
+		r = r.WithContext(ctx)
+
+		payload.Status = responses.StatusFailed
+		payload.Error = &responses.Error{Code: responses.ErrorDataNotFound}
+
+		sendResponse(w, r, payload)
+		Expect(w.Code).To(Equal(http.StatusOK))
+
+		Expect(pointer).To(Equal(responses.ErrorDataNotFound))
+	})
+})
+
+var _ = Describe("mapToSubsonicError", func() {
+	DescribeTable("maps repository errors to the correct Subsonic error code",
+		func(err error, expectedCode int32) {
+			subErr := mapToSubsonicError(err)
+			Expect(subErr.code).To(Equal(expectedCode))
+		},
+		Entry("rest.ErrPermissionDenied -> not authorized (50)",
+			rest.ErrPermissionDenied, responses.ErrorAuthorizationFail),
+		Entry("rest.ErrNotFound -> data not found (70)",
+			rest.ErrNotFound, responses.ErrorDataNotFound),
+		Entry("model.ErrNotAuthorized -> not authorized (50)",
+			model.ErrNotAuthorized, responses.ErrorAuthorizationFail),
+		Entry("model.ErrNotFound -> data not found (70)",
+			model.ErrNotFound, responses.ErrorDataNotFound),
+		Entry("wrapped rest.ErrPermissionDenied is still mapped",
+			fmt.Errorf("update share: %w", rest.ErrPermissionDenied), responses.ErrorAuthorizationFail),
+		Entry("unknown error -> generic (0)",
+			errors.New("boom"), responses.ErrorGeneric),
+	)
+})

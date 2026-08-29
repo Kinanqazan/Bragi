@@ -1,0 +1,273 @@
+import React, { useRef } from 'react'
+import {
+  GridList,
+  GridListTile,
+  Typography,
+  GridListTileBar,
+  LinearProgress,
+  useMediaQuery,
+} from '@material-ui/core'
+import { alpha, makeStyles } from '@material-ui/core/styles'
+import withWidth from '@material-ui/core/withWidth'
+import { Link } from 'react-router-dom'
+import { linkToRecord, useListContext } from 'react-admin'
+import { withContentRect } from 'react-measure'
+import { useRollChanged } from './useRollChanged'
+import {
+  AlbumContextMenu,
+  PlayButton,
+  ArtistLinkField,
+  OverflowTooltip,
+} from '../common'
+import clsx from 'clsx'
+import { AlbumDatesField } from './AlbumDatesField.jsx'
+import { Artwork } from '../common/Artwork'
+
+const useStyles = makeStyles(
+  (theme) => ({
+    root: {
+      margin: '16px 0',
+      display: 'grid',
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: 0,
+      maxHeight: 'calc(100vh - 150px)',
+      overflowY: 'auto',
+      overscrollBehavior: 'contain',
+      WebkitOverflowScrolling: 'touch',
+      boxSizing: 'border-box',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+      '&::-webkit-scrollbar': {
+        display: 'none !important',
+        width: '0 !important',
+        height: '0 !important',
+      },
+      [theme.breakpoints.down('sm')]: {
+        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 72px)',
+        paddingBottom: 72,
+      },
+      [theme.breakpoints.down('xs')]: {
+        margin: '10px 0',
+        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 68px)',
+        paddingBottom: 72,
+      },
+    },
+    tileBar: {
+      transition: 'all 150ms ease-out',
+      opacity: 0,
+      pointerEvents: 'none',
+      textAlign: 'left',
+      background:
+        'linear-gradient(to top, rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0) 100%)',
+    },
+    tileBarMobile: {
+      textAlign: 'left',
+      background:
+        'linear-gradient(to top, rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.4) 70%,rgba(0,0,0,0) 100%)',
+    },
+    albumArtistName: {
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      textAlign: 'left',
+      fontSize: '1em',
+    },
+    albumName: {
+      fontSize: '14px',
+      color: theme.palette.type === 'dark' ? '#eee' : 'black',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+    },
+    missingAlbum: {
+      opacity: 0.3,
+    },
+    albumVersion: {
+      fontSize: '12px',
+      color: theme.palette.type === 'dark' ? '#c5c5c5' : '#696969',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+    },
+    albumSubtitle: {
+      fontSize: '12px',
+      color: theme.palette.type === 'dark' ? '#c5c5c5' : '#696969',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+    },
+    link: {
+      position: 'relative',
+      display: 'block',
+      textDecoration: 'none',
+      '&:hover $tileBar, &:focus-within $tileBar': {
+        opacity: 1,
+        pointerEvents: 'auto',
+      },
+    },
+    albumLink: {
+      position: 'relative',
+      display: 'block',
+      textDecoration: 'none',
+    },
+    albumContainer: {},
+    albumPlayButton: { color: 'white' },
+  }),
+  { name: 'NDAlbumGridView' },
+)
+
+const useCoverStyles = makeStyles({
+  coverContainer: {
+    width: '100%',
+    aspectRatio: '1',
+    overflow: 'hidden',
+  },
+  cover: {
+    display: 'inline-block',
+    width: '100%',
+    objectFit: 'contain',
+    // The image fills this box absolutely, so it lends no height: a remount that has not been
+    // re-measured yet would collapse the tile and blank the cover for a frame.
+    aspectRatio: '1',
+    height: (props) => props.height,
+    transition: 'opacity 0.3s ease-in-out',
+  },
+})
+
+const getColsForWidth = (width) => {
+  if (width === 'xs') return 2
+  if (width === 'sm') return 3
+  if (width === 'md') return 4
+  if (width === 'lg') return 6
+  return 9
+}
+
+const Cover = withContentRect('bounds')(({
+  record,
+  measureRef,
+  contentRect,
+}) => {
+  // Force height to be the same as the width determined by the GridList
+  // noinspection JSSuspiciousNameCombination
+  const classes = useCoverStyles({ height: contentRect.bounds.width })
+  return (
+    <div ref={measureRef} className={classes.coverContainer}>
+      <Artwork
+        record={record}
+        square
+        className={classes.cover}
+        title={record.name}
+      />
+    </div>
+  )
+})
+
+const AlbumGridTile = ({ showArtist, record, basePath, ...props }) => {
+  const classes = useStyles()
+  const isDesktop = useMediaQuery((theme) => theme.breakpoints.up('md'), {
+    noSsr: true,
+  })
+  if (!record) {
+    return null
+  }
+  const computedClasses = clsx(
+    classes.albumContainer,
+    record.missing && classes.missingAlbum,
+  )
+  return (
+    <div className={computedClasses}>
+      <Link
+        className={classes.link}
+        to={linkToRecord(basePath, record.id, 'show')}
+      >
+        <Cover record={record} />
+        <GridListTileBar
+          className={isDesktop ? classes.tileBar : classes.tileBarMobile}
+          subtitle={
+            !record.missing && (
+              <PlayButton
+                className={classes.albumPlayButton}
+                record={record}
+                size="small"
+              />
+            )
+          }
+          actionIcon={<AlbumContextMenu record={record} color={'white'} />}
+        />
+      </Link>
+      <Link
+        className={classes.albumLink}
+        to={linkToRecord(basePath, record.id, 'show')}
+      >
+        <span>
+          <OverflowTooltip title={record.name}>
+            <Typography className={classes.albumName}>{record.name}</Typography>
+          </OverflowTooltip>
+          {record.tags && record.tags['albumversion'] && (
+            <Typography className={classes.albumVersion}>
+              {record.tags['albumversion']}
+            </Typography>
+          )}
+        </span>
+      </Link>
+      {showArtist ? (
+        <ArtistLinkField record={record} className={classes.albumSubtitle} />
+      ) : (
+        <AlbumDatesField record={record} className={classes.albumSubtitle} />
+      )}
+    </div>
+  )
+}
+
+const LoadedAlbumGrid = ({ ids, data, basePath, width }) => {
+  const classes = useStyles()
+  const { filterValues } = useListContext()
+  const isArtistView = !!(filterValues && filterValues.artist_id)
+  return (
+    <div className={classes.root}>
+      <GridList
+        component={'div'}
+        cellHeight={'auto'}
+        cols={getColsForWidth(width)}
+        spacing={20}
+      >
+        {ids.map((id) => (
+          <GridListTile className={classes.gridListTile} key={id}>
+            <AlbumGridTile
+              record={data[id]}
+              basePath={basePath}
+              showArtist={!isArtistView}
+            />
+          </GridListTile>
+        ))}
+      </GridList>
+    </div>
+  )
+}
+
+const AlbumGridView = ({
+  albumListType,
+  loaded,
+  loading,
+  seed,
+  shownSeed,
+  ...props
+}) => {
+  // ArtistShow renders this grid too, with no roll to track, so own a ref when none is passed.
+  const ownSeed = useRef(null)
+  // A re-roll replaces every album, so the previous roll must not linger while it loads.
+  const rerolling =
+    useRollChanged(shownSeed ?? ownSeed, seed, loading) &&
+    albumListType === 'random'
+  const hide = rerolling || !props.data || !props.ids
+  return hide ? (
+    <LinearProgress aria-label="Loading albums" />
+  ) : (
+    <LoadedAlbumGrid {...props} />
+  )
+}
+
+const AlbumGridViewWithWidth = withWidth()(AlbumGridView)
+
+export default AlbumGridViewWithWidth

@@ -1,0 +1,388 @@
+package persistence
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+
+	. "github.com/Masterminds/squirrel"
+	"github.com/deluan/sanitize"
+	"github.com/navidrome/navidrome/log"
+	"github.com/navidrome/navidrome/model"
+	"github.com/navidrome/navidrome/utils/str"
+)
+
+// containsCJK returns true if the string contains any CJK (Chinese/Japanese/Korean) characters.
+// CJK text doesn't use spaces between words, so FTS5's unicode61 tokenizer treats entire
+// CJK phrases as single tokens, making token-based search ineffective for CJK content.
+func containsCJK(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) ||
+			unicode.Is(unicode.Hiragana, r) ||
+			unicode.Is(unicode.Katakana, r) ||
+			unicode.Is(unicode.Hangul, r) {
+			return true
+		}
+	}
+	return false
+}
+
+// fts5SpecialChars matches characters that should be stripped from user input.
+// We keep only Unicode letters, numbers, whitespace, * (prefix wildcard), " (phrase quotes),
+// and \x00 (internal placeholder marker). All punctuation is removed because the unicode61
+// tokenizer treats it as token separators, and characters like ' can cause FTS5 parse errors
+// as unbalanced string delimiters.
+var fts5SpecialChars = regexp.MustCompile(`[^\p{L}\p{N}\s*"\x00]`)
+
+// fts5Operators matches FTS5 boolean operators as whole words (case-insensitive).
+var fts5Operators = regexp.MustCompile(`(?i)\b(AND|OR|NOT|NEAR)\b`)
+
+// fts5LeadingStar matches a * at the start of a token. FTS5 only supports * at the end (prefix queries).
+var fts5LeadingStar = regexp.MustCompile(`(^|[\s])\*+`)
+
+// isSingleUnicodeLetter returns true if token is exactly one Unicode letter.
+func isSingleUnicodeLetter(token string) bool {
+	r, size := utf8.DecodeRuneInString(token)
+	return size == len(token) && size > 0 && unicode.IsLetter(r)
+}
+
+// namePunctuation is the set of characters commonly used as separators in artist/album
+// names (hyphens, slashes, dots, apostrophes). Only words containing these are candidates
+// for punctuated-word processing; other special characters (^, :, &) are just stripped.
+const namePunctuation = `-/.''`
+
+// processPunctuatedWords handles words with embedded name punctuation before the general
+// special-character stripping. For each punctuated word it produces either:
+//   - A quoted phrase for dotted abbreviations: R.E.M. → "R E M"
+//   - A phrase+concat OR for other patterns:    a-ha  → ("a ha" OR aha*)
+func processPunctuatedWords(input string, phrases []string) (string, []string) {
+	words := strings.Fields(input)
+	var result []string
+	for _, w := range words {
+		if strings.HasPrefix(w, "\x00") || strings.ContainsAny(w, `*"`) || !strings.ContainsAny(w, namePunctuation) {
+			result = append(result, w)
+			continue
+		}
+		concat := str.FTSPunctStrip.ReplaceAllString(w, "")
+		if concat == "" || concat == w {
+			result = append(result, w)
+			continue
+		}
+		subTokens := strings.Fields(fts5SpecialChars.ReplaceAllString(w, " "))
+		if len(subTokens) < 2 {
+			// Single sub-token after splitting (e.g., N' → N): just use the stripped form
+			result = append(result, concat)
+			continue
+		}
+		// Dotted abbreviations (R.E.M., U.K.) — all single letters separated by dots only
+		if isDottedAbbreviation(w, subTokens) {
+			phrases = append(phrases, fmt.Sprintf(`"%s"`, strings.Join(subTokens, " ")))
+		} else {
+			// Punctuated names (a-ha, AC/DC, Jay-Z) — phrase for adjacency + concat for search_normalized
+			phrases = append(phrases, fmt.Sprintf(`("%s" OR %s*)`, strings.Join(subTokens, " "), concat))
+		}
+		result = append(result, fmt.Sprintf("\x00PHRASE%d\x00", len(phrases)-1))
+	}
+	return strings.Join(result, " "), phrases
+}
+
+// isDottedAbbreviation returns true if w uses only dots as punctuation and all sub-tokens
+// are single letters (e.g., "R.E.M.", "U.K." but not "a-ha" or "AC/DC").
+func isDottedAbbreviation(w string, subTokens []string) bool {
+	for _, r := range w {
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '.' {
+			return false
+		}
+	}
+	for _, st := range subTokens {
+		if !isSingleUnicodeLetter(st) {
+			return false
+		}
+	}
+	return true
+}
+
+// buildFTS5Query preprocesses user input into a safe FTS5 MATCH expression.
+// Plain tokens are emitted as (token OR token*) so bm25 ranks exact-token hits above prefix-only matches.
+// It preserves quoted phrases and * prefix wildcards, neutralizes FTS5 operators
+// (by lowercasing them, since FTS5 operators are case-sensitive) and strips
+// special characters to prevent query injection.
+// The second return reports whether tokenization degraded the query (see ftsQueryDegraded).
+func buildFTS5Query(userInput string) (string, bool) {
+	q := strings.TrimSpace(userInput)
+	if q == "" || q == `""` {
+		return "", false
+	}
+
+	var phrases []string
+	result := q
+	for {
+		start := strings.Index(result, `"`)
+		if start == -1 {
+			break
+		}
+		end := strings.Index(result[start+1:], `"`)
+		if end == -1 {
+			// Unmatched quote — remove it
+			result = result[:start] + result[start+1:]
+			break
+		}
+		end += start + 1
+		phrase := result[start : end+1] // includes quotes
+		phrases = append(phrases, phrase)
+		result = result[:start] + fmt.Sprintf("\x00PHRASE%d\x00", len(phrases)-1) + result[end+1:]
+	}
+
+	// Transliterate non-ASCII letters in the unquoted portion (ø→o, æ→ae, œ→oe, ß→ss, …)
+	// so the query matches the ASCII variants emitted by normalizeForFTS at index time.
+	// FTS5's own `remove_diacritics 2` only strips NFKD-decomposable marks, so without
+	// this step queries for words containing these letters can miss. Quoted phrases are
+	// left untouched so they continue to match the original text in title/artist columns.
+	result = sanitize.Accents(result)
+
+	// Neutralize FTS5 operators by lowercasing them (FTS5 operators are case-sensitive:
+	// AND, OR, NOT, NEAR are operators, but and, or, not, near are plain tokens)
+	result = fts5Operators.ReplaceAllStringFunc(result, strings.ToLower)
+
+	// Handle words with embedded punctuation (a-ha, AC/DC, R.E.M.) before stripping
+	result, phrases = processPunctuatedWords(result, phrases)
+
+	result = fts5SpecialChars.ReplaceAllString(result, " ")
+	result = fts5LeadingStar.ReplaceAllString(result, "$1")
+	tokens := strings.Fields(result)
+
+	// Two forms per token: a plain prefix form (love*) used only to evaluate query
+	// degradation, and the final (love OR love*) form. The OR adds no matches
+	// (exact ⊂ prefix) but gives bm25 a high-IDF exact-term hit, ranking rows that
+	// contain the literal word above prefix-only matches. Placeholders and
+	// user-supplied wildcards pass through untouched in both forms.
+	prefixTokens := make([]string, len(tokens))
+	wrappedTokens := make([]string, len(tokens))
+	for i, t := range tokens {
+		if strings.HasPrefix(t, "\x00") || strings.HasSuffix(t, "*") {
+			prefixTokens[i], wrappedTokens[i] = t, t
+			continue
+		}
+		prefixTokens[i] = t + "*"
+		wrappedTokens[i] = "(" + t + " OR " + t + "*)"
+	}
+
+	// Use explicit AND between tokens — FTS5's implicit AND (space-separated)
+	// doesn't work correctly with parenthesized OR groups. The prefix form is
+	// space-joined instead: it only feeds ftsQueryDegraded, which would count a
+	// literal "AND" as a long token and never flag all-short-token queries.
+	prefixQuery := strings.Join(prefixTokens, " ")
+	result = strings.Join(wrappedTokens, " AND ")
+
+	for i, phrase := range phrases {
+		placeholder := fmt.Sprintf("\x00PHRASE%d\x00", i)
+		prefixQuery = strings.ReplaceAll(prefixQuery, placeholder, phrase)
+		result = strings.ReplaceAll(result, placeholder, phrase)
+	}
+
+	// Degradation is evaluated on the prefix form: ftsQueryDegraded treats
+	// leading-( tokens as punctuated-word groups and would never flag wrapped ones.
+	return result, ftsQueryDegraded(userInput, prefixQuery)
+}
+
+// ftsColumn pairs an FTS5 column name with its BM25 relevance weight.
+type ftsColumn struct {
+	Name   string
+	Weight float64
+}
+
+// ftsColumnDefs defines FTS5 columns and their BM25 relevance weights.
+// The order MUST match the column order in the FTS5 table definition (see migrations).
+// All columns are both searched and ranked. When adding indexed-but-not-searched
+// columns in the future, use Weight: 0 to exclude from the search column filter.
+var ftsColumnDefs = map[string][]ftsColumn{
+	"media_file": {
+		{"title", 10.0},
+		{"album", 5.0},
+		{"artist", 3.0},
+		{"album_artist", 3.0},
+		{"sort_title", 1.0},
+		{"sort_album_name", 1.0},
+		{"sort_artist_name", 1.0},
+		{"sort_album_artist_name", 1.0},
+		{"disc_subtitle", 1.0},
+		{"search_participants", 2.0},
+		{"search_normalized", 1.0},
+	},
+	"album": {
+		{"name", 10.0},
+		{"sort_album_name", 1.0},
+		{"album_artist", 3.0},
+		{"search_participants", 2.0},
+		{"discs", 1.0},
+		{"catalog_num", 1.0},
+		{"album_version", 1.0},
+		{"search_normalized", 1.0},
+	},
+	"artist": {
+		{"name", 10.0},
+		{"sort_artist_name", 1.0},
+		// Same weight as name: for artists this column is purely the name in
+		// alternate spelling (unlike media_file/album, where it mixes
+		// title/album/artist variants and full weight would distort ranking).
+		{"search_normalized", 10.0},
+	},
+}
+
+// ftsColumnFilters and ftsBM25Weights are precomputed from ftsColumnDefs at init time
+// to avoid per-query allocations.
+var (
+	ftsColumnFilters = map[string]string{}
+	ftsBM25Weights   = map[string]string{}
+)
+
+func init() {
+	for table, cols := range ftsColumnDefs {
+		var names []string
+		weights := make([]string, len(cols))
+		for i, c := range cols {
+			if c.Weight > 0 {
+				names = append(names, c.Name)
+			}
+			weights[i] = fmt.Sprintf("%.1f", c.Weight)
+		}
+		ftsColumnFilters[table] = "{" + strings.Join(names, " ") + "}"
+		ftsBM25Weights[table] = strings.Join(weights, ", ")
+	}
+}
+
+// ftsSearch implements searchStrategy using FTS5 full-text search with BM25 ranking.
+type ftsSearch struct {
+	tableName string
+	ftsTable  string
+	matchExpr string
+	rankExpr  string
+}
+
+// ToSql returns a single-query fallback for the REST filter path (no two-phase split).
+func (s *ftsSearch) ToSql() (string, []any, error) {
+	sql := s.tableName + ".rowid IN (SELECT rowid FROM " + s.ftsTable + " WHERE " + s.ftsTable + " MATCH ?)"
+	return sql, []any{s.matchExpr}, nil
+}
+
+// execute runs a two-phase FTS5 search (see executeTwoPhase): Phase 1 here contributes the
+// FTS MATCH join and BM25 rank ordering. Complex ORDER BY (function calls, aggregations) are
+// dropped from Phase 1.
+func (s *ftsSearch) execute(r sqlRepository, sq SelectBuilder, dest any, cfg searchConfig, options model.QueryOptions) error {
+	qualifiedOrderBys := []string{s.rankExpr}
+	for _, ob := range cfg.OrderBy {
+		if qualified := qualifyOrderBy(s.tableName, ob); qualified != "" {
+			qualifiedOrderBys = append(qualifiedOrderBys, qualified)
+		}
+	}
+
+	rowidCore := Select(s.tableName+".rowid").
+		From(s.tableName).
+		Join(s.ftsTable+" ON "+s.ftsTable+".rowid = "+s.tableName+".rowid AND "+s.ftsTable+" MATCH ?", s.matchExpr).
+		OrderBy(qualifiedOrderBys...)
+	return r.executeTwoPhase(sq, dest, rowidCore, cfg, options)
+}
+
+// qualifyOrderBy prepends tableName to a simple column name. Returns empty string for
+// complex expressions (function calls, aggregations) that can't be used in Phase 1.
+func qualifyOrderBy(tableName, orderBy string) string {
+	orderBy = strings.TrimSpace(orderBy)
+	if orderBy == "" || strings.ContainsAny(orderBy, "(,") {
+		return ""
+	}
+	parts := strings.Fields(orderBy)
+	if !strings.Contains(parts[0], ".") {
+		parts[0] = tableName + "." + parts[0]
+	}
+	return strings.Join(parts, " ")
+}
+
+// ftsQueryDegraded returns true when the FTS query lost significant discriminating
+// content compared to the original input. This happens when special characters that
+// are part of the entity name (e.g., "1+", "C++", "!!!", "C#") get stripped by FTS
+// tokenization, leaving only very short/broad tokens. Also detects quoted phrases
+// that would be degraded by FTS5's unicode61 tokenizer (e.g., "1+" → token "1").
+func ftsQueryDegraded(original, ftsQuery string) bool {
+	original = strings.TrimSpace(original)
+	if original == "" || ftsQuery == "" {
+		return false
+	}
+	// Strip quotes from original for comparison — we want the raw content
+	stripped := strings.ReplaceAll(original, `"`, "")
+	// Extract the alphanumeric content from the original query
+	alphaNum := str.FTSPunctStrip.ReplaceAllString(stripped, "")
+	// If the original is entirely alphanumeric, nothing was stripped — not degraded
+	if len(alphaNum) == len(stripped) {
+		return false
+	}
+	// Check if all effective FTS tokens are very short (≤2 chars).
+	// Short tokens with prefix matching are too broad when special chars were stripped.
+	// For quoted phrases, extract the content and check the tokens inside.
+	tokens := strings.FieldsSeq(ftsQuery)
+	for t := range tokens {
+		t = strings.TrimSuffix(t, "*")
+		// Skip internal phrase placeholders
+		if strings.HasPrefix(t, "\x00") {
+			return false
+		}
+		// For OR groups from processPunctuatedWords (e.g., ("a ha" OR aha*)),
+		// the punctuated word was already handled meaningfully — not degraded.
+		if strings.HasPrefix(t, "(") {
+			return false
+		}
+		// For quoted phrases, check the tokens inside as FTS5 will tokenize them
+		if strings.HasPrefix(t, `"`) {
+			// Extract content between quotes
+			inner := strings.Trim(t, `"`)
+			innerAlpha := str.FTSPunctStrip.ReplaceAllString(inner, " ")
+			for it := range strings.FieldsSeq(innerAlpha) {
+				if len(it) > 2 {
+					return false
+				}
+			}
+			continue
+		}
+		if len(t) > 2 {
+			return false
+		}
+	}
+	return true
+}
+
+// newFTSSearch creates an FTS5 search strategy. Falls back to LIKE search if the
+// query produces no FTS tokens (e.g., punctuation-only like "!!!!!!!") or if FTS
+// tokenization stripped significant content from the query (e.g., "1+" → "1*").
+// Returns nil when the query produces no searchable tokens at all.
+func newFTSSearch(tableName, query string) searchStrategy {
+	q, degraded := buildFTS5Query(query)
+	if q == "" || degraded {
+		// Fallback: try LIKE search with the raw query
+		cleaned := strings.TrimSpace(strings.ReplaceAll(query, `"`, ""))
+		if cleaned != "" {
+			log.Trace("Search using LIKE fallback for non-tokenizable query", "table", tableName, "query", cleaned)
+			return newLikeSearch(tableName, cleaned)
+		}
+		return nil
+	}
+	ftsTable := tableName + "_fts"
+	matchExpr := q
+	if cols, ok := ftsColumnFilters[tableName]; ok {
+		matchExpr = cols + " : (" + q + ")"
+	}
+
+	rankExpr := ftsTable + ".rank"
+	if weights, ok := ftsBM25Weights[tableName]; ok {
+		rankExpr = "bm25(" + ftsTable + ", " + weights + ")"
+	}
+
+	s := &ftsSearch{
+		tableName: tableName,
+		ftsTable:  ftsTable,
+		matchExpr: matchExpr,
+		rankExpr:  rankExpr,
+	}
+	log.Trace("Search using FTS5 backend", "table", tableName, "query", q, "filter", s)
+	return s
+}
