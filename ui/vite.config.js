@@ -37,6 +37,7 @@ export default defineConfig(({ command }) => {
             'offline.html',
             'manifest.webmanifest',
             'android-chrome-*.png',
+            'bragi*.webp',
             'assets/**/*.{js,css,woff,woff2,ttf,eot}',
           ],
           // index.html is rendered per-user by the server, so a precached copy
