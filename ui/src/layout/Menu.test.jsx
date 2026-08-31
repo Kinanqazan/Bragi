@@ -121,7 +121,7 @@ describe('<Menu />', () => {
     )
 
     expect(screen.getByText('Bragi')).toBeInTheDocument()
-    expect(screen.getByAltText('Bragi')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bragi')).toBeInTheDocument()
     expect(screen.getByLabelText('Collapse sidebar')).toBeInTheDocument()
   })
 

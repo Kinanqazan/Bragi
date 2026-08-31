@@ -40,7 +40,7 @@ import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount'
 import ExitToAppIcon from '@material-ui/icons/ExitToApp'
 import MenuOpenIcon from '@material-ui/icons/MenuOpen'
 import MenuIcon from '@material-ui/icons/Menu'
-import Logo from '../icons/android-icon-192x192.png'
+import BragiLogo from '../icons/BragiLogo'
 import { VscSync } from 'react-icons/vsc'
 import { GiMagnifyingGlass } from 'react-icons/gi'
 import { BiError, BiMessageError } from 'react-icons/bi'
@@ -129,13 +129,13 @@ const useStyles = makeStyles((theme) => {
     brandLogo: {
       width: 28,
       height: 28,
-      borderRadius: 7,
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+      color: theme.palette.primary.main,
+      filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
     },
     brandLogoSmall: {
       width: 28,
       height: 28,
-      borderRadius: 7,
+      color: theme.palette.primary.main,
       transition: 'transform 0.2s ease',
       '&:hover': {
         transform: 'scale(1.08)',
@@ -714,7 +714,7 @@ const Menu = ({ dense = false }) => {
               role="button"
               tabIndex={0}
             >
-              <img src={Logo} alt="Bragi" className={classes.brandLogo} />
+              <BragiLogo className={classes.brandLogo} />
               <Typography className={classes.brandTitle}>Bragi</Typography>
             </div>
             <Tooltip title="Collapse sidebar">
@@ -737,7 +737,7 @@ const Menu = ({ dense = false }) => {
                 onClick={() => dispatch(toggleSidebar())}
                 aria-label="Expand sidebar"
               >
-                <img src={Logo} alt="Bragi" className={classes.brandLogoSmall} />
+                <BragiLogo className={classes.brandLogoSmall} />
               </IconButton>
             </Tooltip>
           </div>

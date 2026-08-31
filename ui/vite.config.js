@@ -37,6 +37,7 @@ export default defineConfig(({ command }) => {
             'offline.html',
             'manifest.webmanifest',
             'android-chrome-*.png',
+            'favicon*.svg',
             'bragi*.webp',
             'assets/**/*.{js,css,woff,woff2,ttf,eot}',
           ],

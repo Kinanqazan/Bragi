@@ -15,7 +15,7 @@ import {
   useTranslate,
   useVersion,
 } from 'react-admin'
-import Logo from '../icons/android-icon-192x192.png'
+import BragiLogo from '../icons/BragiLogo'
 
 import Notification from './Notification'
 import useCurrentTheme from '../themes/useCurrentTheme'
@@ -51,6 +51,7 @@ const useStyles = makeStyles(
       backgroundColor: 'transparent',
       width: '6.3em',
       height: '6.3em',
+      color: theme.palette.primary.main,
     },
     systemName: {
       marginTop: '1em',
@@ -122,7 +123,7 @@ const FormLogin = ({ loading, handleSubmit, validate }) => {
           <div className={classes.main}>
             <Card className={classes.card}>
               <div className={classes.avatar}>
-                <img src={Logo} className={classes.icon} alt={'logo'} />
+                <BragiLogo className={classes.icon} />
               </div>
               <div className={classes.systemName}>
                 <a
@@ -254,7 +255,7 @@ const FormSignUp = ({ loading, handleSubmit, validate }) => {
           <div className={classes.main}>
             <Card className={classes.card}>
               <div className={classes.avatar}>
-                <img src={Logo} className={classes.icon} alt={'logo'} />
+                <BragiLogo className={classes.icon} />
               </div>
               <div className={classes.welcome}>
                 {translate('ra.auth.welcome1')}
