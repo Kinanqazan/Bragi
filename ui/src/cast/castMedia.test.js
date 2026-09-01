@@ -34,6 +34,7 @@ describe('resolveCastMedia', () => {
     expect(subsonic.streamUrl).toHaveBeenCalledWith('song-1', {
       format: 'mp3',
       maxBitRate: 320,
+      estimateContentLength: true,
     })
     expect(media.url).toContain('/rest/stream')
     expect(media.url).toContain('format=mp3')

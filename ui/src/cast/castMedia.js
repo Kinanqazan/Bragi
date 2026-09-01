@@ -37,7 +37,11 @@ export const toCastReceiverUrl = (url) => {
 
 const mp3Media = (trackId) => ({
   url: toCastReceiverUrl(
-    subsonic.streamUrl(trackId, { format: 'mp3', maxBitRate: 320 }),
+    subsonic.streamUrl(trackId, {
+      format: 'mp3',
+      maxBitRate: 320,
+      estimateContentLength: true,
+    }),
   ),
   contentType: 'audio/mpeg',
 })

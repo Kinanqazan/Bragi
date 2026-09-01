@@ -398,10 +398,15 @@ export const createCastPlaybackTarget = ({
       Number.isFinite(remotePlayer.currentTime)
         ? remotePlayer.currentTime
         : state.currentTime
-    const duration =
-      receiverStatus?.contentMatches && Number.isFinite(remotePlayer.duration)
+    const remoteDuration =
+      receiverStatus?.contentMatches &&
+      Number.isFinite(remotePlayer.duration) &&
+      remotePlayer.duration > 0
         ? remotePlayer.duration
-        : state.duration
+        : null
+    const trackDuration =
+      Number(currentTrack?.duration || currentTrack?.song?.duration) || 0
+    const duration = remoteDuration || trackDuration || state.duration
     const playing = Boolean(
       receiverStatus?.playing ||
       (receiverStatus?.contentMatches &&
@@ -441,14 +446,20 @@ export const createCastPlaybackTarget = ({
       }
       if (recoveredReceiverFailureOperation !== loadOperation) {
         recoveredReceiverFailureOperation = loadOperation
+        // Retry the load on Cast before giving up. By this point the
+        // server has very likely cached the transcode, so the next
+        // attempt will serve a seekable file that Cast handles reliably.
+        // If this retry also fails, loadTrack's own catch block will
+        // call onSessionError which falls back to local playback.
+        const retryTrack = currentTrack
+        const retryPosition = currentTime
+        const retryAutoplay = previousPlaying
         Promise.resolve()
           .then(() =>
-            onSessionError?.(receiverFailure, {
-              track: currentTrack,
-              autoplay: previousPlaying,
-              position: currentTime,
-              mediaUrl: currentMedia.url,
-              contentType: currentMedia.contentType,
+            loadTrack(retryTrack, {
+              autoplay: retryAutoplay,
+              position: retryPosition,
+              index: currentIndex,
             }),
           )
           .catch(() => undefined)
@@ -542,6 +553,8 @@ export const createCastPlaybackTarget = ({
     loggedReceiverFailure = null
     recoveredReceiverFailureOperation = null
     currentIndex = Number.isInteger(index) ? index : Math.max(0, currentIndex)
+    const trackDuration =
+      Number(track?.duration || track?.song?.duration) || 0
     state = {
       ...state,
       currentTrack,
@@ -549,7 +562,7 @@ export const createCastPlaybackTarget = ({
       playing: false,
       loading: true,
       currentTime: position,
-      duration: 0,
+      duration: trackDuration,
       buffered: 0,
       error: null,
     }
@@ -577,6 +590,9 @@ export const createCastPlaybackTarget = ({
       mediaInfo.streamType =
         chromeCast.cast.media.StreamType?.BUFFERED || 'BUFFERED'
       mediaInfo.metadata = createMusicMetadata(track, chromeCast)
+      if (trackDuration > 0) {
+        mediaInfo.duration = trackDuration
+      }
 
       const request = new chromeCast.cast.media.LoadRequest(mediaInfo)
       request.autoplay = Boolean(autoplay)
@@ -770,9 +786,12 @@ export const createCastPlaybackTarget = ({
       currentTime: Number.isFinite(remotePlayer.currentTime)
         ? remotePlayer.currentTime
         : state.currentTime,
-      duration: Number.isFinite(remotePlayer.duration)
-        ? remotePlayer.duration
-        : state.duration,
+      duration:
+        (Number.isFinite(remotePlayer.duration) && remotePlayer.duration > 0
+          ? remotePlayer.duration
+          : null) ||
+        Number(track?.duration || track?.song?.duration) ||
+        state.duration,
       error: null,
     }
     syncFromRemote()
@@ -877,9 +896,13 @@ export const createCastPlaybackTarget = ({
     ) {
       return state.currentTime
     }
-    const duration = Number.isFinite(remotePlayer.duration)
-      ? remotePlayer.duration
-      : Infinity
+    const duration =
+      (Number.isFinite(remotePlayer.duration) && remotePlayer.duration > 0
+        ? remotePlayer.duration
+        : null) ||
+      Number(currentTrack?.duration || currentTrack?.song?.duration) ||
+      state.duration ||
+      Infinity
     const nextTime = clamp(Number(seconds) || 0, 0, duration)
     remotePlayer.currentTime = nextTime
     controller.seek?.()

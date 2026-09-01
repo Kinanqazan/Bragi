@@ -25,6 +25,14 @@ if (Test-Path (Join-Path $portableGoBin 'go.exe')) {
     $env:GOROOT = Join-Path $projectRoot 'tmp\go-portable-1.26.7\go'
 }
 
+$portableFfmpegPath = Join-Path $projectRoot 'tmp\ffmpeg'
+if (Test-Path $portableFfmpegPath) {
+    $ffmpegExe = Get-ChildItem -Path $portableFfmpegPath -Filter 'ffmpeg.exe' -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($ffmpegExe) {
+        $env:PATH = "$($ffmpegExe.DirectoryName);$env:PATH"
+    }
+}
+
 # Keep the development compiler cache inside the project. This avoids stale or
 # locked entries in a user-wide Go cache when the script is restarted quickly.
 $env:GOCACHE = Join-Path $projectRoot 'tmp\go-build-cache'
