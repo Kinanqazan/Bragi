@@ -189,8 +189,11 @@ const MobileBottomNav = () => {
 
     // Keep Songs as the single root below the bottom-tab layer so Android Back
     // never has to replay every tab the user opened.
-    history.replace('/song')
-    history.push(item.path)
+    if (location.pathname === '/song' || location.pathname === '/song/') {
+      history.push(item.path)
+    } else {
+      history.replace(item.path)
+    }
     hasBottomTabLayer.current = true
   }
 

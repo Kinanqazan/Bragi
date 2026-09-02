@@ -67,6 +67,7 @@ const renderSurface = (
     seek: vi.fn(),
     setVolume: vi.fn(),
   },
+  onClear = vi.fn(),
 ) => {
   const bridge = {
     snapshot: {
@@ -88,7 +89,7 @@ const renderSurface = (
         queue={[]}
         expanded={isExpanded}
         onExpandedChange={onExpandedChange}
-        onClear={vi.fn()}
+        onClear={onClear}
       />
     </ThemeProvider>
   )
@@ -97,6 +98,7 @@ const renderSurface = (
   return {
     ...view,
     onExpandedChange,
+    onClear,
     rerenderSurface: (isExpanded) => view.rerender(surface(isExpanded)),
   }
 }
@@ -437,5 +439,104 @@ describe('MobilePlayerSurface gestures', () => {
     expect(getVerticalSwipeOffset(start, { clientX: 180, clientY: 150 })).toBe(
       0,
     )
+  })
+
+  it('closes the mini player after a downward swipe', () => {
+    const onExpandedChange = vi.fn()
+    const onClear = vi.fn()
+    renderSurface(onExpandedChange, false, undefined, onClear)
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+
+    dispatchPointer(mini, 'pointerdown', {
+      pointerId: 20,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 200,
+    })
+    dispatchPointer(mini, 'pointermove', {
+      pointerId: 20,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 260,
+    })
+
+    expect(mini.style.transform).toBe('translate3d(0, 60px, 0) scale(1)')
+    expect(mini.style.opacity).toBe('0.75')
+
+    dispatchPointer(mini, 'pointerup', {
+      pointerId: 20,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 260,
+    })
+
+    expect(mini.style.transition).toContain('cubic-bezier')
+    expect(mini.style.transform).toContain('calc(100% + 120px')
+    expect(mini.style.opacity).toBe('0')
+    expect(onClear).not.toHaveBeenCalled()
+
+    dispatchPointer(mini, 'transitionend', { propertyName: 'transform' })
+
+    expect(onClear).toHaveBeenCalledTimes(1)
+    expect(onExpandedChange).not.toHaveBeenCalled()
+  })
+
+  it('resets the mini player without closing when downward drag is below threshold', () => {
+    const onClear = vi.fn()
+    renderSurface(vi.fn(), false, undefined, onClear)
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+
+    dispatchPointer(mini, 'pointerdown', {
+      pointerId: 21,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 200,
+    })
+    dispatchPointer(mini, 'pointermove', {
+      pointerId: 21,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 220,
+    })
+
+    expect(mini.style.transform).toBe('translate3d(0, 20px, 0) scale(1)')
+
+    dispatchPointer(mini, 'pointerup', {
+      pointerId: 21,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 220,
+    })
+
+    expect(mini.style.transform).toBe('translate3d(0, 0%, 0) scale(1)')
+    expect(mini.style.opacity).toBe('1')
+    expect(onClear).not.toHaveBeenCalled()
+  })
+
+  it('cancels downward mini player drag on pointercancel without closing', () => {
+    const onClear = vi.fn()
+    renderSurface(vi.fn(), false, undefined, onClear)
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+
+    dispatchPointer(mini, 'pointerdown', {
+      pointerId: 22,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 200,
+    })
+    dispatchPointer(mini, 'pointermove', {
+      pointerId: 22,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 250,
+    })
+    dispatchPointer(mini, 'pointercancel', {
+      pointerId: 22,
+      pointerType: 'touch',
+    })
+
+    expect(mini.style.transform).toBe('translate3d(0, 0%, 0) scale(1)')
+    expect(mini.style.opacity).toBe('1')
+    expect(onClear).not.toHaveBeenCalled()
   })
 })

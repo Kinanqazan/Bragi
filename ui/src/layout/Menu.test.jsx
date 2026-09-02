@@ -226,12 +226,38 @@ describe('<Menu />', () => {
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText(/transcoding/i)).toBeInTheDocument()
     expect(screen.getByText('About')).toBeInTheDocument()
+    expect(screen.getByText('Refresh App')).toBeInTheDocument()
     expect(screen.getByText('Logout')).toBeInTheDocument()
 
     // Trigger full scan from inside popover
     const fullScanButton = screen.getByText('Full Scan')
     fireEvent.click(fullScanButton)
     expect(subsonic.startScan).toHaveBeenCalledWith({ fullScan: true })
+  })
+
+  it('triggers window.location.reload when Refresh App is clicked', () => {
+    const reloadMock = vi.fn()
+    const originalLocation = window.location
+    delete window.location
+    window.location = { ...originalLocation, reload: reloadMock }
+    try {
+      render(
+        <Provider store={store}>
+          <MemoryRouter>
+            <Menu />
+          </MemoryRouter>
+        </Provider>,
+      )
+
+      const userCard = screen.getByLabelText('User profile & system settings')
+      fireEvent.click(userCard)
+
+      const refreshItem = screen.getByText('Refresh App')
+      fireEvent.click(refreshItem)
+      expect(reloadMock).toHaveBeenCalled()
+    } finally {
+      window.location = originalLocation
+    }
   })
 
   it('renders collapsed avatar button when sidebar is closed', () => {

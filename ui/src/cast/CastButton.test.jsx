@@ -82,4 +82,41 @@ describe('CastButton', () => {
       warnSpy.mockRestore()
     }
   })
+
+  it('re-enables the button when a session request times out', async () => {
+    mockedCastState.connected = false
+    mockedRequestCastSession.mockRejectedValue({ code: 'TIMEOUT' })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      render(<CastButton />)
+      const button = screen.getByRole('button', { name: /cast to device/i })
+
+      fireEvent.click(button)
+
+      await waitFor(() => expect(button).not.toBeDisabled())
+      expect(warnSpy).toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('safely unlocks the button if the request hangs beyond the safety timer', async () => {
+    vi.useFakeTimers()
+    try {
+      mockedCastState.connected = false
+      mockedRequestCastSession.mockReturnValue(new Promise(() => {}))
+
+      render(<CastButton />)
+      const button = screen.getByRole('button', { name: /cast to device/i })
+
+      fireEvent.click(button)
+      expect(button).toBeDisabled()
+
+      vi.advanceTimersByTime(12500)
+      expect(button).not.toBeDisabled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

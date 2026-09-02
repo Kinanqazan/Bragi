@@ -5,11 +5,27 @@ import { REST_URL } from '../consts'
 const dataProvider = jsonServerProvider(REST_URL, httpClient)
 
 // Lists are the expensive part of changing tabs on a remote/mobile client.
-// Keep the cache deliberately small and short-lived; mutations and refresh
-// events clear it immediately.
+// Keep dynamic lists short-lived (30s), but keep static facet resources (genres, tags/moods)
+// cached longer (15 minutes) so tab navigation is instant (0ms).
 const LIST_CACHE_TTL_MS = 30 * 1000
+const FACET_CACHE_TTL_MS = 15 * 60 * 1000
+const MAX_LIST_CACHE_SIZE = 60
+const facetResources = new Set(['genre', 'tag'])
 const cacheableResources = new Set(['album', 'song', 'artist', 'genre', 'tag'])
 const listCache = new Map()
+
+const pruneExpiredOrOverflow = () => {
+  const now = Date.now()
+  for (const [k, entry] of listCache) {
+    if (entry.expiresAt <= now) {
+      listCache.delete(k)
+    }
+  }
+  while (listCache.size >= MAX_LIST_CACHE_SIZE) {
+    const oldestKey = listCache.keys().next().value
+    listCache.delete(oldestKey)
+  }
+}
 
 const clearListCache = () => {
   listCache.clear()
@@ -33,7 +49,12 @@ const cachedGetList = (resource, params, request) => {
     key = `${identity}:${resource}`
   }
   const cached = listCache.get(key)
-  if (cached && cached.expiresAt > Date.now()) return cached.value
+  if (cached && cached.expiresAt > Date.now()) {
+    // Refresh insertion order (LRU)
+    listCache.delete(key)
+    listCache.set(key, cached)
+    return cached.value
+  }
 
   let pending
   try {
@@ -44,9 +65,12 @@ const cachedGetList = (resource, params, request) => {
   } catch (err) {
     return Promise.reject(err)
   }
+  const ttl = facetResources.has(resource) ? FACET_CACHE_TTL_MS : LIST_CACHE_TTL_MS
+  pruneExpiredOrOverflow()
+  listCache.delete(key)
   listCache.set(key, {
     value: pending,
-    expiresAt: Date.now() + LIST_CACHE_TTL_MS,
+    expiresAt: Date.now() + ttl,
   })
   return pending
 }

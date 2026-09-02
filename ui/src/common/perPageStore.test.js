@@ -23,8 +23,8 @@ describe('perPageStore', () => {
     expect(getStoredPerPage()).toEqual(50)
   })
 
-  it('returns the default 10 when nothing is stored', () => {
-    expect(getStoredPerPage()).toEqual(10)
+  it('returns the default 25 when nothing is stored', () => {
+    expect(getStoredPerPage()).toEqual(25)
   })
 
   it('returns the fallback for garbage values', () => {
@@ -37,8 +37,12 @@ describe('perPageStore', () => {
     expect(getStoredPerPage([18, 36, 72], 18)).toEqual(18)
   })
 
-  it('defaults the fallback to the first option', () => {
-    expect(getStoredPerPage(defaultRowsPerPageOptions)).toEqual(10)
+  it('defaults the fallback to 25 when using default options', () => {
+    expect(getStoredPerPage(defaultRowsPerPageOptions)).toEqual(25)
+  })
+
+  it('defaults the fallback to the first option when custom options do not include 25', () => {
+    expect(getStoredPerPage([18, 36, 72])).toEqual(18)
   })
 })
 

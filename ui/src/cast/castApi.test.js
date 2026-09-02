@@ -153,4 +153,75 @@ describe('Cast sender SDK loading', () => {
     expect(castContext.endCurrentSession).toHaveBeenCalledWith(true)
     expect(localStorage.getItem('navidrome.cast.sessionId')).toBeNull()
   })
+
+  it('rejects with TIMEOUT when castContext.requestSession hangs', async () => {
+    const castContext = {
+      addEventListener: vi.fn(),
+      getCastState: () => 'NOT_CONNECTED',
+      getCurrentSession: () => null,
+      getSessionState: () => 'NO_SESSION',
+      setOptions: vi.fn(),
+      requestSession: vi.fn(() => new Promise(() => {})),
+    }
+    window.cast = {
+      framework: {
+        CastContext: { getInstance: () => castContext },
+        RemotePlayer: class RemotePlayer {},
+        RemotePlayerController: class RemotePlayerController {},
+        CastContextEventType: {},
+      },
+    }
+    window.chrome = {
+      cast: {
+        AutoJoinPolicy: { ORIGIN_SCOPED: 'ORIGIN_SCOPED' },
+        media: { DEFAULT_MEDIA_RECEIVER_APP_ID: 'CC1AD845' },
+      },
+    }
+
+    vi.resetModules()
+    castApi = await import('./castApi')
+    await castApi.initializeCast()
+
+    await expect(castApi.requestCastSession(50)).rejects.toMatchObject({
+      code: 'TIMEOUT',
+    })
+  })
+
+  it('discards an expired session from localStorage (>24h)', async () => {
+    localStorage.setItem('navidrome.cast.sessionId', 'old-session-id')
+    localStorage.setItem(
+      'navidrome.cast.sessionTimestamp',
+      String(Date.now() - 1000 * 60 * 60 * 25), // 25 hours ago
+    )
+    const requestSessionById = vi.fn()
+    const castContext = {
+      addEventListener: vi.fn(),
+      getCastState: () => 'NOT_CONNECTED',
+      getCurrentSession: () => null,
+      getSessionState: () => 'NO_SESSION',
+      setOptions: vi.fn(),
+    }
+    window.cast = {
+      framework: {
+        CastContext: { getInstance: () => castContext },
+        RemotePlayer: class RemotePlayer {},
+        RemotePlayerController: class RemotePlayerController {},
+        CastContextEventType: {},
+      },
+    }
+    window.chrome = {
+      cast: {
+        AutoJoinPolicy: { ORIGIN_SCOPED: 'ORIGIN_SCOPED' },
+        media: { DEFAULT_MEDIA_RECEIVER_APP_ID: 'CC1AD845' },
+        requestSessionById,
+      },
+    }
+
+    vi.resetModules()
+    castApi = await import('./castApi')
+    await castApi.initializeCast()
+
+    expect(requestSessionById).not.toHaveBeenCalled()
+    expect(localStorage.getItem('navidrome.cast.sessionId')).toBeNull()
+  })
 })

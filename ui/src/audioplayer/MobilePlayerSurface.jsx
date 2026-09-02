@@ -236,10 +236,46 @@ const MobilePlayerSurface = ({
     settle.current = null
     clearSettleTimer()
     setLayerTransition('none')
+    if (activeSettle.dismiss) {
+      onClear?.()
+      return
+    }
     applyProgress(activeSettle.target)
     if (activeSettle.notify) {
       onExpandedChange?.(activeSettle.target === 1)
     }
+  }
+
+  const settleDismiss = (velocityY = 0) => {
+    clearSettleTimer()
+    settle.current = { dismiss: true }
+    const duration = Math.min(240, getSwipeTransitionDuration(0, 0.5, velocityY))
+    const transition = `transform ${duration}ms ${snapEasing}, opacity ${duration}ms ${snapEasing}`
+    if (miniRef.current) {
+      miniRef.current.style.transition = transition
+      miniRef.current.style.transform =
+        'translate3d(0, calc(100% + 120px + env(safe-area-inset-bottom, 0px)), 0)'
+      miniRef.current.style.opacity = '0'
+      miniRef.current.style.pointerEvents = 'none'
+    }
+    settleTimer.current = window.setTimeout(finishSettle, duration + 40)
+  }
+
+  const settleMiniReset = () => {
+    clearSettleTimer()
+    settle.current = null
+    const duration = 200
+    const transition = `transform ${duration}ms ${snapEasing}, opacity ${duration}ms ${snapEasing}`
+    if (miniRef.current) {
+      miniRef.current.style.transition = transition
+      miniRef.current.style.transform = 'translate3d(0, 0%, 0) scale(1)'
+      miniRef.current.style.opacity = '1'
+      miniRef.current.style.pointerEvents = 'auto'
+    }
+    settleTimer.current = window.setTimeout(() => {
+      clearSettleTimer()
+      setLayerTransition('none')
+    }, duration + 40)
   }
 
   const settleTo = (target, velocityY = 0, notify = false) => {
@@ -282,6 +318,7 @@ const MobilePlayerSurface = ({
       velocityY: 0,
       startProgress,
       opening: startProgress < 0.5,
+      mode: null,
       moved: false,
       themeColorSynced: false,
     }
@@ -301,6 +338,28 @@ const MobilePlayerSurface = ({
     gesture.velocityY = (event.clientY - gesture.lastY) / elapsed
     gesture.lastY = event.clientY
     gesture.lastTime = now
+
+    if (!gesture.mode && Math.abs(deltaY) > gestureIntentThreshold) {
+      if (gesture.startProgress < 0.5) {
+        gesture.mode = deltaY < 0 ? 'expand' : 'dismiss'
+      } else {
+        gesture.mode = deltaY > 0 ? 'collapse' : null
+      }
+    }
+
+    if (gesture.mode === 'dismiss') {
+      const isCorrectDirection = deltaY > 0
+      if (isCorrectDirection && Math.abs(deltaY) >= swipeThreshold) {
+        gesture.moved = true
+      }
+      const dragY = Math.max(0, deltaY)
+      if (miniRef.current) {
+        miniRef.current.style.transition = 'none'
+        miniRef.current.style.transform = `translate3d(0, ${dragY}px, 0) scale(1)`
+        miniRef.current.style.opacity = `${Math.max(0, 1 - dragY / 240)}`
+      }
+      return
+    }
 
     const isCorrectDirection = gesture.opening ? deltaY < 0 : deltaY > 0
     if (
@@ -331,6 +390,19 @@ const MobilePlayerSurface = ({
     swipe.current = null
     if (!gesture) return
 
+    if (gesture.mode === 'dismiss') {
+      const deltaY = getVerticalSwipeOffset(gesture, event)
+      const passedThreshold = gesture.moved || deltaY >= swipeThreshold
+      if (passedThreshold) {
+        event?.preventDefault?.()
+        settleDismiss(gesture.velocityY)
+      } else {
+        event?.preventDefault?.()
+        settleMiniReset()
+      }
+      return
+    }
+
     if (!gesture.moved) {
       // Leave taps on controls to those controls. Settling the layer here can
       // race the browser's synthesized click on the first tap after opening
@@ -351,7 +423,7 @@ const MobilePlayerSurface = ({
     // Prevent the browser from synthesizing a click for the element where the
     // swipe ended. A shell-wide click guard can also swallow the first real
     // control click after the transition completes.
-    event.preventDefault()
+    event?.preventDefault?.()
     settleTo(target, gesture.velocityY, target !== (gesture.opening ? 0 : 1))
   }
 
@@ -365,6 +437,10 @@ const MobilePlayerSurface = ({
       return
     swipe.current = null
     if (gesture) {
+      if (gesture.mode === 'dismiss') {
+        settleMiniReset()
+        return
+      }
       const target = gesture.opening ? 0 : 1
       setThemeColorActive(target === 1)
       settleTo(target)
@@ -398,6 +474,7 @@ const MobilePlayerSurface = ({
     onPointerMove: handlePointerMove,
     onPointerUp: handlePointerUp,
     onPointerCancel: handlePointerCancel,
+    onTransitionEnd: handleTransitionEnd,
   }
 
   return (

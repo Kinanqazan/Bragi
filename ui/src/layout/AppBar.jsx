@@ -242,14 +242,17 @@ const MobileTopBar = () => {
       clearTimeout(debounceTimerRef.current)
     }
 
-    if (value === '') {
+    const trimmed = value.trim()
+    if (trimmed === '') {
       // Immediate reset when input is cleared or backspaced to empty
       applySearchFilter('')
     } else {
-      // 200ms debounce while typing
+      // Smart debounce: 400ms for 1-character input to give time for 2nd character;
+      // 300ms for normal typing.
+      const delay = trimmed.length === 1 ? 400 : 300
       debounceTimerRef.current = setTimeout(() => {
         applySearchFilter(value)
-      }, 200)
+      }, delay)
     }
   }
 

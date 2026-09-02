@@ -38,6 +38,7 @@ import InfoOutlinedIcon from '@material-ui/icons/InfoOutlined'
 import PersonIcon from '@material-ui/icons/Person'
 import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount'
 import ExitToAppIcon from '@material-ui/icons/ExitToApp'
+import RefreshIcon from '@material-ui/icons/Refresh'
 import MenuOpenIcon from '@material-ui/icons/MenuOpen'
 import MenuIcon from '@material-ui/icons/Menu'
 import BragiLogo from '../icons/BragiLogo'
@@ -643,6 +644,11 @@ const Menu = ({ dense = false }) => {
     })
   }
 
+  const handleReloadApp = () => {
+    handleCloseMenu()
+    window.location.reload()
+  }
+
   const lastScanType = (() => {
     switch (scanStatus.scanType) {
       case 'full':
@@ -1144,6 +1150,19 @@ const Menu = ({ dense = false }) => {
             </ListItemIcon>
             <ListItemText
               primary={translate('menu.about', { _: 'About' })}
+              classes={{ primary: classes.popoverMenuText }}
+            />
+          </MenuItem>
+
+          <MenuItem
+            className={classes.popoverMenuItem}
+            onClick={handleReloadApp}
+          >
+            <ListItemIcon className={classes.popoverMenuIcon}>
+              <RefreshIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={translate('menu.refresh', { _: 'Refresh App' })}
               classes={{ primary: classes.popoverMenuText }}
             />
           </MenuItem>

@@ -165,8 +165,16 @@ func buildFTS5Query(userInput string) (string, bool) {
 			prefixTokens[i], wrappedTokens[i] = t, t
 			continue
 		}
-		prefixTokens[i] = t + "*"
-		wrappedTokens[i] = "(" + t + " OR " + t + "*)"
+		// For single-token single-character queries (e.g. "a"), do not expand to a* prefix
+		// wildcard. In FTS5, a single-letter prefix wildcard matches almost every word across
+		// all indexed columns, causing multi-second table scans and massive result sets.
+		if len(tokens) == 1 && len(t) < 2 {
+			prefixTokens[i] = t
+			wrappedTokens[i] = t
+		} else {
+			prefixTokens[i] = t + "*"
+			wrappedTokens[i] = "(" + t + " OR " + t + "*)"
+		}
 	}
 
 	// Use explicit AND between tokens — FTS5's implicit AND (space-separated)

@@ -18,9 +18,13 @@ import {
   CardContent,
   Divider,
   Typography,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import AccountCircle from '@material-ui/icons/AccountCircle'
+import RefreshIcon from '@material-ui/icons/Refresh'
 import config from '../config'
 import authProvider from '../authProvider'
 import { startEventStream } from '../eventStream'
@@ -70,6 +74,10 @@ const UserMenu = (props) => {
 
   const handleMenu = (event) => setAnchorEl(event.currentTarget)
   const handleClose = () => setAnchorEl(null)
+  const handleReload = () => {
+    handleClose()
+    window.location.reload()
+  }
 
   return (
     <div className={classes.user}>
@@ -122,6 +130,14 @@ const UserMenu = (props) => {
                 })
               : null,
           )}
+          <MenuItem onClick={handleReload}>
+            <ListItemIcon style={{ minWidth: 36 }}>
+              <RefreshIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={translate('menu.refresh', { _: 'Refresh App' })}
+            />
+          </MenuItem>
           {(!config.auth || !!config.extAuthLogoutURL) && logout}
         </MenuList>
       </Popover>

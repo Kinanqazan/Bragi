@@ -170,7 +170,7 @@ const inspectReceiverMedia = (
   }
 }
 
-const receiverFailureFrom = (status) => {
+const receiverFailureFrom = (status, { previousPlaying = false } = {}) => {
   if (
     !status.contentMatches ||
     status.playerState !== 'IDLE' ||
@@ -181,6 +181,13 @@ const receiverFailureFrom = (status) => {
   }
 
   const reason = String(status.idleReason).toUpperCase()
+  if (
+    !previousPlaying &&
+    (reason === 'CANCELLED' || reason === 'INTERRUPTED')
+  ) {
+    return null
+  }
+
   const error = new Error(`Cast receiver became idle: ${reason}`)
   error.code = `RECEIVER_${reason}`
   error.idleReason = reason
@@ -417,7 +424,7 @@ export const createCastPlaybackTarget = ({
       ? remotePlayer.volumeLevel
       : state.volume
     const receiverFailure = receiverStatus
-      ? receiverFailureFrom(receiverStatus)
+      ? receiverFailureFrom(receiverStatus, { previousPlaying })
       : null
     const finished = Boolean(
       receiverStatus?.contentMatches &&
@@ -847,12 +854,27 @@ export const createCastPlaybackTarget = ({
   }
 
   const play = () => {
+    if (destroyed) return Promise.resolve(false)
     const remoteStatus = getRemoteStatus()
     if (
-      destroyed ||
       !remoteStatus.mediaLoaded ||
-      !remoteStatus.contentMatches
+      !remoteStatus.contentMatches ||
+      state.error
     ) {
+      if (currentTrack) {
+        state = { ...state, error: null }
+        notify()
+        return loadTrack(currentTrack, {
+          autoplay: true,
+          position: state.currentTime,
+          index: currentIndex,
+        })
+      }
+      if (queue.length) {
+        state = { ...state, error: null }
+        notify()
+        return loadTrack(queue[0], { autoplay: true, index: 0 })
+      }
       return Promise.resolve(false)
     }
     if (remoteStatus.playing) return Promise.resolve(true)

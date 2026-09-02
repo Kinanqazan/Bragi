@@ -1,7 +1,10 @@
 const CAST_SENDER_SDK_URL =
   'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'
 const CAST_SDK_TIMEOUT_MS = 10000
+const CAST_REQUEST_TIMEOUT_MS = 10000
 const CAST_SESSION_STORAGE_KEY = 'navidrome.cast.sessionId'
+const CAST_SESSION_TIMESTAMP_KEY = 'navidrome.cast.sessionTimestamp'
+const MAX_SESSION_AGE_MS = 1000 * 60 * 60 * 24 // 24 hours
 
 const initialState = {
   available: false,
@@ -66,7 +69,9 @@ const getSessionId = (session) => session?.getSessionId?.() || ''
 const rememberCastSession = (sessionId) => {
   if (!sessionId) return
   try {
-    getSessionStorage()?.setItem(CAST_SESSION_STORAGE_KEY, sessionId)
+    const storage = getSessionStorage()
+    storage?.setItem(CAST_SESSION_STORAGE_KEY, sessionId)
+    storage?.setItem(CAST_SESSION_TIMESTAMP_KEY, String(Date.now()))
   } catch {
     // Storage can be disabled in private browsing or by a browser policy.
   }
@@ -74,7 +79,9 @@ const rememberCastSession = (sessionId) => {
 
 const forgetCastSession = () => {
   try {
-    getSessionStorage()?.removeItem(CAST_SESSION_STORAGE_KEY)
+    const storage = getSessionStorage()
+    storage?.removeItem(CAST_SESSION_STORAGE_KEY)
+    storage?.removeItem(CAST_SESSION_TIMESTAMP_KEY)
   } catch {
     // Storage can be disabled in private browsing or by a browser policy.
   }
@@ -131,15 +138,26 @@ const resumeRememberedCastSession = () => {
   if (castContext?.getCurrentSession?.()) return
 
   const sessionId = getRememberedCastSession()
+  const storage = getSessionStorage()
+  const timestamp = Number(storage?.getItem(CAST_SESSION_TIMESTAMP_KEY) || 0)
+  if (!sessionId || (timestamp && Date.now() - timestamp > MAX_SESSION_AGE_MS)) {
+    forgetCastSession()
+    return
+  }
+
   const requestSessionById = getWindow()?.chrome?.cast?.requestSessionById
-  if (!sessionId || typeof requestSessionById !== 'function') return
+  if (typeof requestSessionById !== 'function') return
 
   try {
-    const result = requestSessionById(sessionId)
+    const onSessionError = () => {
+      if (getRememberedCastSession() === sessionId) forgetCastSession()
+    }
+    const result =
+      requestSessionById.length > 1
+        ? requestSessionById(sessionId, () => {}, onSessionError)
+        : requestSessionById(sessionId)
     if (result && typeof result.catch === 'function') {
-      result.catch(() => {
-        if (getRememberedCastSession() === sessionId) forgetCastSession()
-      })
+      result.catch(onSessionError)
     }
   } catch {
     if (getRememberedCastSession() === sessionId) forgetCastSession()
@@ -315,7 +333,7 @@ export const initializeCast = () => {
   return initializationPromise
 }
 
-export const requestCastSession = async () => {
+export const requestCastSession = async (timeoutMs = CAST_REQUEST_TIMEOUT_MS) => {
   // A new explicit user request starts a fresh lifecycle even if a previous
   // end request has not emitted its final SESSION_ENDED event yet.
   explicitStopRequested = false
@@ -323,7 +341,26 @@ export const requestCastSession = async () => {
     const initialized = await initializeCast()
     if (!initialized) throw new Error(state.error || 'Cast unavailable')
   }
-  return castContext.requestSession()
+
+  if (!state.connected && getRememberedCastSession()) {
+    forgetCastSession()
+  }
+
+  let timerId
+  const timeoutPromise = new Promise((_, reject) => {
+    timerId = setTimeout(() => {
+      const err = new Error('Cast session request timed out')
+      err.code = 'TIMEOUT'
+      reject(err)
+    }, timeoutMs)
+  })
+
+  try {
+    const requestPromise = Promise.resolve(castContext.requestSession())
+    return await Promise.race([requestPromise, timeoutPromise])
+  } finally {
+    clearTimeout(timerId)
+  }
 }
 
 export const endCastSession = (stopCasting = true) => {
@@ -361,5 +398,23 @@ export const getCastRuntime = () => {
   return {
     framework: currentWindow.cast.framework,
     chrome: currentWindow.chrome,
+  }
+}
+
+export const handleCastWakeUp = () => {
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+    return
+  }
+  if (castContext) {
+    syncState()
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', handleCastWakeUp)
+  window.addEventListener('focus', handleCastWakeUp)
+  window.addEventListener('online', handleCastWakeUp)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleCastWakeUp)
   }
 }

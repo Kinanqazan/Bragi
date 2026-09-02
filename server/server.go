@@ -236,7 +236,13 @@ func (s *Server) frontendAssetsHandler() http.Handler {
 	r := chi.NewRouter()
 
 	r.Handle("/", Index(s.ds, ui.BuildAssets()))
-	r.Handle("/*", http.StripPrefix(s.appRoot, http.FileServer(http.FS(ui.BuildAssets()))))
+	fileServer := http.StripPrefix(s.appRoot, http.FileServer(http.FS(ui.BuildAssets())))
+	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if strings.Contains(req.URL.Path, "/assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		fileServer.ServeHTTP(w, req)
+	}))
 	return r
 }
 

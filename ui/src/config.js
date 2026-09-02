@@ -22,7 +22,7 @@ const defaultConfig = {
   defaultTheme: 'Dark',
   defaultLanguage: '',
   defaultUIVolume: 100,
-  uiSearchDebounceMs: 200,
+  uiSearchDebounceMs: 300,
   uiCoverArtSize: 600,
   enableUserEditing: true,
   enableArtworkUpload: true,

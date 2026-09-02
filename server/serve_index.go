@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/navidrome/navidrome/conf"
@@ -29,16 +31,25 @@ func IndexWithShare(ds model.DataStore, fs fs.FS, shareInfo *model.Share) http.H
 }
 
 // Injects the config in the `index.html` template
-func serveIndex(ds model.DataStore, fs fs.FS, shareInfo *model.Share) http.HandlerFunc {
+func serveIndex(ds model.DataStore, fsys fs.FS, shareInfo *model.Share) http.HandlerFunc {
+	var (
+		tplOnce   sync.Once
+		cachedTpl *template.Template
+		tplErr    error
+	)
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := ds.User(r.Context()).CountAll()
-		firstTime := c == 0 && err == nil
-
-		t, err := getIndexTemplate(r, fs)
-		if err != nil {
+		tplOnce.Do(func() {
+			cachedTpl, tplErr = parseIndexTemplate(fsys)
+		})
+		if tplErr != nil {
+			log.Error(r, "Could not parse `index.html` template", tplErr)
 			http.NotFound(w, r)
 			return
 		}
+		t := cachedTpl
+
+		c, err := ds.User(r.Context()).CountAll()
+		firstTime := c == 0 && err == nil
 		appConfig := map[string]any{
 			"version":                   consts.Version,
 			"firstTime":                 firstTime,
@@ -117,22 +128,20 @@ func serveIndex(ds model.DataStore, fs fs.FS, shareInfo *model.Share) http.Handl
 	}
 }
 
-func getIndexTemplate(r *http.Request, fs fs.FS) (*template.Template, error) {
+func parseIndexTemplate(fsys fs.FS) (*template.Template, error) {
 	t := template.New("initial state")
-	indexHtml, err := fs.Open("index.html")
+	indexHtml, err := fsys.Open("index.html")
 	if err != nil {
-		log.Error(r, "Could not find `index.html` template", err)
-		return nil, err
+		return nil, fmt.Errorf("could not find `index.html` template: %w", err)
 	}
+	defer indexHtml.Close()
 	indexStr, err := io.ReadAll(indexHtml)
 	if err != nil {
-		log.Error(r, "Could not read from `index.html`", err)
-		return nil, err
+		return nil, fmt.Errorf("could not read from `index.html`: %w", err)
 	}
 	t, err = t.Parse(string(indexStr))
 	if err != nil {
-		log.Error(r, "Error parsing `index.html`", err)
-		return nil, err
+		return nil, fmt.Errorf("error parsing `index.html`: %w", err)
 	}
 	return t, nil
 }

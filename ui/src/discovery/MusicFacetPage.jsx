@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 import {
   Avatar,
   Card,
   CardActionArea,
   CardContent,
-  LinearProgress,
   Typography,
 } from '@material-ui/core'
+import Skeleton from '@material-ui/lab/Skeleton'
 import { alpha, makeStyles } from '@material-ui/core/styles'
 import CategoryOutlinedIcon from '@material-ui/icons/CategoryOutlined'
 import ChevronRightRoundedIcon from '@material-ui/icons/ChevronRightRounded'
@@ -187,6 +187,29 @@ const useStyles = makeStyles((theme) => ({
   },
 }))
 
+const FacetCardSkeleton = ({ classes }) => (
+  <Card className={classes.card} style={{ pointerEvents: 'none' }}>
+    <CardContent className={classes.content}>
+      <div className={classes.leftGroup}>
+        <Skeleton
+          variant="rect"
+          className={classes.avatar}
+          style={{ borderRadius: 10 }}
+        />
+        <Skeleton variant="text" width="60%" height={22} />
+      </div>
+      <div className={classes.rightGroup}>
+        <Skeleton
+          variant="rect"
+          width={28}
+          height={18}
+          style={{ borderRadius: 10 }}
+        />
+      </div>
+    </CardContent>
+  </Card>
+)
+
 export const MusicFacetPage = ({ kind }) => {
   const classes = useStyles()
   const isMood = kind === 'mood'
@@ -208,7 +231,29 @@ export const MusicFacetPage = ({ kind }) => {
     [data, ids],
   )
 
-  if (loading && items.length === 0) return <LinearProgress />
+  // Retain last known items for this tab so re-visiting renders immediately
+  const cachedItemsRef = useRef([])
+  if (items.length > 0) {
+    cachedItemsRef.current = items
+  }
+  const displayItems = items.length > 0 ? items : cachedItemsRef.current
+
+  if (loading && displayItems.length === 0) {
+    return (
+      <main className={classes.root}>
+        <div className={classes.heading}>
+          <Typography className={classes.title} component="h1">
+            {title}
+          </Typography>
+        </div>
+        <div className={classes.grid}>
+          {Array.from({ length: 12 }).map((_, index) => (
+            <FacetCardSkeleton key={index} classes={classes} />
+          ))}
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className={classes.root}>
@@ -217,12 +262,12 @@ export const MusicFacetPage = ({ kind }) => {
           {title}
         </Typography>
         <span className={classes.badge}>
-          {items.length} {items.length === 1 ? 'item' : 'items'}
+          {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'}
         </span>
       </div>
-      {items.length > 0 ? (
+      {displayItems.length > 0 ? (
         <div className={classes.grid}>
-          {items.map((item) => {
+          {displayItems.map((item) => {
             const displayName = item.tagValue || item.name || ''
             const count =
               item.songCount ??

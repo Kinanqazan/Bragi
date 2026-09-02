@@ -40,10 +40,10 @@ describe('useAlbumsPerPage', () => {
     expect(result.current[0]).toEqual(50)
   })
 
-  it('returns the default 10 when nothing is stored', () => {
+  it('returns the default 25 when nothing is stored', () => {
     setReduxPerPage(undefined)
     const { result } = renderHook(() => useAlbumsPerPage())
-    expect(result.current).toEqual([10, [10, 25, 50, 100]])
+    expect(result.current).toEqual([25, [10, 25, 50, 100]])
   })
 
   it('ignores an invalid redux value and falls back to stored', () => {

@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
+import { ReactReduxContext } from 'react-redux'
+import { showNotification } from 'react-admin'
 import {
   IconButton,
   ListItemIcon,
@@ -77,6 +79,23 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
   const castState = useCastState()
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [requesting, setRequesting] = useState(false)
+  const safetyTimerRef = useRef(null)
+  const reduxContext = useContext(ReactReduxContext)
+
+  const notify = React.useCallback(
+    (message, type = 'info') => {
+      if (reduxContext?.store?.dispatch) {
+        reduxContext.store.dispatch(showNotification(message, type))
+      }
+    },
+    [reduxContext],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!castState.connected) setMenuAnchor(null)
@@ -93,6 +112,11 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
     }
 
     setRequesting(true)
+    if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
+    safetyTimerRef.current = setTimeout(() => {
+      setRequesting(false)
+    }, 12000)
+
     try {
       // Keep the request inside the click handler so device discovery retains
       // the sender SDK's user-gesture permission.
@@ -102,9 +126,21 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
       if (!isCastRequestCancelled(code)) {
         // eslint-disable-next-line no-console
         console.warn('[Navidrome Cast] Session request failed', { code })
+        if (code === 'TIMEOUT') {
+          notify(
+            'Cast request timed out. Make sure your Cast device is on the same Wi-Fi.',
+            'warning',
+          )
+        } else if (code === 'NO_DEVICES_AVAILABLE') {
+          notify('No Cast devices found on this network.', 'warning')
+        }
       }
       // The button remains usable so a transient discovery failure can retry.
     } finally {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current)
+        safetyTimerRef.current = null
+      }
       setRequesting(false)
     }
   }

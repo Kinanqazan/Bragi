@@ -6,14 +6,22 @@ export const getStoredPerPage = (
   fallbackVal,
 ) => {
   let options = defaultRowsPerPageOptions
-  let fallback = 10
+  let fallback = 25
 
   if (Array.isArray(resourceOrOptions)) {
     options = resourceOrOptions
-    if (typeof optionsOrFallback === 'number') fallback = optionsOrFallback
+    if (typeof optionsOrFallback === 'number') {
+      fallback = optionsOrFallback
+    } else {
+      fallback = options.includes(25) ? 25 : options[0]
+    }
   } else if (Array.isArray(optionsOrFallback)) {
     options = optionsOrFallback
-    if (typeof fallbackVal === 'number') fallback = fallbackVal
+    if (typeof fallbackVal === 'number') {
+      fallback = fallbackVal
+    } else {
+      fallback = options.includes(25) ? 25 : options[0]
+    }
   } else if (typeof resourceOrOptions === 'number') {
     fallback = resourceOrOptions
   }

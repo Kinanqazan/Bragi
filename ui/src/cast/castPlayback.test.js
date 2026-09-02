@@ -1458,4 +1458,41 @@ describe('createCastPlaybackTarget', () => {
     expect(seekResult).toBe(45)
     expect(fake.controller().player.currentTime).toBe(45)
   })
+
+  it('reloads the track when play() is called while media is not loaded or in error state', async () => {
+    const fake = createFakeRuntime()
+    const session = {
+      getCastDevice: () => ({ friendlyName: 'Living Room TV' }),
+      loadMedia: vi.fn(async (request) => {
+        const player = fake.controller().player
+        player.isMediaLoaded = true
+        player.isPaused = !request.autoplay
+        player.playerState = request.autoplay ? 'PLAYING' : 'PAUSED'
+        player.currentTime = request.currentTime || 0
+        player.duration = 180
+        fake.controller().emit()
+      }),
+    }
+    const target = createCastPlaybackTarget({
+      runtime: fake.runtime,
+      getSession: () => session,
+      resolveMedia: () =>
+        Promise.resolve({
+          url: 'https://server.test/song.mp3',
+          contentType: 'audio/mpeg',
+        }),
+      mediaLoadTimeoutMs: 500,
+    })
+
+    await target.setQueue([track], 0, { autoplay: false })
+    expect(session.loadMedia).toHaveBeenCalledTimes(1)
+
+    // Simulate media being unloaded / idle on the remote player
+    fake.controller().player.isMediaLoaded = false
+    fake.controller().player.playerState = 'IDLE'
+
+    // Calling play() (which is what Retry triggers) should reload the track
+    await target.play()
+    expect(session.loadMedia).toHaveBeenCalledTimes(2)
+  })
 })
