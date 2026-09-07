@@ -11,7 +11,7 @@ const LIST_CACHE_TTL_MS = 30 * 1000
 const FACET_CACHE_TTL_MS = 15 * 60 * 1000
 const MAX_LIST_CACHE_SIZE = 60
 const facetResources = new Set(['genre', 'tag'])
-const cacheableResources = new Set(['album', 'song', 'artist', 'genre', 'tag'])
+const cacheableResources = new Set(['album', 'song', 'artist', 'genre', 'tag', 'playlist'])
 const listCache = new Map()
 
 const pruneExpiredOrOverflow = () => {

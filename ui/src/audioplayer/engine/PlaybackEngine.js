@@ -10,8 +10,8 @@ import {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
-export const STREAM_RESOLUTION_TIMEOUT_MS = 10000
-export const PLAYBACK_START_TIMEOUT_MS = 10000
+export const STREAM_RESOLUTION_TIMEOUT_MS = 15000
+export const PLAYBACK_START_TIMEOUT_MS = 30000
 
 const resolveWithTimeout = (
   resolver,
@@ -225,7 +225,7 @@ export const createPlaybackEngine = ({
       update({ playing: false, loading: false })
       return
     }
-    loadTrack(nextIndex, { autoplay: true, skipStopped: true })
+    loadTrack(nextIndex, { autoplay: true, skipStopped: true, fromEnded: true })
   }
 
   const eventHandlers = {
@@ -249,7 +249,7 @@ export const createPlaybackEngine = ({
 
   const loadTrack = async (
     index,
-    { autoplay = false, skipStopped = false } = {},
+    { autoplay = false, skipStopped = false, fromEnded = false } = {},
   ) => {
     if (destroyed || !queue[index]) return false
     const track = queue[index]
@@ -270,7 +270,7 @@ export const createPlaybackEngine = ({
     queuePolicy.setQueue(queue.length, index)
     startReportedForLoad = null
     if (state.playing) state = { ...state, playing: false }
-    adapter.pause()
+    if (!autoplay || !fromEnded) adapter.pause()
     update({
       currentTrack: track,
       currentIndex: index,
@@ -305,6 +305,7 @@ export const createPlaybackEngine = ({
       }
 
       if (destroyed || operation !== loadId) return false
+      adapter.pause()
       adapter.src = url
       adapter.load()
       const shouldAutoplay = playbackIntent && operation === loadId

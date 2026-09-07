@@ -11,7 +11,7 @@ import {
 import { alpha, makeStyles } from '@material-ui/core/styles'
 import clsx from 'clsx'
 import { MdCast, MdPhoneAndroid } from 'react-icons/md'
-import { endCastSession, requestCastSession } from './castApi'
+import { endCastSession, initializeCast, requestCastSession } from './castApi'
 import { getCastErrorCode } from './castDiagnostics'
 import { useCastState } from './useCastState'
 
@@ -111,11 +111,21 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
       return
     }
 
+    if (castState.initialized === false && !castState.connected) {
+      if (castState.error) {
+        notify(castState.error, 'warning')
+        return
+      }
+      notify('Initializing Cast, please tap again in a moment...', 'info')
+      initializeCast().catch(() => undefined)
+      return
+    }
+
     setRequesting(true)
     if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current)
     safetyTimerRef.current = setTimeout(() => {
       setRequesting(false)
-    }, 12000)
+    }, 10000)
 
     try {
       // Keep the request inside the click handler so device discovery retains

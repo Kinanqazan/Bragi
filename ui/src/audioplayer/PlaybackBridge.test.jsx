@@ -10,6 +10,9 @@ import { usePlaybackBridge } from './PlaybackBridge'
 const mockedResolveStreamUrl = vi.hoisted(() =>
   vi.fn((id) => Promise.resolve(`stream:${id}`)),
 )
+const mockedPrefetchDecisions = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve()),
+)
 const mockedCastState = vi.hoisted(() => ({
   initialized: false,
   connected: false,
@@ -28,6 +31,7 @@ vi.mock('../transcode', () => ({
   decisionService: {
     resolveStreamUrl: mockedResolveStreamUrl,
     setProfile: vi.fn(),
+    prefetchDecisions: mockedPrefetchDecisions,
   },
   detectBrowserProfile: vi.fn(() => 'test-profile'),
 }))

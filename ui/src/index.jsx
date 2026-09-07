@@ -3,6 +3,9 @@ import './index.css'
 import App from './App'
 import { registerSW } from 'virtual:pwa-register'
 import { unregisterNonDevelopmentWorkers } from './serviceWorkerRegistration'
+import { initializeCast } from './cast/castApi'
+
+initializeCast().catch(() => undefined)
 
 const devPwaEnabled = import.meta.env.VITE_ENABLE_DEV_PWA === 'true'
 

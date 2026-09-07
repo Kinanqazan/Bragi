@@ -10,6 +10,7 @@ workbox.setConfig({
   debug: false,
 })
 
+
 workbox.loadModule('workbox-core')
 workbox.loadModule('workbox-strategies')
 workbox.loadModule('workbox-routing')
@@ -49,14 +50,17 @@ const navigationHandler = createNavigationHandler(
 // self.__WB_MANIFEST is default injection point
 workbox.precaching.precacheAndRoute(self.__WB_MANIFEST)
 
-// Cache artwork and cover images using StaleWhileRevalidate
+// Cache artwork and cover images using CacheFirst.
+// Navidrome artwork URLs are content-versioned (via imageHash or updatedAt timestamp).
+// CacheFirst serves cached images directly from storage with 0ms network overhead,
+// preventing dozens of redundant background requests from saturating Tailscale/remote tunnels.
 workbox.routing.registerRoute(
   ({ request, url }) =>
     request.destination === 'image' ||
     url.pathname.includes('getCoverArt') ||
     url.pathname.includes('getAvatar') ||
     url.pathname.includes('/rest/getCoverArt'),
-  new workbox.strategies.StaleWhileRevalidate({
+  new workbox.strategies.CacheFirst({
     cacheName: 'navidrome-artwork-cache',
   }),
 )
@@ -65,4 +69,3 @@ workbox.routing.registerRoute(
 workbox.routing.registerRoute(
   new workbox.routing.NavigationRoute(navigationHandler),
 )
-
