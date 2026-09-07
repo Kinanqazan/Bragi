@@ -842,7 +842,7 @@ const Menu = ({ dense = false }) => {
               )}
               <div className={classes.userNameWrapper}>
                 <Typography className={classes.userName}>
-                  {loaded && identity?.fullName ? identity.fullName : 'Navidrome'}
+                  {loaded && identity?.fullName ? identity.fullName : 'Bragi'}
                 </Typography>
                 <Typography className={classes.userRole}>
                   {permissions === 'admin' ? 'Administrator' : 'User'}
@@ -964,7 +964,7 @@ const Menu = ({ dense = false }) => {
           )}
           <div className={classes.popoverUserInfo}>
             <Typography className={classes.popoverUserName}>
-              {loaded && identity?.fullName ? identity.fullName : 'Navidrome'}
+              {loaded && identity?.fullName ? identity.fullName : 'Bragi'}
             </Typography>
             <Typography className={classes.popoverUserRole}>
               {permissions === 'admin' ? 'Administrator' : 'User'}

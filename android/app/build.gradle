@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace "org.bragi.app"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "org.bragi.app"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("../android.keystore")
+            storePassword "bragipassword"
+            keyAlias "bragi"
+            keyPassword "bragipassword"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core:1.15.0'
+    implementation 'com.google.android.gms:play-services-cast-framework:21.5.0'
+    implementation 'androidx.mediarouter:mediarouter:1.7.0'
+}

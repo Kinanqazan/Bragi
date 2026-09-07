@@ -52,3 +52,10 @@ zz_*_test.go
 /tests/fixtures/artist/Jazz, Blues, Roots & R&B/
 /tests/fixtures/test_songs files/
 /tests/fixtures/test_songs*/
+
+# Android TWA build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+

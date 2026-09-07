@@ -27,7 +27,17 @@ const listeners = new Set()
 
 const getWindow = () => (typeof window === 'undefined' ? undefined : window)
 
+export const isNativeCastAvailable = () => {
+  const currentWindow = getWindow()
+  try {
+    return Boolean(currentWindow?.BragiNative?.hasNativeCast?.())
+  } catch {
+    return false
+  }
+}
+
 const hasCastFramework = () => {
+  if (isNativeCastAvailable()) return true
   const currentWindow = getWindow()
   return Boolean(
     currentWindow?.cast?.framework?.CastContext &&
@@ -173,6 +183,7 @@ export const subscribeCastState = (listener) => {
 }
 
 export const loadCastSenderSdk = () => {
+  if (isNativeCastAvailable()) return Promise.resolve(true)
   if (hasCastFramework()) return Promise.resolve(true)
   if (sdkPromise) return sdkPromise
 
@@ -258,6 +269,39 @@ const initializeCastOnce = async () => {
     return true
   }
 
+  const currentWindow = getWindow()
+  if (isNativeCastAvailable()) {
+    const isConnected = Boolean(currentWindow.BragiNative.isCastConnected?.())
+    const deviceName = currentWindow.BragiNative.getCastDeviceName?.() || ''
+    state = {
+      ...state,
+      available: true,
+      initialized: true,
+      error: null,
+      castState: isConnected ? 'CONNECTED' : 'NOT_CONNECTED',
+      sessionState: isConnected ? 'SESSION_STARTED' : 'NO_SESSION',
+      connected: isConnected,
+      deviceName,
+    }
+    currentWindow.__bragiNativeCastState = (nativeState) => {
+      const connected = Boolean(nativeState?.connected)
+      state = {
+        ...state,
+        available: true,
+        initialized: true,
+        error: null,
+        castState: connected ? 'CONNECTED' : 'NOT_CONNECTED',
+        sessionState: connected ? 'SESSION_STARTED' : 'SESSION_ENDED',
+        connected,
+        deviceName: nativeState?.deviceName || '',
+        sessionId: nativeState?.sessionId || '',
+      }
+      notify()
+    }
+    notify()
+    return true
+  }
+
   const available = await loadCastSenderSdk()
   if (!available) {
     state = {
@@ -268,7 +312,6 @@ const initializeCastOnce = async () => {
     return false
   }
 
-  const currentWindow = getWindow()
   const framework = currentWindow.cast.framework
   const chromeCast = currentWindow.chrome.cast
 
@@ -337,6 +380,13 @@ export const requestCastSession = async (timeoutMs = CAST_REQUEST_TIMEOUT_MS) =>
   // A new explicit user request starts a fresh lifecycle even if a previous
   // end request has not emitted its final SESSION_ENDED event yet.
   explicitStopRequested = false
+
+  const currentWindow = getWindow()
+  if (isNativeCastAvailable()) {
+    currentWindow.BragiNative.requestCastSession()
+    return true
+  }
+
   if (!castContext) {
     const initialized = await initializeCast()
     if (!initialized) throw new Error(state.error || 'Cast unavailable')
@@ -367,6 +417,13 @@ export const endCastSession = (stopCasting = true) => {
   // An explicit stop must not be automatically rejoined after a refresh.
   explicitStopRequested = true
   forgetCastSession()
+
+  const currentWindow = getWindow()
+  if (isNativeCastAvailable()) {
+    currentWindow.BragiNative.endCastSession()
+    return Promise.resolve(true)
+  }
+
   const result = castContext?.endCurrentSession?.(stopCasting)
   if (result && typeof result.then === 'function') {
     return Promise.resolve(result).then(

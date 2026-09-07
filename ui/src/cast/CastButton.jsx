@@ -11,7 +11,7 @@ import {
 import { alpha, makeStyles } from '@material-ui/core/styles'
 import clsx from 'clsx'
 import { MdCast, MdPhoneAndroid } from 'react-icons/md'
-import { endCastSession, initializeCast, requestCastSession } from './castApi'
+import { endCastSession, requestCastSession } from './castApi'
 import { getCastErrorCode } from './castDiagnostics'
 import { useCastState } from './useCastState'
 
@@ -108,16 +108,6 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
 
     if (castState.connected) {
       setMenuAnchor(event.currentTarget)
-      return
-    }
-
-    if (castState.initialized === false && !castState.connected) {
-      if (castState.error) {
-        notify(castState.error, 'warning')
-        return
-      }
-      notify('Initializing Cast, please tap again in a moment...', 'info')
-      initializeCast().catch(() => undefined)
       return
     }
 

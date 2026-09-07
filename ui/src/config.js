@@ -7,8 +7,7 @@ const defaultConfig = {
   baseURL: '',
   castMediaBaseURL: '',
   variousArtistsId: '63sqASlAfjbGMuLP4JhnZU', // See consts.VariousArtistsID in consts.go
-  // Login backgrounds from https://unsplash.com/collections/1065384/music-wallpapers
-  loginBackgroundURL: 'https://source.unsplash.com/collection/1065384/1600x900',
+  loginBackgroundURL: '',
   maxSidebarPlaylists: 100,
   enableTranscodingConfig: true,
   enableDownloads: true,

@@ -53,7 +53,7 @@ export const updateMediaSessionMetadata = (info) => {
   }
 
   const song = info.song || {}
-  const title = song.title || info.name || info.title || 'Navidrome'
+  const title = song.title || info.name || info.title || 'Bragi'
   const artist = song.artist || song.albumArtist || info.singer || info.artist || ''
   const album = song.album || (info.isRadio ? 'Radio' : '')
 

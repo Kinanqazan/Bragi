@@ -110,13 +110,13 @@ export const Player = () => {
   useEffect(() => {
     if (!currentTrack) {
       clearMediaSessionMetadata()
-      document.title = 'Navidrome'
+      document.title = 'Bragi'
       return
     }
     updateMediaSessionMetadata(currentTrack)
     document.title = currentTrack.title
-      ? `${currentTrack.title} - ${currentTrack.artist || currentTrack.singer || ''} - Navidrome`
-      : 'Navidrome'
+      ? `${currentTrack.title} - ${currentTrack.artist || currentTrack.singer || ''} - Bragi`
+      : 'Bragi'
   }, [currentKey, currentTrack])
 
   useEffect(() => {

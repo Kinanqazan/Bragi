@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1e1e1e">
+
+    <!-- Primary Full-screen Web View -->
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- Google Cast MediaRouteButton (Active anchor for Cast dialog trigger) -->
+    <androidx.mediarouter.app.MediaRouteButton
+        android:id="@+id/media_route_button"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_gravity="top|end"
+        android:alpha="0.01"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="visible" />
+
+    <!-- Loading Indicator -->
+    <ProgressBar
+        android:id="@+id/loading_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:indeterminate="true"
+        android:visibility="gone" />
+
+    <!-- Server Connection Card Overlay -->
+    <LinearLayout
+        android:id="@+id/server_connect_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="28dp"
+        android:background="#1e1e1e">
+
+        <ImageView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_marginBottom="16dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="Bragi Logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bragi"
+            android:textColor="#ffffff"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="32dp"
+            android:text="Connect to your music server"
+            android:textColor="#a0a0a0"
+            android:textSize="14sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/server_input_layout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:hint="Server URL"
+            android:textColorHint="#888888"
+            app:boxStrokeColor="#1976d2"
+            app:boxStrokeWidth="1.5dp"
+            app:hintTextColor="#1976d2">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/server_url_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textUri"
+                android:textColor="#ffffff"
+                android:textSize="16sp"
+                android:singleLine="true"
+                android:text="https://bragi.lan/app/" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/connect_button"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Connect"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#ffffff"
+            app:backgroundTint="#1976d2"
+            app:cornerRadius="8dp" />
+
+        <TextView
+            android:id="@+id/status_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="#ff6b6b"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</FrameLayout>

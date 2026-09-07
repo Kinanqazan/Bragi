@@ -998,3 +998,136 @@ export const createCastPlaybackTarget = ({
     getRemotePlayer: () => remotePlayer,
   }
 }
+
+export const createNativeCastPlaybackTarget = ({
+  onPlaybackEvent,
+  onSessionError,
+  resolveMedia = resolveCastMedia,
+} = {}) => {
+  let destroyed = false
+  const subscribers = new Set()
+  let currentTrack = null
+  let currentIndex = -1
+  let queue = []
+  let state = {
+    currentTrack: null,
+    currentIndex: -1,
+    playing: false,
+    loading: false,
+    currentTime: 0,
+    duration: 0,
+    buffered: 0,
+    volume: 1,
+    mode: 'order',
+    error: null,
+  }
+
+  const notify = () => {
+    if (destroyed) return
+    const snapshot = { ...state }
+    subscribers.forEach((l) => l(snapshot))
+  }
+
+  return {
+    getSnapshot: () => ({ ...state }),
+    subscribe: (listener) => {
+      subscribers.add(listener)
+      listener({ ...state })
+      return () => subscribers.delete(listener)
+    },
+    setQueue: async (nextQueue = [], startIndex = 0, options = {}) => {
+      queue = Array.isArray(nextQueue) ? nextQueue.filter(Boolean) : []
+      if (!queue.length) {
+        currentTrack = null
+        currentIndex = -1
+        state = {
+          ...state,
+          currentTrack: null,
+          currentIndex: -1,
+          playing: false,
+          loading: false,
+        }
+        notify()
+        if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
+        return true
+      }
+      currentIndex = Math.max(0, Math.min(startIndex, queue.length - 1))
+      currentTrack = queue[currentIndex]
+      state = {
+        ...state,
+        currentTrack,
+        currentIndex,
+        playing: Boolean(options.autoplay),
+        loading: true,
+        currentTime: options.position || 0,
+        duration:
+          Number(currentTrack.duration || currentTrack.song?.duration) || 0,
+        error: null,
+      }
+      notify()
+
+      if (options.autoplay) onPlaybackEvent?.('starting', options.position || 0)
+
+      try {
+        const media = await resolveMedia(currentTrack)
+        const meta = currentTrack
+        if (typeof window !== 'undefined') {
+          window?.BragiNative?.loadMedia?.(
+            meta.title || meta.name || '',
+            meta.artist || meta.artistName || '',
+            meta.album || meta.albumName || '',
+            media.url || '',
+            meta.artworkUrl || meta.coverArt || '',
+            options.position || 0,
+            Boolean(options.autoplay),
+          )
+        }
+        state = { ...state, loading: false, playing: Boolean(options.autoplay) }
+        notify()
+        if (options.autoplay) onPlaybackEvent?.('playing', options.position || 0)
+        return true
+      } catch (err) {
+        state = {
+          ...state,
+          loading: false,
+          error: err?.message || 'Cast load failed',
+        }
+        notify()
+        onSessionError?.(err)
+        return false
+      }
+    },
+    play: () => {
+      state = { ...state, playing: true }
+      notify()
+      if (typeof window !== 'undefined') window?.BragiNative?.play?.()
+      onPlaybackEvent?.('playing', state.currentTime)
+      return Promise.resolve(true)
+    },
+    pause: () => {
+      state = { ...state, playing: false }
+      notify()
+      if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
+      onPlaybackEvent?.('paused', state.currentTime)
+      return Promise.resolve(true)
+    },
+    seek: (pos) => {
+      state = { ...state, currentTime: pos }
+      notify()
+      if (typeof window !== 'undefined') window?.BragiNative?.seek?.(pos)
+      return Promise.resolve(true)
+    },
+    stop: () => {
+      state = { ...state, playing: false, loading: false }
+      notify()
+      if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
+      onPlaybackEvent?.('stopped')
+      return Promise.resolve(true)
+    },
+    destroy: () => {
+      destroyed = true
+      subscribers.clear()
+    },
+  }
+}
+

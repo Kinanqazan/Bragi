@@ -426,7 +426,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Thanks for installing Navidrome!",
+      "welcome1": "Thanks for installing Bragi!",
       "welcome2": "To start, create an admin user",
       "confirmPassword": "Confirm Password",
       "buttonCreateAdmin": "Create Admin",
@@ -437,7 +437,7 @@
       "sign_in": "Sign in",
       "sign_in_error": "Authentication failed, please retry",
       "logout": "Logout",
-      "insightsCollectionNote": "Navidrome collects anonymous usage data to\nhelp improve the project. Click [here] to learn\nmore and to opt-out if you want"
+      "insightsCollectionNote": "Bragi collects anonymous usage data to\nhelp improve the project. Click [here] to learn\nmore and to opt-out if you want"
     },
     "validation": {
       "invalidChars": "Please only use letters and numbers",
@@ -578,7 +578,7 @@
     "coverRemoveError": "Error removing cover art",
     "note": "NOTE",
     "transcodingDisabled": "Changing the transcoding configuration through the web interface is disabled for security reasons. If you would like to change (edit or add) transcoding options, restart the server with the %{config} configuration option.",
-    "transcodingEnabled": "Navidrome is currently running with %{config}, making it possible to run system commands from the transcoding settings using the web interface. We recommend to disable it for security reasons and only enable it when configuring Transcoding options.",
+    "transcodingEnabled": "Bragi is currently running with %{config}, making it possible to run system commands from the transcoding settings using the web interface. We recommend to disable it for security reasons and only enable it when configuring Transcoding options.",
     "songsAddedToPlaylist": "Added 1 song to playlist |||| Added %{smart_count} songs to playlist",
     "noSimilarSongsFound": "No similar songs found",
     "startingInstantMix": "Loading Instant Mix...",
@@ -587,14 +587,14 @@
     "delete_user_title": "Delete user '%{name}'",
     "delete_user_content": "Are you sure you want to delete this user and all their data (including playlists and preferences)?",
     "delete_media_file_title": "Permanently delete '%{title}'?",
-    "delete_media_file_content": "This permanently deletes the audio file from storage and removes its Navidrome data, including play counts, ratings, bookmarks, and playlist references. This cannot be undone. File: %{path}",
+    "delete_media_file_content": "This permanently deletes the audio file from storage and removes its Bragi data, including play counts, ratings, bookmarks, and playlist references. This cannot be undone. File: %{path}",
     "mediaFileDeleted": "Music file permanently deleted",
     "remove_missing_title": "Remove missing files",
     "remove_missing_content": "Are you sure you want to remove the selected missing files from the database? This will remove permanently any references to them, including their play counts and ratings.",
     "remove_all_missing_title": "Remove all missing files",
     "remove_all_missing_content": "Are you sure you want to remove all missing files from the database? This will permanently remove any references to them, including their play counts and ratings.",
     "notifications_blocked": "You have blocked Notifications for this site in your browser's settings",
-    "notifications_not_available": "This browser does not support desktop notifications or you are not accessing Navidrome over https",
+    "notifications_not_available": "This browser does not support desktop notifications or you are not accessing Bragi over https",
     "lastfmLinkSuccess": "Last.fm successfully linked and scrobbling enabled",
     "lastfmLinkFailure": "Last.fm could not be linked",
     "lastfmUnlinkSuccess": "Last.fm unlinked and scrobbling disabled",
@@ -696,7 +696,7 @@
     "elapsedTime": "Elapsed Time"
   },
   "help": {
-    "title": "Navidrome Hotkeys",
+    "title": "Bragi Hotkeys",
     "hotkeys": {
       "show_help": "Show This Help",
       "toggle_menu": "Toggle Menu Side Bar",

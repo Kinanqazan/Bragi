@@ -7,8 +7,11 @@ import {
 } from '../actions'
 import subsonic from '../subsonic'
 import { detectBrowserProfile, decisionService } from '../transcode'
-import { endCastSession } from '../cast/castApi'
-import { createCastPlaybackTarget } from '../cast/castPlayback'
+import { endCastSession, isNativeCastAvailable } from '../cast/castApi'
+import {
+  createCastPlaybackTarget,
+  createNativeCastPlaybackTarget,
+} from '../cast/castPlayback'
 import { getCastErrorCode } from '../cast/castDiagnostics'
 import { useCastState } from '../cast/useCastState'
 import { createAudioElementAdapter, createPlaybackEngine } from './engine'
@@ -190,15 +193,27 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
 
     let target
     try {
-      target = createCastPlaybackTarget({
-        onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
-        onSessionError: (error, details) => {
-          recoverLocalFromCast(target, details)
-          Promise.resolve()
-            .then(() => endCastSession(false))
-            .catch(() => undefined)
-        },
-      })
+      if (isNativeCastAvailable()) {
+        target = createNativeCastPlaybackTarget({
+          onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
+          onSessionError: (error, details) => {
+            recoverLocalFromCast(target, details)
+            Promise.resolve()
+              .then(() => endCastSession(false))
+              .catch(() => undefined)
+          },
+        })
+      } else {
+        target = createCastPlaybackTarget({
+          onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
+          onSessionError: (error, details) => {
+            recoverLocalFromCast(target, details)
+            Promise.resolve()
+              .then(() => endCastSession(false))
+              .catch(() => undefined)
+          },
+        })
+      }
     } catch (error) {
       // If the SDK reports ready before its remote-player classes are usable,
       // keep the failure visible instead of silently losing the Cast target.
