@@ -1011,6 +1011,7 @@ export const createNativeCastPlaybackTarget = ({
   let queue = []
   const queuePolicy = createQueuePolicy()
   let loadOperation = 0
+  let mediaLoaded = false
 
   let state = {
     currentTrack: null,
@@ -1097,8 +1098,12 @@ export const createNativeCastPlaybackTarget = ({
         loading: false,
         playing: Boolean(autoplay),
       }
+      mediaLoaded = true
       notify()
-      if (autoplay) report('playing', position)
+      if (autoplay) {
+        startProgressTicker()
+        report('playing', position)
+      }
       return true
     } catch (err) {
       if (destroyed || operation !== loadOperation) return false
@@ -1126,6 +1131,26 @@ export const createNativeCastPlaybackTarget = ({
     return loadTrack(queue[nextIndex], { autoplay, index: nextIndex })
   }
 
+  let progressInterval = null
+  const startProgressTicker = () => {
+    if (progressInterval) return
+    progressInterval = setInterval(() => {
+      if (!state.playing || state.loading) return
+      const duration = state.duration || 0
+      const nextTime = state.currentTime + 1
+      if (duration > 0 && nextTime >= duration) return
+      state = { ...state, currentTime: nextTime }
+      notify()
+    }, 1000)
+  }
+
+  const stopProgressTicker = () => {
+    if (progressInterval) {
+      clearInterval(progressInterval)
+      progressInterval = null
+    }
+  }
+
   // Handle updates from Android RemoteMediaClient
   const handleNativeStatus = ({
     playerState,
@@ -1144,6 +1169,12 @@ export const createNativeCastPlaybackTarget = ({
     let nextPlaying = state.playing
     if (isPlaying) nextPlaying = true
     else if (isPaused || isIdle) nextPlaying = false
+
+    if (nextPlaying) {
+      startProgressTicker()
+    } else {
+      stopProgressTicker()
+    }
 
     const rawVolume =
       typeof volume === 'number' && volume >= 0 ? clamp(volume, 0, 1) : null
@@ -1179,8 +1210,16 @@ export const createNativeCastPlaybackTarget = ({
     if (!currentTrack && queue.length) {
       return loadTrack(queue[0], { autoplay: true, index: 0 })
     }
+    if (currentTrack && !mediaLoaded) {
+      return loadTrack(currentTrack, {
+        autoplay: true,
+        position: state.currentTime,
+        index: currentIndex,
+      })
+    }
     state = { ...state, playing: true }
     notify()
+    startProgressTicker()
     if (typeof window !== 'undefined') window?.BragiNative?.play?.()
     report('playing', state.currentTime)
     return Promise.resolve(true)
@@ -1188,6 +1227,7 @@ export const createNativeCastPlaybackTarget = ({
 
   const pause = () => {
     if (destroyed) return Promise.resolve(false)
+    stopProgressTicker()
     state = { ...state, playing: false }
     notify()
     if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
@@ -1205,8 +1245,10 @@ export const createNativeCastPlaybackTarget = ({
     setQueue: async (nextQueue = [], startIndex = 0, options = {}) => {
       queue = Array.isArray(nextQueue) ? nextQueue.filter(Boolean) : []
       if (!queue.length) {
+        stopProgressTicker()
         currentTrack = null
         currentIndex = -1
+        mediaLoaded = false
         state = {
           ...state,
           currentTrack: null,
@@ -1231,11 +1273,20 @@ export const createNativeCastPlaybackTarget = ({
         currentTrack = nextTrack
         state = { ...state, currentTrack, currentIndex }
         notify()
-        return options.autoplay && !state.playing
-          ? play()
-          : Promise.resolve(true)
+        if (options.autoplay) {
+          if (!mediaLoaded) {
+            return loadTrack(nextTrack, {
+              autoplay: true,
+              position: options.position || 0,
+              index: currentIndex,
+            })
+          }
+          return play()
+        }
+        return Promise.resolve(true)
       }
 
+      mediaLoaded = false
       return loadTrack(nextTrack, {
         autoplay: options.autoplay,
         position: options.position || 0,
@@ -1245,6 +1296,7 @@ export const createNativeCastPlaybackTarget = ({
     adoptSession: (track, { index } = {}) => {
       if (!track) return Promise.resolve(false)
       currentTrack = track
+      mediaLoaded = true
       if (Number.isInteger(index)) {
         currentIndex = index
         queuePolicy.setQueue(queue.length, index)
@@ -1257,6 +1309,7 @@ export const createNativeCastPlaybackTarget = ({
         loading: false,
       }
       notify()
+      startProgressTicker()
       return Promise.resolve(true)
     },
     play,
@@ -1294,6 +1347,7 @@ export const createNativeCastPlaybackTarget = ({
       return state.mode
     },
     stop: () => {
+      stopProgressTicker()
       state = { ...state, playing: false, loading: false }
       notify()
       if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
@@ -1302,6 +1356,7 @@ export const createNativeCastPlaybackTarget = ({
     },
     destroy: () => {
       destroyed = true
+      stopProgressTicker()
       subscribers.clear()
       if (
         typeof window !== 'undefined' &&

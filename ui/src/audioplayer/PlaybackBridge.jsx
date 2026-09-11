@@ -455,12 +455,16 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     window.__bragiTogglePlayback = () => engine?.toggle()
     window.__bragiNextTrack = () => engine?.next()
     window.__bragiPreviousTrack = () => engine?.previous()
+    window.__bragiSeek = (pos) => {
+      if (typeof pos === 'number') engine?.seek(pos)
+    }
 
     return () => {
       window.__bragiNativeVolumeChanged = null
       window.__bragiTogglePlayback = null
       window.__bragiNextTrack = null
       window.__bragiPreviousTrack = null
+      window.__bragiSeek = null
     }
   }, [dispatch, engine])
 
@@ -472,19 +476,27 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     const title = track.title || track.name || ''
     const artist = track.artist || track.artistName || ''
     const album = track.album || track.albumName || ''
-    const artworkUrl = track.artworkUrl || track.coverArt || ''
-    window.BragiNative.updateMetadata(title, artist, album, artworkUrl, Boolean(snapshot.playing))
-  }, [snapshot.currentTrack, snapshot.playing])
+    const artworkUrl = track.cover || track.artworkUrl || track.coverArt || ''
+    const duration = Number(snapshot.duration) || Number(track.duration) || 0
+    const position = Number(snapshot.currentTime) || 0
+    window.BragiNative.updateMetadata(
+      title,
+      artist,
+      album,
+      artworkUrl,
+      Boolean(snapshot.playing),
+      duration,
+      position,
+    )
+  }, [snapshot.currentTrack, snapshot.playing, snapshot.duration])
 
-  // Keep native PlaybackService awake when Casting in background
+  // Keep native PlaybackService active whenever playing
   useEffect(() => {
     if (typeof window === 'undefined' || !window.BragiNative) return
-    if (activeTargetRef.current === 'cast') {
-      if (snapshot.playing) {
-        window.BragiNative.onPlaybackStarted?.()
-      } else {
-        window.BragiNative.onPlaybackStopped?.()
-      }
+    if (snapshot.playing) {
+      window.BragiNative.onPlaybackStarted?.()
+    } else {
+      window.BragiNative.onPlaybackStopped?.()
     }
   }, [snapshot.playing])
 

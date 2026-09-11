@@ -17,12 +17,29 @@ const pathWithoutAppBase = (path) => {
 export const toCastReceiverUrl = (url) => {
   if (!url) return ''
 
-  const senderUrl = new URL(url, window.location.origin)
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+  const senderUrl = new URL(url, origin)
   const receiverBaseValue = String(config.castMediaBaseURL || '').trim()
+
+  const isAppAssets = senderUrl.hostname === 'appassets.androidplatform.net'
+  const serverBase =
+    config.baseURL ||
+    (typeof window !== 'undefined' && window.BragiNative?.getServerUrl?.()) ||
+    (typeof localStorage !== 'undefined' &&
+      localStorage.getItem('bragi_server_url')) ||
+    ''
+
+  if (isAppAssets && serverBase) {
+    const serverUrl = new URL(serverBase)
+    senderUrl.protocol = serverUrl.protocol
+    senderUrl.host = serverUrl.host
+    return senderUrl.href
+  }
 
   // External radio streams already identify their receiver-accessible host.
   // Only rebase URLs belonging to this Navidrome deployment.
-  if (!receiverBaseValue || senderUrl.origin !== window.location.origin) {
+  if (!receiverBaseValue || senderUrl.origin !== origin) {
     return senderUrl.href
   }
 
