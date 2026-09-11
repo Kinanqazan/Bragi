@@ -412,9 +412,69 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       const normalized = Math.min(1, Math.max(0, Number(nextVolume) || 0))
       dispatch(setReduxVolume(normalized))
       engine?.setVolume(normalized * normalized)
+      if (typeof window !== 'undefined' && window.BragiNative?.setVolume) {
+        window.BragiNative.setVolume(normalized)
+      }
     },
     [dispatch, engine],
   )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    // If native Android volume is available on startup, sync Redux volume
+    if (window.BragiNative?.getVolume) {
+      try {
+        const initialNativeVol = Number(window.BragiNative.getVolume())
+        if (Number.isFinite(initialNativeVol) && initialNativeVol >= 0) {
+          dispatch(setReduxVolume(initialNativeVol))
+        }
+      } catch {}
+    }
+
+    // Hardware volume buttons broadcast listener
+    window.__bragiNativeVolumeChanged = (vol) => {
+      const normalized = Math.min(1, Math.max(0, Number(vol) || 0))
+      dispatch(setReduxVolume(normalized))
+      engine?.setVolume(normalized * normalized)
+    }
+
+    // Hardware/notification media action buttons
+    window.__bragiTogglePlayback = () => engine?.toggle()
+    window.__bragiNextTrack = () => engine?.next()
+    window.__bragiPreviousTrack = () => engine?.previous()
+
+    return () => {
+      window.__bragiNativeVolumeChanged = null
+      window.__bragiTogglePlayback = null
+      window.__bragiNextTrack = null
+      window.__bragiPreviousTrack = null
+    }
+  }, [dispatch, engine])
+
+  // Sync notification metadata with native Android PlaybackService
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.BragiNative?.updateMetadata) return
+    const track = snapshot.currentTrack
+    if (!track) return
+    const title = track.title || track.name || ''
+    const artist = track.artist || track.artistName || ''
+    const album = track.album || track.albumName || ''
+    const artworkUrl = track.artworkUrl || track.coverArt || ''
+    window.BragiNative.updateMetadata(title, artist, album, artworkUrl, Boolean(snapshot.playing))
+  }, [snapshot.currentTrack, snapshot.playing])
+
+  // Keep native PlaybackService awake when Casting in background
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.BragiNative) return
+    if (activeTargetRef.current === 'cast') {
+      if (snapshot.playing) {
+        window.BragiNative.onPlaybackStarted?.()
+      } else {
+        window.BragiNative.onPlaybackStopped?.()
+      }
+    }
+  }, [snapshot.playing])
 
   const commands = useMemo(
     () => ({

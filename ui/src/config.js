@@ -54,7 +54,41 @@ try {
     ...appConfig,
   }
 } catch (e) {
-  config = defaultConfig
+  config = { ...defaultConfig }
+}
+
+// Bind native Android server address if running inside APK wrapper
+if (typeof window !== 'undefined') {
+  let nativeServer = ''
+  try {
+    if (window.__BRAGI_SERVER_URL__) {
+      nativeServer = window.__BRAGI_SERVER_URL__
+    } else if (
+      window.BragiNative &&
+      typeof window.BragiNative.getServerUrl === 'function'
+    ) {
+      nativeServer = window.BragiNative.getServerUrl()
+    } else if (localStorage.getItem('bragi_server_url')) {
+      nativeServer = localStorage.getItem('bragi_server_url')
+    }
+  } catch (e) {}
+
+  if (nativeServer) {
+    const cleanUrl = nativeServer.trim().replace(/\/+$/, '')
+    config.baseURL = cleanUrl
+    try {
+      localStorage.setItem('bragi_server_url', cleanUrl)
+    } catch (e) {}
+  }
+}
+
+export const setServerUrl = (url) => {
+  if (!url) return
+  const cleanUrl = url.trim().replace(/\/+$/, '')
+  config.baseURL = cleanUrl
+  try {
+    localStorage.setItem('bragi_server_url', cleanUrl)
+  } catch (e) {}
 }
 
 export let shareInfo

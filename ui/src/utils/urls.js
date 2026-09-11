@@ -1,10 +1,21 @@
 import config from '../config'
 
 export const baseUrl = (path) => {
-  const base = config.baseURL || ''
-  const parts = [base]
-  parts.push(path.replace(/^\//, ''))
-  return parts.join('/')
+  if (!path) return ''
+  if (
+    path.startsWith('http://') ||
+    path.startsWith('https://') ||
+    path.startsWith('blob:') ||
+    path.startsWith('data:')
+  ) {
+    return path
+  }
+  const base = (config.baseURL || '').replace(/\/+$/, '')
+  const cleanPath = path.replace(/^\/+/, '')
+  if (!base) {
+    return `/${cleanPath}`
+  }
+  return `${base}/${cleanPath}`
 }
 
 export const shareUrl = (path) => {

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "vite",
     "build": "vite build",
+    "build:standalone": "vite build --mode standalone",
     "serve": "vite preview",
     "test:watch": "vitest",
     "test": "vitest --watch=false",

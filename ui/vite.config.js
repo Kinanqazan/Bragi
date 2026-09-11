@@ -14,14 +14,16 @@ const allowedHosts = configuredAllowedHosts.length
   : ['.lan']
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
+  const isStandalone =
+    mode === 'standalone' || process.env.VITE_STANDALONE === 'true'
   const devPwaEnabled =
     command === 'serve' && process.env.VITE_ENABLE_DEV_PWA === 'true'
   const serviceWorkerFilename = command === 'serve' ? 'sw-dev.js' : 'sw.js'
 
   return {
     plugins: [
-      devTemplatePlugin(),
+      devTemplatePlugin(isStandalone),
       react(),
       VitePWA({
         manifest: createPwaManifest({ development: command === 'serve' }),
@@ -129,7 +131,7 @@ export default defineConfig(({ command }) => {
 // The Go server replaces these template actions when it serves the embedded
 // production UI. Vite serves the same source file directly in development, so
 // replace them with safe development values before the browser parses it.
-function devTemplatePlugin() {
+function devTemplatePlugin(isStandalone = false) {
   // The dev script passes this through to both Go and Vite. Keep the
   // frontend's runtime config aligned with the URL that Chromecast can reach.
   const devAppConfig = JSON.stringify(
@@ -140,11 +142,11 @@ function devTemplatePlugin() {
 
   return {
     name: 'navidrome-dev-template',
-    apply: 'serve',
+    apply: isStandalone ? undefined : 'serve',
     enforce: 'pre',
     transformIndexHtml(html) {
       const transformedHtml = html
-        .replace(/\{\{\s*\.Version\s*\}\}/g, 'dev')
+        .replace(/\{\{\s*\.Version\s*\}\}/g, '1.0.0')
         .replace(/\{\{\s*\.ShareURL\s*\}\}/g, '')
         .replace(/\{\{\s*\.ShareDescription\s*\}\}/g, '')
         .replace(/\{\{\s*\.ShareImageURL\s*\}\}/g, '')
