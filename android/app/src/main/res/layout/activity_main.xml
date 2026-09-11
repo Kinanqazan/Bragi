@@ -87,7 +87,7 @@
                 android:textColor="#ffffff"
                 android:textSize="16sp"
                 android:singleLine="true"
-                android:text="https://bragi.lan/app/" />
+                android:text="https://bragi.lan/" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton

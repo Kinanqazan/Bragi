@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Build;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -303,6 +304,9 @@ public class MainActivity extends AppCompatActivity {
             if (!input.startsWith("http://") && !input.startsWith("https://")) {
                 input = "https://" + input;
             }
+
+            // Strip trailing /app or /app/
+            input = input.replaceAll("/app/?$", "");
 
             if (!input.endsWith("/")) {
                 input = input + "/";
@@ -741,14 +745,29 @@ public class MainActivity extends AppCompatActivity {
             return "";
         }
 
+        private CastSession getActiveCastSession() {
+            if (currentCastSession != null && currentCastSession.isConnected()) {
+                return currentCastSession;
+            }
+            if (castContext != null && castContext.getSessionManager() != null) {
+                CastSession session = castContext.getSessionManager().getCurrentCastSession();
+                if (session != null && session.isConnected()) {
+                    currentCastSession = session;
+                    return session;
+                }
+            }
+            return null;
+        }
+
         @JavascriptInterface
         public void setVolume(double volume) {
             runOnUiThread(() -> {
-                if (currentCastSession != null && currentCastSession.isConnected()) {
+                CastSession session = getActiveCastSession();
+                if (session != null) {
                     try {
-                        currentCastSession.setVolume(volume);
+                        session.setVolume(volume);
                     } catch (Exception ignored) {
-                        RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
+                        RemoteMediaClient client = session.getRemoteMediaClient();
                         if (client != null) {
                             client.setStreamVolume(volume);
                         }
@@ -768,9 +787,10 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public double getVolume() {
-            if (currentCastSession != null && currentCastSession.isConnected()) {
+            CastSession session = getActiveCastSession();
+            if (session != null) {
                 try {
-                    return currentCastSession.getVolume();
+                    return session.getVolume();
                 } catch (Exception ignored) {}
             }
             try {
@@ -826,10 +846,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
-        public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, long positionSec, boolean autoplay) {
+        public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, boolean autoplay) {
+            Log.d("BragiCast", "Native loadMedia: title=" + title + ", streamUrl=" + streamUrl + ", pos=" + positionSec + ", autoplay=" + autoplay);
             runOnUiThread(() -> {
-                if (currentCastSession != null && currentCastSession.isConnected()) {
-                    RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
+                CastSession session = getActiveCastSession();
+                if (session != null) {
+                    RemoteMediaClient client = session.getRemoteMediaClient();
                     if (client != null) {
                         MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
                         if (!TextUtils.isEmpty(title)) metadata.putString(MediaMetadata.KEY_TITLE, title);
@@ -850,11 +872,21 @@ public class MainActivity extends AppCompatActivity {
                         MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
                                 .setMediaInfo(mediaInfo)
                                 .setAutoplay(autoplay)
-                                .setCurrentTime(positionSec * 1000L)
+                                .setCurrentTime((long) Math.round(positionSec * 1000.0))
                                 .build();
 
-                        client.load(requestData);
+                        client.load(requestData).setResultCallback(result -> {
+                            if (!result.getStatus().isSuccess()) {
+                                Log.e("BragiCast", "Media load failed on Cast receiver: " + result.getStatus().getStatusCode() + " " + result.getStatus().getStatusMessage());
+                            } else {
+                                Log.i("BragiCast", "Media load succeeded on Cast receiver");
+                            }
+                        });
+                    } else {
+                        Log.e("BragiCast", "RemoteMediaClient is null on active session");
                     }
+                } else {
+                    Log.e("BragiCast", "No active Cast session when loadMedia called");
                 }
             });
         }
@@ -862,8 +894,9 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void play() {
             runOnUiThread(() -> {
-                if (currentCastSession != null && currentCastSession.getRemoteMediaClient() != null) {
-                    currentCastSession.getRemoteMediaClient().play();
+                CastSession session = getActiveCastSession();
+                if (session != null && session.getRemoteMediaClient() != null) {
+                    session.getRemoteMediaClient().play();
                 }
             });
         }
@@ -871,18 +904,20 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void pause() {
             runOnUiThread(() -> {
-                if (currentCastSession != null && currentCastSession.getRemoteMediaClient() != null) {
-                    currentCastSession.getRemoteMediaClient().pause();
+                CastSession session = getActiveCastSession();
+                if (session != null && session.getRemoteMediaClient() != null) {
+                    session.getRemoteMediaClient().pause();
                 }
             });
         }
 
         @JavascriptInterface
-        public void seek(long positionSec) {
+        public void seek(double positionSec) {
             runOnUiThread(() -> {
-                if (currentCastSession != null && currentCastSession.getRemoteMediaClient() != null) {
-                    currentCastSession.getRemoteMediaClient().seek(
-                            new MediaSeekOptions.Builder().setPosition(positionSec * 1000L).build()
+                CastSession session = getActiveCastSession();
+                if (session != null && session.getRemoteMediaClient() != null) {
+                    session.getRemoteMediaClient().seek(
+                            new MediaSeekOptions.Builder().setPosition((long) Math.round(positionSec * 1000.0)).build()
                     );
                 }
             });

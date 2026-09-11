@@ -100,6 +100,7 @@ const ActivityPanel = () => {
   const triggerScan = (full) => () => subsonic.startScan({ fullScan: full })
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.BragiNative) return
     if (serverStart.version && serverStart.version !== config.version) {
       notify('ra.notification.new_version', 'info', {}, false, 604800000 * 50)
     }

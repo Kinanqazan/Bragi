@@ -1068,15 +1068,19 @@ export const createNativeCastPlaybackTarget = ({
 
       const meta = track
       if (typeof window !== 'undefined' && window.BragiNative?.loadMedia) {
-        window.BragiNative.loadMedia(
-          meta.title || meta.name || '',
-          meta.artist || meta.artistName || '',
-          meta.album || meta.albumName || '',
-          media.url || '',
-          meta.artworkUrl || meta.coverArt || '',
-          position || 0,
-          Boolean(autoplay),
-        )
+        try {
+          window.BragiNative.loadMedia(
+            meta.title || meta.name || '',
+            meta.artist || meta.artistName || '',
+            meta.album || meta.albumName || '',
+            media.url || '',
+            meta.artworkUrl || meta.coverArt || '',
+            Number(position) || 0,
+            Boolean(autoplay),
+          )
+        } catch (e) {
+          console.error('[Bragi Cast] Native loadMedia error', e)
+        }
       }
 
       state = {
