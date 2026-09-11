@@ -295,10 +295,14 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
           return adopted
         }
         return handoffTrack
-          ? castTarget.setQueue([handoffTrack], 0, {
-              autoplay: wasPlaying,
-              position: localSnapshot.currentTime,
-            })
+          ? castTarget.setQueue(
+              queue.length ? queue : [handoffTrack],
+              targetIndex >= 0 ? targetIndex : 0,
+              {
+                autoplay: wasPlaying,
+                position: localSnapshot.currentTime,
+              },
+            )
           : castTarget.setQueue([])
       })
 
@@ -411,7 +415,11 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     (nextVolume) => {
       const normalized = Math.min(1, Math.max(0, Number(nextVolume) || 0))
       dispatch(setReduxVolume(normalized))
-      engine?.setVolume(normalized * normalized)
+      if (activeTargetRef.current === 'local') {
+        engine?.setVolume(normalized * normalized)
+      } else {
+        engine?.setVolume(normalized)
+      }
       if (typeof window !== 'undefined' && window.BragiNative?.setVolume) {
         window.BragiNative.setVolume(normalized)
       }
@@ -436,7 +444,11 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     window.__bragiNativeVolumeChanged = (vol) => {
       const normalized = Math.min(1, Math.max(0, Number(vol) || 0))
       dispatch(setReduxVolume(normalized))
-      engine?.setVolume(normalized * normalized)
+      if (activeTargetRef.current === 'local') {
+        engine?.setVolume(normalized * normalized)
+      } else {
+        engine?.setVolume(normalized)
+      }
     }
 
     // Hardware/notification media action buttons

@@ -1066,16 +1066,25 @@ export const createNativeCastPlaybackTarget = ({
       const media = await resolveMedia(track)
       if (destroyed || operation !== loadOperation) return false
 
+      if (!media?.url) {
+        throw new Error('Cast media URL could not be resolved')
+      }
+
       const meta = track
+      const artworkUrl = meta.cover ? toCastReceiverUrl(meta.cover) : ''
+      const trackDuration =
+        Number(meta.duration || meta.song?.duration) || 0
+
       if (typeof window !== 'undefined' && window.BragiNative?.loadMedia) {
         try {
           window.BragiNative.loadMedia(
             meta.title || meta.name || '',
             meta.artist || meta.artistName || '',
             meta.album || meta.albumName || '',
-            media.url || '',
-            meta.artworkUrl || meta.coverArt || '',
+            media.url,
+            artworkUrl,
             Number(position) || 0,
+            trackDuration,
             Boolean(autoplay),
           )
         } catch (e) {
@@ -1136,6 +1145,9 @@ export const createNativeCastPlaybackTarget = ({
     if (isPlaying) nextPlaying = true
     else if (isPaused || isIdle) nextPlaying = false
 
+    const rawVolume =
+      typeof volume === 'number' && volume >= 0 ? clamp(volume, 0, 1) : null
+
     state = {
       ...state,
       playing: nextPlaying,
@@ -1145,7 +1157,7 @@ export const createNativeCastPlaybackTarget = ({
           ? currentTime
           : state.currentTime,
       duration: duration > 0 ? duration : state.duration,
-      volume: typeof volume === 'number' && volume >= 0 ? volume : state.volume,
+      volume: rawVolume != null ? rawVolume * rawVolume : state.volume,
     }
 
     if (previousPlaying !== nextPlaying && currentTrack) {
@@ -1268,7 +1280,7 @@ export const createNativeCastPlaybackTarget = ({
     },
     setVolume: (volume) => {
       const nextVolume = clamp(Number(volume) || 0, 0, 1)
-      state = { ...state, volume: nextVolume }
+      state = { ...state, volume: nextVolume * nextVolume }
       notify()
       if (typeof window !== 'undefined')
         window?.BragiNative?.setVolume?.(nextVolume)

@@ -283,7 +283,13 @@ const initializeCastOnce = async () => {
       connected: isConnected,
       deviceName,
     }
+    const prevCastState = currentWindow.__bragiNativeCastState
     currentWindow.__bragiNativeCastState = (nativeState) => {
+      if (typeof prevCastState === 'function') {
+        try {
+          prevCastState(nativeState)
+        } catch (e) {}
+      }
       const connected = Boolean(nativeState?.connected)
       state = {
         ...state,

@@ -39,6 +39,10 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
+import java.util.Locale;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.KeyEvent;
 
 import com.google.android.gms.cast.CastDevice;
 import com.google.android.gms.cast.MediaInfo;
@@ -94,7 +98,13 @@ public class MainActivity extends AppCompatActivity {
         if (client == null || client.getMediaStatus() == null) return;
         int playerState = client.getMediaStatus().getPlayerState();
         String stateStr = (playerState == MediaStatus.PLAYER_STATE_PLAYING) ? "PLAYING" : "PAUSED";
-        notifyNativeCastMediaStatus(stateStr, "NONE", progressMs / 1000.0, durationMs / 1000.0, client.getMediaStatus().getStreamVolume());
+        double volume = 1.0;
+        try {
+            volume = currentCastSession.getVolume();
+        } catch (Exception ignored) {
+            volume = client.getMediaStatus().getStreamVolume();
+        }
+        notifyNativeCastMediaStatus(stateStr, "NONE", progressMs / 1000.0, durationMs / 1000.0, volume);
     };
 
     private void notifyCastStatus() {
@@ -108,7 +118,12 @@ public class MainActivity extends AppCompatActivity {
         int idleReason = status.getIdleReason();
         long streamPosition = client.getApproximateStreamPosition();
         long streamDuration = client.getStreamDuration();
-        double volume = status.getStreamVolume();
+        double volume = 1.0;
+        try {
+            volume = currentCastSession.getVolume();
+        } catch (Exception ignored) {
+            volume = status.getStreamVolume();
+        }
 
         String stateStr = "UNKNOWN";
         switch (playerState) {
@@ -135,7 +150,8 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             if (webView == null) return;
             String script = String.format(
-                    "if (window.__bragiNativeCastMediaStatus) { window.__bragiNativeCastMediaStatus({ playerState: '%s', idleReason: '%s', currentTime: %s, duration: %s, volume: %s }); }",
+                    Locale.US,
+                    "if (window.__bragiNativeCastMediaStatus) { window.__bragiNativeCastMediaStatus({ playerState: '%s', idleReason: '%s', currentTime: %.2f, duration: %.2f, volume: %.4f }); }",
                     playerState, idleReason, currentTime, duration, volume
             );
             webView.evaluateJavascript(script, null);
@@ -257,14 +273,29 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if ("android.media.VOLUME_CHANGED_ACTION".equals(intent.getAction())) {
-                    AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                    if (am != null) {
-                        int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                        int current = am.getStreamVolume(AudioManager.STREAM_MUSIC);
-                        double normalized = max > 0 ? (double) current / max : 1.0;
-                        if (webView != null) {
-                            webView.evaluateJavascript(String.format("if (window.__bragiNativeVolumeChanged) { window.__bragiNativeVolumeChanged(%s); }", normalized), null);
+                    CastSession session = null;
+                    if (castContext != null && castContext.getSessionManager() != null) {
+                        session = castContext.getSessionManager().getCurrentCastSession();
+                    }
+                    if (session == null && currentCastSession != null && currentCastSession.isConnected()) {
+                        session = currentCastSession;
+                    }
+                    double vol;
+                    if (session != null && session.isConnected()) {
+                        try {
+                            vol = session.getVolume();
+                        } catch (Exception e) {
+                            vol = 1.0;
                         }
+                    } else {
+                        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                        int max = am != null ? am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) : 0;
+                        int current = am != null ? am.getStreamVolume(AudioManager.STREAM_MUSIC) : 0;
+                        vol = max > 0 ? (double) current / max : 1.0;
+                    }
+                    if (webView != null) {
+                        String script = String.format(Locale.US, "if (window.__bragiNativeVolumeChanged) { window.__bragiNativeVolumeChanged(%.4f); }", vol);
+                        webView.evaluateJavascript(script, null);
                     }
                 }
             }
@@ -632,6 +663,36 @@ public class MainActivity extends AppCompatActivity {
                 "})();";
     }
 
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            CastSession session = null;
+            if (castContext != null && castContext.getSessionManager() != null) {
+                session = castContext.getSessionManager().getCurrentCastSession();
+            }
+            if (session == null && currentCastSession != null && currentCastSession.isConnected()) {
+                session = currentCastSession;
+            }
+            if (session != null && session.isConnected()) {
+                int keyCode = event.getKeyCode();
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+                    try {
+                        double current = session.getVolume();
+                        session.setVolume(Math.min(1.0, current + 0.05));
+                    } catch (Exception ignored) {}
+                    return true;
+                } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+                    try {
+                        double current = session.getVolume();
+                        session.setVolume(Math.max(0.0, current - 0.05));
+                    } catch (Exception ignored) {}
+                    return true;
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     private void updateNativeCastState(String eventType, CastSession session) {
         runOnUiThread(() -> {
             boolean connected = "SESSION_STARTED".equals(eventType) && session != null && session.isConnected();
@@ -646,6 +707,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             String script = String.format(
+                    Locale.US,
                     "if (window.__bragiNativeCastState) { window.__bragiNativeCastState({ connected: %s, deviceName: '%s', sessionId: '%s' }); }",
                     connected ? "true" : "false",
                     deviceName.replace("'", "\\'"),
@@ -847,46 +909,91 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, boolean autoplay) {
-            Log.d("BragiCast", "Native loadMedia: title=" + title + ", streamUrl=" + streamUrl + ", pos=" + positionSec + ", autoplay=" + autoplay);
+            loadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, 0.0, autoplay);
+        }
+
+        @JavascriptInterface
+        public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, double durationSec, boolean autoplay) {
+            Log.d("BragiCast", "Native loadMedia: title=" + title + ", streamUrl=" + streamUrl + ", pos=" + positionSec + ", dur=" + durationSec + ", autoplay=" + autoplay);
             runOnUiThread(() -> {
-                CastSession session = getActiveCastSession();
-                if (session != null) {
-                    RemoteMediaClient client = session.getRemoteMediaClient();
-                    if (client != null) {
-                        MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
-                        if (!TextUtils.isEmpty(title)) metadata.putString(MediaMetadata.KEY_TITLE, title);
-                        if (!TextUtils.isEmpty(artist)) metadata.putString(MediaMetadata.KEY_ARTIST, artist);
-                        if (!TextUtils.isEmpty(album)) metadata.putString(MediaMetadata.KEY_ALBUM_TITLE, album);
-                        if (!TextUtils.isEmpty(artworkUrl)) {
-                            try {
-                                metadata.addImage(new WebImage(Uri.parse(artworkUrl)));
-                            } catch (Exception ignored) {}
-                        }
+                executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, 1);
+            });
+        }
 
-                        MediaInfo mediaInfo = new MediaInfo.Builder(streamUrl)
-                                .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-                                .setContentType("audio/mpeg")
-                                .setMetadata(metadata)
-                                .build();
+        private void executeLoadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, double durationSec, boolean autoplay, int attempt) {
+            CastSession session = getActiveCastSession();
+            if (session == null) {
+                Log.w("BragiCast", "No active Cast session when loadMedia called (attempt " + attempt + ")");
+                if (attempt < 4) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1);
+                    }, 400);
+                } else {
+                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                }
+                return;
+            }
 
-                        MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
-                                .setMediaInfo(mediaInfo)
-                                .setAutoplay(autoplay)
-                                .setCurrentTime((long) Math.round(positionSec * 1000.0))
-                                .build();
+            RemoteMediaClient client = session.getRemoteMediaClient();
+            if (client == null) {
+                Log.w("BragiCast", "RemoteMediaClient is null (attempt " + attempt + ")");
+                if (attempt < 4) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1);
+                    }, 400);
+                } else {
+                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                }
+                return;
+            }
 
-                        client.load(requestData).setResultCallback(result -> {
-                            if (!result.getStatus().isSuccess()) {
-                                Log.e("BragiCast", "Media load failed on Cast receiver: " + result.getStatus().getStatusCode() + " " + result.getStatus().getStatusMessage());
-                            } else {
-                                Log.i("BragiCast", "Media load succeeded on Cast receiver");
-                            }
-                        });
+            MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+            if (!TextUtils.isEmpty(title)) metadata.putString(MediaMetadata.KEY_TITLE, title);
+            if (!TextUtils.isEmpty(artist)) metadata.putString(MediaMetadata.KEY_ARTIST, artist);
+            if (!TextUtils.isEmpty(album)) metadata.putString(MediaMetadata.KEY_ALBUM_TITLE, album);
+            if (!TextUtils.isEmpty(artworkUrl)) {
+                try {
+                    Uri artUri = Uri.parse(artworkUrl);
+                    if (artUri != null && artUri.isAbsolute()) {
+                        metadata.addImage(new WebImage(artUri));
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            MediaInfo.Builder mediaInfoBuilder = new MediaInfo.Builder(streamUrl)
+                    .setContentUrl(streamUrl)
+                    .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                    .setContentType("audio/mpeg")
+                    .setMetadata(metadata);
+            if (durationSec > 0) {
+                mediaInfoBuilder.setStreamDuration((long) Math.round(durationSec * 1000.0));
+            }
+            MediaInfo mediaInfo = mediaInfoBuilder.build();
+
+            long startPosMs = (long) Math.round(positionSec * 1000.0);
+            MediaLoadRequestData requestData = new MediaLoadRequestData.Builder()
+                    .setMediaInfo(mediaInfo)
+                    .setAutoplay(autoplay)
+                    .setCurrentTime(startPosMs)
+                    .build();
+
+            client.load(requestData).setResultCallback(result -> {
+                if (!result.getStatus().isSuccess()) {
+                    int statusCode = result.getStatus().getStatusCode();
+                    Log.e("BragiCast", "Media load failed on Cast receiver (attempt " + attempt + "): " + statusCode);
+                    if (attempt < 3) {
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            double nextPos = (attempt == 1 && positionSec > 0) ? 0 : positionSec;
+                            executeLoadMedia(title, artist, album, streamUrl, artworkUrl, nextPos, durationSec, autoplay, attempt + 1);
+                        }, 500);
                     } else {
-                        Log.e("BragiCast", "RemoteMediaClient is null on active session");
+                        notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
                     }
                 } else {
-                    Log.e("BragiCast", "No active Cast session when loadMedia called");
+                    Log.i("BragiCast", "Media load succeeded on Cast receiver");
+                    if (autoplay) {
+                        client.play();
+                    }
                 }
             });
         }
