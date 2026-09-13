@@ -45,4 +45,5 @@ dist
 binaries
 cache
 tmp
-!tmp/taglib
+!tmp/taglib
+!out/navidrome

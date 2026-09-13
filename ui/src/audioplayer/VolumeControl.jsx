@@ -28,13 +28,12 @@ const VolumeControl = ({ value = 1, onChange }) => {
       : VolumeUpIcon
   const percent = Math.min(100, Math.max(0, (activeValue || 0) * 100))
 
-  const handlePointerDown = () => {
+  const handlePointerDown = (event) => {
+    event.stopPropagation?.()
     isDraggingRef.current = true
-  }
-
-  const handlePointerUp = () => {
-    isDraggingRef.current = false
-    setDragValue(null)
+    try {
+      event.currentTarget?.setPointerCapture?.(event.pointerId)
+    } catch {}
   }
 
   const handleChange = (event) => {
@@ -46,10 +45,11 @@ const VolumeControl = ({ value = 1, onChange }) => {
   }
 
   useEffect(() => {
-    if (dragValue === null) return undefined
     const handleRelease = () => {
-      isDraggingRef.current = false
-      setDragValue(null)
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false
+        setDragValue(null)
+      }
     }
     window.addEventListener('pointerup', handleRelease)
     window.addEventListener('pointercancel', handleRelease)
@@ -57,7 +57,7 @@ const VolumeControl = ({ value = 1, onChange }) => {
       window.removeEventListener('pointerup', handleRelease)
       window.removeEventListener('pointercancel', handleRelease)
     }
-  }, [dragValue])
+  }, [])
 
   return (
     <div className="nd-player-volume">
@@ -75,8 +75,7 @@ const VolumeControl = ({ value = 1, onChange }) => {
         step="0.01"
         value={activeValue}
         onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onTouchStart={(e) => e.stopPropagation?.()}
         onChange={handleChange}
         aria-label="Volume"
         style={{ '--progress-percent': `${percent}%` }}

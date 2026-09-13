@@ -51,21 +51,31 @@ fs.writeFileSync(
   `sdk.dir=${androidSdkPath.replace(/\\/g, '\\\\')}\n`
 );
 
-// 4. Build Android Release APK
-console.log('\n=== Step 3: Compiling Native Android APK with Gradle ===');
-execSync('cmd /c gradlew.bat assembleRelease', {
+// 4. Build Android APK (Release by default, or Debug if --debug passed)
+const isDebug = process.argv.includes('--debug');
+const gradleTask = isDebug ? 'assembleDebug' : 'assembleRelease';
+const apkFolder = isDebug ? 'debug' : 'release';
+const apkFileName = isDebug ? 'app-debug.apk' : 'app-release.apk';
+
+console.log(`\n=== Step 3: Compiling Native Android APK (${isDebug ? 'DEBUG' : 'PRODUCTION RELEASE'}) with Gradle ===`);
+execSync(`cmd /c gradlew.bat ${gradleTask}`, {
   cwd: androidDir,
   env,
   stdio: 'inherit'
 });
 
-const builtApk = path.join(androidDir, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
-const targetApk = path.join(androidDir, 'bragi.apk');
+const builtApk = path.join(androidDir, 'app', 'build', 'outputs', 'apk', apkFolder, apkFileName);
+const distinctApkName = isDebug ? 'bragi-dev.apk' : 'bragi.apk';
+const targetApk = path.join(androidDir, distinctApkName);
 
 if (fs.existsSync(builtApk)) {
   fs.copyFileSync(builtApk, targetApk);
+  if (isDebug) {
+    // Also copy to bragi.apk so deploy script finds it if needed
+    fs.copyFileSync(builtApk, path.join(androidDir, 'bragi.apk'));
+  }
   console.log('\n=============================================');
-  console.log('SUCCESS! Native Android APK created:');
+  console.log(`SUCCESS! ${isDebug ? 'Debug (Bragi Dev)' : 'Production (Bragi)'} Android APK created:`);
   console.log(targetApk);
   console.log('=============================================');
 }

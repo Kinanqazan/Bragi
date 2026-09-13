@@ -40,7 +40,11 @@ describe('CastButton', () => {
       screen.getByRole('menuitem', { name: /play on this device/i }),
     )
 
-    await waitFor(() => expect(mockedEndCastSession).toHaveBeenCalledWith(true))
+    await waitFor(() =>
+      expect(mockedEndCastSession).toHaveBeenCalledWith(true, {
+        resumeLocal: true,
+      }),
+    )
   })
 
   it('does not submit duplicate discovery requests while opening the picker', async () => {

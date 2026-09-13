@@ -148,7 +148,7 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
   const handleUseThisDevice = async () => {
     setMenuAnchor(null)
     try {
-      await endCastSession(true)
+      await endCastSession(true, { resumeLocal: true })
     } catch (error) {
       const code = getCastErrorCode(error)
       if (!isCastRequestCancelled(code)) {

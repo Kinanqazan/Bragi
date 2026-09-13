@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import config from '../config'
-import { createCastPlaybackTarget } from './castPlayback'
+import {
+  createCastPlaybackTarget,
+  createNativeCastPlaybackTarget,
+} from './castPlayback'
 
 const createFakeRuntime = () => {
   class RemotePlayer {
@@ -1494,5 +1497,102 @@ describe('createCastPlaybackTarget', () => {
     // Calling play() (which is what Retry triggers) should reload the track
     await target.play()
     expect(session.loadMedia).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('createNativeCastPlaybackTarget', () => {
+  it('preserves autoplay and playback intent across rapid track skips', async () => {
+    const tracks = Array.from({ length: 8 }, (_, i) => ({
+      uuid: `track-${i + 1}`,
+      title: `Song ${i + 1}`,
+      artist: 'Artist',
+      album: 'Album',
+    }))
+
+    const loadedMediaCalls = []
+    window.BragiNative = {
+      loadMedia: vi.fn((title, artist, album, url, art, pos, dur, autoplay) => {
+        loadedMediaCalls.push({ title, autoplay })
+      }),
+      play: vi.fn(),
+      pause: vi.fn(),
+    }
+
+    const target = createNativeCastPlaybackTarget({
+      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
+    })
+
+    // Start playback on song 1
+    await target.setQueue(tracks, 0, { autoplay: true })
+    expect(target.getSnapshot().playing).toBe(true)
+
+    // Rapidly skip 5 times
+    for (let i = 0; i < 5; i++) {
+      target.next()
+    }
+
+    // Advance debounce timers
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
+    // Final track should be track 6 (index 5) with autoplay: true
+    expect(target.getSnapshot().currentIndex).toBe(5)
+    expect(target.getSnapshot().currentTrack.title).toBe('Song 6')
+    expect(target.getSnapshot().playing).toBe(true)
+
+    const lastCall = loadedMediaCalls[loadedMediaCalls.length - 1]
+    expect(lastCall.title).toBe('Song 6')
+    expect(lastCall.autoplay).toBe(true)
+
+    delete window.BragiNative
+  })
+
+  it('ignores transient PAUSED status from receiver while a track load is in progress', async () => {
+    const tracks = [
+      { uuid: 'track-1', title: 'Song 1' },
+      { uuid: 'track-2', title: 'Song 2' },
+    ]
+
+    window.BragiNative = {
+      loadMedia: vi.fn(),
+      play: vi.fn(),
+      pause: vi.fn(),
+    }
+
+    const target = createNativeCastPlaybackTarget({
+      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
+    })
+
+    await target.setQueue(tracks, 0, { autoplay: true })
+
+    // Skip to song 2
+    target.next()
+    expect(target.getSnapshot().playing).toBe(true)
+    expect(target.getSnapshot().loading).toBe(true)
+
+    // Receiver emits PAUSED because song 1 was aborted
+    window.__bragiNativeCastMediaStatus({
+      playerState: 'PAUSED',
+      idleReason: 'NONE',
+      currentTime: 0,
+      duration: 180,
+      volume: 1,
+    })
+
+    // Playing should remain true (intent is playing, load in-flight)
+    expect(target.getSnapshot().playing).toBe(true)
+
+    // When receiver confirms PLAYING for song 2
+    window.__bragiNativeCastMediaStatus({
+      playerState: 'PLAYING',
+      idleReason: 'NONE',
+      currentTime: 2,
+      duration: 180,
+      volume: 1,
+    })
+
+    expect(target.getSnapshot().playing).toBe(true)
+    expect(target.getSnapshot().loading).toBe(false)
+
+    delete window.BragiNative
   })
 })

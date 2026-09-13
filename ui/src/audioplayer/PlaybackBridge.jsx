@@ -7,7 +7,11 @@ import {
 } from '../actions'
 import subsonic from '../subsonic'
 import { detectBrowserProfile, decisionService } from '../transcode'
-import { endCastSession, isNativeCastAvailable } from '../cast/castApi'
+import {
+  consumeResumeLocalOnEnd,
+  endCastSession,
+  isNativeCastAvailable,
+} from '../cast/castApi'
 import {
   createCastPlaybackTarget,
   createNativeCastPlaybackTarget,
@@ -335,8 +339,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     if (!castState.connected && activeTargetRef.current === 'cast') {
       ++castHandoffRef.current
       castHandoffKeyRef.current = null
-      const remoteSnapshot = castTarget.getSnapshot()
-      const localSnapshot = localEngine.getSnapshot()
+      const remoteSnapshot = castTarget.getSnapshot() || {}
       activeTargetRef.current = 'local'
       setEngine(localEngine)
       // Forget the remote queue after capturing its position. This prevents
@@ -344,17 +347,69 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       // current one and skipping the required media load.
       castTarget.setQueue([])
 
+      const handoffTrack =
+        remoteSnapshot.currentTrack ||
+        queue[targetIndex] ||
+        localEngine.getSnapshot().currentTrack
+      const handoffTrackId = trackIdOf(handoffTrack)
+      const queueIndex =
+        handoffTrackId == null
+          ? -1
+          : queue.findIndex(
+              (candidate) =>
+                String(trackIdOf(candidate)) === String(handoffTrackId),
+            )
+      const handoffIndex =
+        queueIndex >= 0
+          ? queueIndex
+          : Number.isInteger(remoteSnapshot.currentIndex) &&
+              remoteSnapshot.currentIndex >= 0
+            ? remoteSnapshot.currentIndex
+            : targetIndex >= 0
+              ? targetIndex
+              : 0
+      const handoffQueue =
+        queueIndex >= 0 ? queue : [handoffTrack].filter(Boolean)
+      const handoffPosition = Math.max(
+        0,
+        Number(remoteSnapshot.currentTime) || 0,
+      )
+      const shouldResume =
+        consumeResumeLocalOnEnd() ||
+        Boolean(remoteSnapshot.playing) ||
+        Boolean(remoteSnapshot.wasPlaying)
+
+      const localSnapshot = localEngine.getSnapshot()
       const sameTrack =
         localSnapshot.currentTrack &&
-        remoteSnapshot.currentTrack &&
-        (localSnapshot.currentTrack.uuid === remoteSnapshot.currentTrack.uuid ||
-          trackIdOf(localSnapshot.currentTrack) ===
-            trackIdOf(remoteSnapshot.currentTrack))
-      if (sameTrack) {
-        localEngine.seek(remoteSnapshot.currentTime)
-        if (remoteSnapshot.playing) localEngine.play()
+        handoffTrack &&
+        (localSnapshot.currentTrack.uuid === handoffTrack.uuid ||
+          trackIdOf(localSnapshot.currentTrack) === trackIdOf(handoffTrack))
+
+      if (sameTrack && localSnapshot.currentIndex === handoffIndex) {
+        localEngine.seek(handoffPosition)
+        if (shouldResume) {
+          localEngine.play()
+        }
+        publishSnapshot(localEngine.getSnapshot(), 'local')
+      } else if (handoffQueue.length) {
+        let loadResult
+        try {
+          loadResult = localEngine.setQueue(handoffQueue, handoffIndex, {
+            autoplay: shouldResume,
+            position: handoffPosition,
+          })
+        } catch {
+          return
+        }
+        Promise.resolve(loadResult)
+          .then(() => {
+            if (activeTargetRef.current === 'local') {
+              publishSnapshot(localEngine.getSnapshot(), 'local')
+            }
+          })
+          .catch(() => undefined)
       }
-      publishSnapshot(localEngine.getSnapshot(), 'local')
     }
   }, [
     castState.connected,

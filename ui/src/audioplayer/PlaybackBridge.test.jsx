@@ -502,6 +502,72 @@ describe('usePlaybackBridge', () => {
     expect(screen.getByTestId('audio')).toHaveAttribute('data-playing', 'true')
   })
 
+  it('switches to the current Cast track when casting stops on a later song', async () => {
+    const handoff = Promise.resolve(true)
+    const castTarget = {
+      setQueue: vi
+        .fn()
+        .mockImplementationOnce(() => handoff)
+        .mockResolvedValue(true),
+      play: vi.fn(() => Promise.resolve(true)),
+      setMode: vi.fn(),
+      setVolume: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        currentTrack: song('second'),
+        currentIndex: 1,
+        playing: true,
+        loading: false,
+        currentTime: 52,
+        duration: 180,
+        volume: 0.5,
+        mode: 'order',
+        error: null,
+      })),
+      subscribe: vi.fn(() => () => undefined),
+      destroy: vi.fn(),
+    }
+    mockedCreateCastPlaybackTarget.mockReturnValue(castTarget)
+    const store = renderBridge()
+
+    act(() => {
+      store.dispatch(
+        playTracks({
+          first: song('first'),
+          second: song('second'),
+        }),
+      )
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('audio')).toHaveAttribute(
+        'data-playing',
+        'true',
+      ),
+    )
+
+    mockedCastState.initialized = true
+    mockedCastState.connected = true
+    act(() => {
+      store.dispatch(addTracks({ third: song('third') }))
+    })
+    await waitFor(() => expect(castTarget.setQueue).toHaveBeenCalled())
+
+    HTMLMediaElement.prototype.play.mockClear()
+    mockedCastState.connected = false
+    act(() => {
+      store.dispatch(addTracks({ fourth: song('fourth') }))
+    })
+
+    await waitFor(() => expect(castTarget.setQueue).toHaveBeenCalledWith([]))
+    await waitFor(() =>
+      expect(screen.getByTestId('audio')).toHaveAttribute(
+        'data-track',
+        'second',
+      ),
+    )
+    expect(screen.getByTestId('audio')).toHaveAttribute('data-playing', 'true')
+    expect(store.getState().player.current.trackId).toBe('second')
+  })
+
   it('adopts a resumed Cast session instead of reloading the local track', async () => {
     const castTarget = {
       adoptSession: vi.fn(() => Promise.resolve(true)),

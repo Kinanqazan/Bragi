@@ -27,6 +27,7 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -61,11 +62,13 @@ import com.google.android.gms.common.images.WebImage;
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "bragi_prefs";
     private static final String KEY_SERVER_URL = "server_url";
+    private static final String KEY_DEV_MODE = "dev_mode_enabled";
     private static final String APP_LOCAL_URL = "https://appassets.androidplatform.net/assets/index.html";
 
     private WebView webView;
     private View serverConnectLayout;
     private EditText serverUrlInput;
+    private CheckBox devModeCheckbox;
     private Button connectButton;
     private TextView statusMessage;
     private ProgressBar loadingProgress;
@@ -80,6 +83,9 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver volumeReceiver;
     private CastContext castContext;
     private CastSession currentCastSession;
+    private boolean isMediaLoading = false;
+    private volatile boolean isCastSessionConnected = false;
+    private volatile String currentCastDeviceName = "";
 
     private final RemoteMediaClient.Callback remoteMediaClientCallback = new RemoteMediaClient.Callback() {
         @Override
@@ -100,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
         String stateStr = "PAUSED";
         if (playerState == MediaStatus.PLAYER_STATE_PLAYING) {
             stateStr = "PLAYING";
-        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING) {
+        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING || isMediaLoading) {
             stateStr = "BUFFERING";
         } else if (playerState == MediaStatus.PLAYER_STATE_IDLE) {
             stateStr = "IDLE";
@@ -137,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         String stateStr = "PAUSED";
         if (playerState == MediaStatus.PLAYER_STATE_PLAYING) {
             stateStr = "PLAYING";
-        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING) {
+        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING || isMediaLoading) {
             stateStr = "BUFFERING";
         } else if (playerState == MediaStatus.PLAYER_STATE_IDLE) {
             stateStr = "IDLE";
@@ -239,6 +245,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSessionEnded(@NonNull CastSession session, int error) {
+            isMediaLoading = false;
             if (currentCastSession != null) {
                 RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
                 if (client != null) {
@@ -338,10 +345,23 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview);
         serverConnectLayout = findViewById(R.id.server_connect_layout);
         serverUrlInput = findViewById(R.id.server_url_input);
+        devModeCheckbox = findViewById(R.id.dev_mode_checkbox);
         connectButton = findViewById(R.id.connect_button);
         statusMessage = findViewById(R.id.status_message);
         loadingProgress = findViewById(R.id.loading_progress);
         mediaRouteButton = findViewById(R.id.media_route_button);
+
+        if (devModeCheckbox != null) {
+            if (BuildConfig.DEBUG) {
+                devModeCheckbox.setVisibility(View.VISIBLE);
+                devModeCheckbox.setChecked(prefs.getBoolean(KEY_DEV_MODE, false));
+            } else {
+                devModeCheckbox.setVisibility(View.GONE);
+            }
+        }
+
+        // Enable Chrome remote debugging only in debug builds
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         // Initialize Google Cast
         try {
@@ -372,7 +392,8 @@ public class MainActivity extends AppCompatActivity {
                 input = input + "/";
             }
 
-            saveAndLoadServer(input);
+            boolean isDevMode = BuildConfig.DEBUG && devModeCheckbox != null && devModeCheckbox.isChecked();
+            saveAndLoadServer(input, isDevMode);
         });
 
         // Check if server is already saved
@@ -393,6 +414,12 @@ public class MainActivity extends AppCompatActivity {
             castContext.getSessionManager().addSessionManagerListener(sessionManagerListener, CastSession.class);
             currentCastSession = castContext.getSessionManager().getCurrentCastSession();
             if (currentCastSession != null && currentCastSession.isConnected()) {
+                isCastSessionConnected = true;
+                try {
+                    if (currentCastSession.getCastDevice() != null) {
+                        currentCastDeviceName = currentCastSession.getCastDevice().getFriendlyName();
+                    }
+                } catch (Exception ignored) {}
                 RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
                 if (client != null) {
                     client.removeProgressListener(progressListener);
@@ -400,6 +427,9 @@ public class MainActivity extends AppCompatActivity {
                     client.unregisterCallback(remoteMediaClientCallback);
                     client.registerCallback(remoteMediaClientCallback);
                 }
+            } else {
+                isCastSessionConnected = false;
+                currentCastDeviceName = "";
             }
         }
     }
@@ -610,9 +640,13 @@ public class MainActivity extends AppCompatActivity {
                 "  };" +
                 "" +
                 "  var listeners = {};" +
+                "  var isConnected = false;" +
+                "  var deviceName = '';" +
+                "  try { isConnected = Boolean(window.BragiNative && window.BragiNative.isCastConnected && window.BragiNative.isCastConnected()); } catch (e) {}" +
+                "  try { deviceName = (window.BragiNative && window.BragiNative.getCastDeviceName && window.BragiNative.getCastDeviceName()) || ''; } catch (e) {}" +
                 "  var currentState = {" +
-                "    connected: Boolean(window.BragiNative && window.BragiNative.isCastConnected && window.BragiNative.isCastConnected())," +
-                "    deviceName: (window.BragiNative && window.BragiNative.getCastDeviceName && window.BragiNative.getCastDeviceName()) || ''," +
+                "    connected: isConnected," +
+                "    deviceName: deviceName," +
                 "    sessionId: ''" +
                 "  };" +
                 "" +
@@ -733,7 +767,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateNativeCastState(String eventType, CastSession session) {
         runOnUiThread(() -> {
-            boolean connected = "SESSION_STARTED".equals(eventType) && session != null && session.isConnected();
+            boolean connected = ("SESSION_STARTED".equals(eventType) || "SESSION_RESUMED".equals(eventType)) && session != null && session.isConnected();
             String deviceName = "";
             String sessionId = "";
             if (session != null) {
@@ -743,6 +777,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 sessionId = session.getSessionId();
             }
+
+            isCastSessionConnected = connected;
+            currentCastDeviceName = deviceName;
 
             String script = String.format(
                     Locale.US,
@@ -762,8 +799,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveAndLoadServer(String url) {
+        saveAndLoadServer(url, prefs.getBoolean(KEY_DEV_MODE, false));
+    }
+
+    private void saveAndLoadServer(String url, boolean devMode) {
         currentServerUrl = url;
-        prefs.edit().putString(KEY_SERVER_URL, url).apply();
+        prefs.edit()
+                .putString(KEY_SERVER_URL, url)
+                .putBoolean(KEY_DEV_MODE, devMode)
+                .apply();
         loadLocalApp();
     }
 
@@ -771,12 +815,28 @@ public class MainActivity extends AppCompatActivity {
         loadingProgress.setVisibility(View.VISIBLE);
         serverConnectLayout.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
-        webView.loadUrl(APP_LOCAL_URL);
+        boolean devMode = BuildConfig.DEBUG && prefs.getBoolean(KEY_DEV_MODE, false);
+        if (devMode && !TextUtils.isEmpty(currentServerUrl)) {
+            String cleanUrl = currentServerUrl.replaceAll("/+$", "");
+            String devUrl = cleanUrl + "/app/";
+            Log.i("BragiDev", "Live Dev Mode active: loading " + devUrl);
+            webView.loadUrl(devUrl);
+        } else {
+            webView.loadUrl(APP_LOCAL_URL);
+        }
     }
 
     private void showServerPicker() {
         webView.setVisibility(View.GONE);
         serverConnectLayout.setVisibility(View.VISIBLE);
+        if (devModeCheckbox != null) {
+            if (BuildConfig.DEBUG) {
+                devModeCheckbox.setVisibility(View.VISIBLE);
+                devModeCheckbox.setChecked(prefs.getBoolean(KEY_DEV_MODE, false));
+            } else {
+                devModeCheckbox.setVisibility(View.GONE);
+            }
+        }
     }
 
     private void showError(String msg) {
@@ -834,15 +894,20 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public boolean isCastConnected() {
-            return currentCastSession != null && currentCastSession.isConnected();
+            try {
+                return isCastSessionConnected;
+            } catch (Exception ignored) {
+                return false;
+            }
         }
 
         @JavascriptInterface
         public String getCastDeviceName() {
-            if (currentCastSession != null && currentCastSession.getCastDevice() != null) {
-                return currentCastSession.getCastDevice().getFriendlyName();
+            try {
+                return currentCastDeviceName != null ? currentCastDeviceName : "";
+            } catch (Exception ignored) {
+                return "";
             }
-            return "";
         }
 
         private CastSession getActiveCastSession() {
@@ -950,6 +1015,10 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        private int currentLoadOperationId = 0;
+        private final Handler loadMediaHandler = new Handler(Looper.getMainLooper());
+        private Runnable pendingLoadRetry = null;
+
         @JavascriptInterface
         public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, boolean autoplay) {
             loadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, 0.0, autoplay);
@@ -959,42 +1028,63 @@ public class MainActivity extends AppCompatActivity {
         public void loadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, double durationSec, boolean autoplay) {
             Log.d("BragiCast", "Native loadMedia: title=" + title + ", streamUrl=" + streamUrl + ", pos=" + positionSec + ", dur=" + durationSec + ", autoplay=" + autoplay);
             runOnUiThread(() -> {
-                executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, 1);
+                final int opId = ++currentLoadOperationId;
+                if (pendingLoadRetry != null) {
+                    loadMediaHandler.removeCallbacks(pendingLoadRetry);
+                    pendingLoadRetry = null;
+                }
+                executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, 1, opId);
             });
         }
 
-        private void executeLoadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, double durationSec, boolean autoplay, int attempt) {
+        private void executeLoadMedia(String title, String artist, String album, String streamUrl, String artworkUrl, double positionSec, double durationSec, boolean autoplay, int attempt, int opId) {
+            if (opId != currentLoadOperationId) {
+                Log.d("BragiCast", "Discarding superseded executeLoadMedia (opId=" + opId + ", current=" + currentLoadOperationId + ")");
+                return;
+            }
+
             if (TextUtils.isEmpty(streamUrl)) {
                 Log.e("BragiCast", "streamUrl is empty when loadMedia called");
+                isMediaLoading = false;
                 notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
                 return;
             }
 
             CastSession session = getActiveCastSession();
             if (session == null) {
-                Log.w("BragiCast", "No active Cast session when loadMedia called (attempt " + attempt + ")");
+                Log.w("BragiCast", "No active Cast session when loadMedia called (attempt " + attempt + ", opId " + opId + ")");
                 if (attempt < 4) {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1);
-                    }, 400);
+                    pendingLoadRetry = () -> {
+                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
+                    };
+                    loadMediaHandler.postDelayed(pendingLoadRetry, 400);
                 } else {
-                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                    if (opId == currentLoadOperationId) {
+                        isMediaLoading = false;
+                        notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                    }
                 }
                 return;
             }
 
             RemoteMediaClient client = session.getRemoteMediaClient();
             if (client == null) {
-                Log.w("BragiCast", "RemoteMediaClient is null (attempt " + attempt + ")");
+                Log.w("BragiCast", "RemoteMediaClient is null (attempt " + attempt + ", opId " + opId + ")");
                 if (attempt < 4) {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1);
-                    }, 400);
+                    pendingLoadRetry = () -> {
+                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
+                    };
+                    loadMediaHandler.postDelayed(pendingLoadRetry, 400);
                 } else {
-                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                    if (opId == currentLoadOperationId) {
+                        isMediaLoading = false;
+                        notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                    }
                 }
                 return;
             }
+
+            isMediaLoading = true;
 
             // Ensure listeners are registered
             client.removeProgressListener(progressListener);
@@ -1041,18 +1131,39 @@ public class MainActivity extends AppCompatActivity {
             MediaLoadRequestData requestData = requestBuilder.build();
 
             client.load(requestData).setResultCallback(result -> {
+                if (opId != currentLoadOperationId) {
+                    Log.d("BragiCast", "Ignoring obsolete load result (opId=" + opId + ", current=" + currentLoadOperationId + ")");
+                    return;
+                }
+
                 if (!result.getStatus().isSuccess()) {
                     int statusCode = result.getStatus().getStatusCode();
-                    Log.e("BragiCast", "Media load failed on Cast receiver (attempt " + attempt + "): " + statusCode);
+                    // 2002 = CastStatusCodes.CANCELED (replaced/interrupted by subsequent load)
+                    // 2103 = Media load replaced on receiver
+                    if (statusCode == 2002 || statusCode == 2103) {
+                        Log.d("BragiCast", "Load was cancelled or replaced on receiver (statusCode=" + statusCode + "), ignoring");
+                        return;
+                    }
+                    Log.e("BragiCast", "Media load failed on Cast receiver (attempt " + attempt + ", opId " + opId + "): " + statusCode);
                     if (attempt < 3 && positionSec > 0) {
-                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                            executeLoadMedia(title, artist, album, streamUrl, artworkUrl, 0.0, durationSec, autoplay, attempt + 1);
-                        }, 500);
+                        pendingLoadRetry = () -> {
+                            executeLoadMedia(title, artist, album, streamUrl, artworkUrl, 0.0, durationSec, autoplay, attempt + 1, opId);
+                        };
+                        loadMediaHandler.postDelayed(pendingLoadRetry, 500);
                     } else {
-                        notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                        if (opId == currentLoadOperationId) {
+                            isMediaLoading = false;
+                            notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1.0);
+                        }
                     }
                 } else {
-                    Log.i("BragiCast", "Media load accepted by Cast receiver (autoplay=" + autoplay + ")");
+                    if (opId == currentLoadOperationId) {
+                        isMediaLoading = false;
+                        Log.i("BragiCast", "Media load accepted by Cast receiver for opId=" + opId);
+                        if (autoplay) {
+                            client.play();
+                        }
+                    }
                 }
             });
         }

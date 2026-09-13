@@ -271,8 +271,14 @@ const initializeCastOnce = async () => {
 
   const currentWindow = getWindow()
   if (isNativeCastAvailable()) {
-    const isConnected = Boolean(currentWindow.BragiNative.isCastConnected?.())
-    const deviceName = currentWindow.BragiNative.getCastDeviceName?.() || ''
+    let isConnected = false
+    let deviceName = ''
+    try {
+      isConnected = Boolean(currentWindow.BragiNative.isCastConnected?.())
+      deviceName = currentWindow.BragiNative.getCastDeviceName?.() || ''
+    } catch (e) {
+      isConnected = false
+    }
     state = {
       ...state,
       available: true,
@@ -419,7 +425,22 @@ export const requestCastSession = async (timeoutMs = CAST_REQUEST_TIMEOUT_MS) =>
   }
 }
 
-export const endCastSession = (stopCasting = true) => {
+let resumeLocalOnEnd = false
+
+export const setResumeLocalOnEnd = (value) => {
+  resumeLocalOnEnd = Boolean(value)
+}
+
+export const consumeResumeLocalOnEnd = () => {
+  const value = resumeLocalOnEnd
+  resumeLocalOnEnd = false
+  return value
+}
+
+export const endCastSession = (stopCasting = true, options = {}) => {
+  if (options?.resumeLocal) {
+    resumeLocalOnEnd = true
+  }
   // An explicit stop must not be automatically rejoined after a refresh.
   explicitStopRequested = true
   forgetCastSession()

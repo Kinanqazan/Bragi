@@ -1,0 +1,27 @@
+FROM public.ecr.aws/docker/library/alpine:3.20 AS final
+LABEL maintainer="deluan@navidrome.org"
+LABEL org.opencontainers.image.source="https://github.com/navidrome/navidrome"
+
+# Install runtime dependencies
+# - libwebp + symlinks: enables native WebP encoding via purego/dlopen
+RUN apk add -U --no-cache ffmpeg mpv sqlite libwebp libwebpdemux libwebpmux && \
+    for lib in libwebp libwebpdemux libwebpmux; do \
+        target=$(ls /usr/lib/$lib.so.* 2>/dev/null | head -1) && \
+        [ -n "$target" ] && ln -sf "$target" /usr/lib/$lib.so; \
+    done
+
+# Copy navidrome binary (prebuilt dynamic musl binary for Alpine)
+COPY out/navidrome /app/navidrome
+
+VOLUME ["/data", "/music"]
+ENV ND_MUSICFOLDER=/music
+ENV ND_DATAFOLDER=/data
+ENV ND_CONFIGFILE=/data/navidrome.toml
+ENV ND_PORT=4533
+RUN touch /.nddockerenv
+
+EXPOSE ${ND_PORT}
+WORKDIR /app
+ENV PATH="/app:${PATH}"
+
+ENTRYPOINT ["/app/navidrome"]

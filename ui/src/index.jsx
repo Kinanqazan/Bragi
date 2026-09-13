@@ -7,9 +7,20 @@ import { initializeCast } from './cast/castApi'
 
 initializeCast().catch(() => undefined)
 
+const isNativeApp = typeof window !== 'undefined' && Boolean(window.BragiNative)
 const devPwaEnabled = import.meta.env.VITE_ENABLE_DEV_PWA === 'true'
 
-if (import.meta.env.PROD) {
+if (isNativeApp) {
+  // In the native Android APK, the service worker is not used (assets are either
+  // bundled in the APK or served dynamically via Vite HMR in live dev mode).
+  // Skipping registration also prevents Chromium SSL certificate errors when
+  // connecting via local reverse proxies (e.g. self-signed certs).
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister())
+    }).catch(() => undefined)
+  }
+} else if (import.meta.env.PROD) {
   registerSW({ immediate: true })
 } else if (devPwaEnabled) {
   // Replace a previously installed production worker before registering

@@ -25,13 +25,19 @@ android {
 
     buildTypes {
         release {
+            resValue "string", "app_name", "Bragi"
             minifyEnabled false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
+            resValue "string", "app_name", "Bragi Dev"
             signingConfig signingConfigs.release
         }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {

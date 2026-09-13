@@ -249,7 +249,12 @@ export const createPlaybackEngine = ({
 
   const loadTrack = async (
     index,
-    { autoplay = false, skipStopped = false, fromEnded = false } = {},
+    {
+      autoplay = false,
+      skipStopped = false,
+      fromEnded = false,
+      position = 0,
+    } = {},
   ) => {
     if (destroyed || !queue[index]) return false
     const track = queue[index]
@@ -271,12 +276,14 @@ export const createPlaybackEngine = ({
     startReportedForLoad = null
     if (state.playing) state = { ...state, playing: false }
     if (!autoplay || !fromEnded) adapter.pause()
+    const targetPosition =
+      Number.isFinite(position) && position > 0 ? position : 0
     update({
       currentTrack: track,
       currentIndex: index,
       playing: false,
       loading: true,
-      currentTime: 0,
+      currentTime: targetPosition,
       duration: 0,
       buffered: 0,
       error: null,
@@ -308,6 +315,24 @@ export const createPlaybackEngine = ({
       adapter.pause()
       adapter.src = url
       adapter.load()
+      if (targetPosition > 0) {
+        try {
+          adapter.currentTime = targetPosition
+        } catch {
+          // Ignored if media element requires metadata before seeking
+        }
+        const onLoaded = () => {
+          try {
+            if (adapter.currentTime !== targetPosition) {
+              adapter.currentTime = targetPosition
+            }
+          } catch {}
+          adapter.removeEventListener('loadedmetadata', onLoaded)
+          adapter.removeEventListener('canplay', onLoaded)
+        }
+        adapter.addEventListener('loadedmetadata', onLoaded)
+        adapter.addEventListener('canplay', onLoaded)
+      }
       const shouldAutoplay = playbackIntent && operation === loadId
       if (!shouldAutoplay) {
         update({ loading: false })
@@ -316,7 +341,7 @@ export const createPlaybackEngine = ({
 
       if (startReportedForLoad !== operation) {
         startReportedForLoad = operation
-        report('starting', track, 0)
+        report('starting', track, targetPosition)
       }
       try {
         await resolveWithTimeout(
@@ -348,6 +373,7 @@ export const createPlaybackEngine = ({
         return false
       }
     })()
+
     return request
   }
 
@@ -397,10 +423,16 @@ export const createPlaybackEngine = ({
 
     if (sameTrack && currentIndex === nextIndex) {
       currentTrack = normalizedQueue[nextIndex]
+      if (Number.isFinite(options.position) && options.position >= 0) {
+        seek(options.position)
+      }
       update({ currentTrack, currentIndex })
       return options.autoplay ? play() : Promise.resolve(true)
     }
-    return loadTrack(nextIndex, { autoplay: options.autoplay })
+    return loadTrack(nextIndex, {
+      autoplay: options.autoplay,
+      position: options.position,
+    })
   }
 
   const play = async () => {

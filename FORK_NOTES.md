@@ -39,8 +39,10 @@ Resolve conflicts if Git reports any, run the backend and UI test suites, then
 build and deploy a new image from this fork. Pulling an official Navidrome image
 will not contain these customizations.
 
-Pushes to `master` automatically build the existing `Dockerfile` for
-`linux/amd64` and publish two tags to GitHub Container Registry:
+Pushes to `master` automatically compile the UI, build the dynamic musl
+binary with GitHub Actions caching, and package the final Alpine image using
+`Dockerfile.custom` for `linux/amd64`, publishing two tags to GitHub Container
+Registry:
 
 ```text
 ghcr.io/<github-owner>/<repository>:latest

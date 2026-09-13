@@ -101,6 +101,16 @@
             app:backgroundTint="#1976d2"
             app:cornerRadius="8dp" />
 
+        <CheckBox
+            android:id="@+id/dev_mode_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Live Dev Mode (Vite HMR)"
+            android:textColor="#a0a0a0"
+            android:buttonTint="#1976d2"
+            android:textSize="14sp" />
+
         <TextView
             android:id="@+id/status_message"
             android:layout_width="wrap_content"

@@ -27,6 +27,53 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build UI bundle
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Cache Go build and modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-cache-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-
+
+      - name: Build Navidrome binary (dynamic musl)
+        run: |
+          mkdir -p "$HOME/.cache/go-build" "$HOME/go/pkg/mod" out
+          docker run --rm -i \
+            -v "${{ github.workspace }}:/workspace" \
+            -v "$HOME/.cache/go-build:/root/.cache/go-build" \
+            -v "$HOME/go/pkg/mod:/go/pkg/mod" \
+            -w /workspace \
+            public.ecr.aws/docker/library/golang:1.26-alpine \
+            sh << 'EOF'
+          set -e
+          apk add --no-cache clang lld file git gcc musl-dev zlib-dev
+          export CGO_ENABLED=1
+          BUILD_TAGS=$(./release/build-tags.sh)
+          go build -tags="${BUILD_TAGS}" -ldflags="-w -s \
+            -linkmode=external -extldflags '-latomic' \
+            -X github.com/navidrome/navidrome/consts.gitSha=${{ github.sha }} \
+            -X github.com/navidrome/navidrome/consts.gitTag=custom-${{ github.ref_name }}" \
+            -o out/navidrome .
+          ./release/verify-binary.sh out/navidrome
+          file out/navidrome | grep -q "dynamically linked" || { echo "ERROR: out/navidrome is not dynamically linked"; file out/navidrome; exit 1; }
+          chmod 755 out/navidrome
+          EOF
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -53,16 +100,13 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: Dockerfile
+          file: Dockerfile.custom
           platforms: linux/amd64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           annotations: ${{ steps.metadata.outputs.annotations }}
-          build-args: |
-            GIT_SHA=${{ github.sha }}
-            GIT_TAG=custom-${{ github.ref_name }}
-          cache-from: type=gha,scope=custom-image-amd64
-          cache-to: type=gha,mode=max,scope=custom-image-amd64
+          cache-from: type=gha,scope=custom-image-final
+          cache-to: type=gha,mode=min,scope=custom-image-final
           provenance: false
           sbom: false
