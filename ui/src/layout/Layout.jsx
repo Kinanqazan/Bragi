@@ -24,8 +24,8 @@ const useStyles = makeStyles((theme) => ({
     boxSizing: 'border-box',
     overflow: 'hidden',
     paddingBottom: props.addPadding
-      ? 'calc(184px + env(safe-area-inset-bottom))'
-      : 'calc(84px + env(safe-area-inset-bottom))',
+      ? 'calc(174px + env(safe-area-inset-bottom, 0px))'
+      : 'calc(74px + env(safe-area-inset-bottom, 0px))',
     '& .MuiDrawer-root.MuiDrawer-modal, & .MuiDrawer-modal, & .RaSidebar-root .MuiDrawer-modal':
       {
         background: 'transparent !important',
@@ -52,6 +52,13 @@ const useStyles = makeStyles((theme) => ({
           paddingTop: '0 !important',
           marginBottom: '0 !important',
           boxShadow: 'none !important',
+          display: 'flex !important',
+          flexDirection: 'column !important',
+          flex: '1 1 auto !important',
+          minHeight: '0 !important',
+          height: '100% !important',
+          maxHeight: '100% !important',
+          overflow: 'hidden !important',
         },
       '& .RaList-header, & div[class*="RaList-header"], & [class*="RaList-header"], & [class*="RaList-actions"], & [class*="RaTopToolbar-root"]':
         {
@@ -79,16 +86,20 @@ const useStyles = makeStyles((theme) => ({
         duration: theme.transitions.duration.shorter,
       }),
       [theme.breakpoints.down('sm')]: {
+        display: 'flex',
+        flexDirection: 'column',
+        flex: '1 1 auto',
+        minHeight: 0,
         paddingTop: '0 !important',
         paddingLeft: '16px !important',
         paddingRight: '16px !important',
-        paddingBottom: theme.spacing(2),
+        paddingBottom: '0 !important',
       },
       [theme.breakpoints.down('xs')]: {
         paddingLeft: '16px !important',
         paddingRight: '16px !important',
         paddingTop: '0 !important',
-        paddingBottom: theme.spacing(2),
+        paddingBottom: '0 !important',
       },
       '& thead.MuiTableHead-root, & .RaDatagrid-thead, & .RaDatagrid-headerRow':
         {
@@ -233,6 +244,12 @@ const useStyles = makeStyles((theme) => ({
     height: '100%',
     maxHeight: '100%',
     overflow: 'hidden',
+    [theme.breakpoints.down('sm')]: {
+      display: 'flex',
+      flexDirection: 'column',
+      flex: '1 1 auto',
+      minHeight: 0,
+    },
   },
   contentWithSidebar: {
     marginTop: '0 !important',
@@ -243,6 +260,12 @@ const useStyles = makeStyles((theme) => ({
     height: '100%',
     maxHeight: '100%',
     overflow: 'hidden',
+    [theme.breakpoints.down('sm')]: {
+      display: 'flex',
+      flexDirection: 'column',
+      flex: '1 1 auto',
+      minHeight: 0,
+    },
   },
   content: {
     marginTop: '0 !important',
@@ -253,6 +276,12 @@ const useStyles = makeStyles((theme) => ({
     height: '100%',
     maxHeight: '100%',
     overflow: 'hidden',
+    [theme.breakpoints.down('sm')]: {
+      display: 'flex',
+      flexDirection: 'column',
+      flex: '1 1 auto',
+      minHeight: 0,
+    },
   },
 }))
 
@@ -266,8 +295,8 @@ const Layout = (props) => {
 
   useEffect(() => {
     const offset = hasQueue
-      ? 'calc(200px + env(safe-area-inset-bottom, 0px))'
-      : 'calc(96px + env(safe-area-inset-bottom, 0px))'
+      ? 'calc(174px + env(safe-area-inset-bottom, 0px))'
+      : 'calc(74px + env(safe-area-inset-bottom, 0px))'
     document.documentElement.style.setProperty(
       '--nd-mobile-bottom-offset',
       offset,

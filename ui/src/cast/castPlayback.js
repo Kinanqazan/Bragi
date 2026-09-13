@@ -327,6 +327,7 @@ export const createCastPlaybackTarget = ({
   let currentIndex = -1
   let queue = []
   const queuePolicy = createQueuePolicy()
+  let lastLocalVolumeChange = 0
   let loggedReceiverFailure = null
   let recoveredReceiverFailureOperation = null
   let state = {
@@ -420,9 +421,11 @@ export const createCastPlaybackTarget = ({
         remotePlayer.isMediaLoaded &&
         !remotePlayer.isPaused),
     )
-    const volume = Number.isFinite(remotePlayer.volumeLevel)
-      ? remotePlayer.volumeLevel
-      : state.volume
+    const isRecentLocalVolume = Date.now() - lastLocalVolumeChange < 1000
+    const volume =
+      !isRecentLocalVolume && Number.isFinite(remotePlayer.volumeLevel)
+        ? remotePlayer.volumeLevel
+        : state.volume
     const receiverFailure = receiverStatus
       ? receiverFailureFrom(receiverStatus, { previousPlaying })
       : null
@@ -943,6 +946,7 @@ export const createCastPlaybackTarget = ({
 
   const setVolume = (volume) => {
     const nextVolume = clamp(Number(volume) || 0, 0, 1)
+    lastLocalVolumeChange = Date.now()
     remotePlayer.volumeLevel = nextVolume
     throttledSetRemoteVolume()
     state = { ...state, volume: nextVolume }
@@ -1041,7 +1045,6 @@ export const createNativeCastPlaybackTarget = ({
   }
 
   let progressInterval = null
-  let nativeLoadTimer = null
   const startProgressTicker = () => {
     if (progressInterval) return
     progressInterval = setInterval(() => {
@@ -1069,10 +1072,6 @@ export const createNativeCastPlaybackTarget = ({
   ) => {
     if (destroyed || !track) return false
     const operation = ++loadOperation
-    if (nativeLoadTimer) {
-      clearTimeout(nativeLoadTimer)
-      nativeLoadTimer = null
-    }
     const shouldAutoplay =
       typeof autoplay === 'boolean'
         ? autoplay
@@ -1120,24 +1119,20 @@ export const createNativeCastPlaybackTarget = ({
         Number(meta.duration || meta.song?.duration) || 0
 
       if (typeof window !== 'undefined' && window.BragiNative?.loadMedia) {
-        nativeLoadTimer = setTimeout(() => {
-          nativeLoadTimer = null
-          if (destroyed || operation !== loadOperation) return
-          try {
-            window.BragiNative.loadMedia(
-              meta.title || meta.name || '',
-              meta.artist || meta.artistName || '',
-              meta.album || meta.albumName || '',
-              media.url,
-              artworkUrl,
-              Number(position) || 0,
-              trackDuration,
-              Boolean(shouldAutoplay),
-            )
-          } catch (e) {
-            console.error('[Bragi Cast] Native loadMedia error', e)
-          }
-        }, 75)
+        try {
+          window.BragiNative.loadMedia(
+            meta.title || meta.name || '',
+            meta.artist || meta.artistName || '',
+            meta.album || meta.albumName || '',
+            media.url,
+            artworkUrl,
+            Number(position) || 0,
+            trackDuration,
+            Boolean(shouldAutoplay),
+          )
+        } catch (e) {
+          console.error('[Bragi Cast] Native loadMedia error', e)
+        }
       }
 
       mediaLoaded = true
@@ -1214,19 +1209,26 @@ export const createNativeCastPlaybackTarget = ({
         nextPlaying = true
       }
     } else if (isPaused) {
-      // If a track load is in progress (nativeLoadTimer or loading state)
-      // or playbackIntent is true, a transient PAUSED event from the receiver
-      // terminating the previous track MUST NOT kill playback intent or stop playback!
-      if (!state.loading && !nativeLoadTimer && !playbackIntent) {
+      // If a track load is in progress or playbackIntent is true,
+      // a transient PAUSED event from the receiver terminating the previous
+      // track MUST NOT kill playback intent or stop playback!
+      if (!state.loading && !playbackIntent) {
         nextPlaying = false
         nextLoading = false
         wasPlayingBeforeStop = false
         playbackIntent = false
       }
     } else if (isIdle) {
-      if (!state.loading && !nativeLoadTimer) {
-        nextPlaying = false
+      if (idleReason === 'INTERRUPTED' || idleReason === 'CANCELED') {
+        if (playbackIntent) {
+          nextLoading = true
+          nextPlaying = true
+        }
+      } else {
         nextLoading = false
+        if (!playbackIntent) {
+          nextPlaying = false
+        }
       }
     }
 
@@ -1258,7 +1260,7 @@ export const createNativeCastPlaybackTarget = ({
       loading: nextLoading,
       currentTime: nextCurrentTime,
       duration: duration > 0 ? duration : state.duration,
-      volume: rawVolume != null ? rawVolume * rawVolume : state.volume,
+      volume: rawVolume != null ? rawVolume : state.volume,
     }
 
     if (previousPlaying !== nextPlaying && currentTrack) {
@@ -1269,12 +1271,10 @@ export const createNativeCastPlaybackTarget = ({
     if (isIdle && idleReason === 'FINISHED') {
       navigate('next', { autoplay: true, manual: false })
     } else if (isIdle && idleReason === 'ERROR') {
-      // If a new track is in the middle of loading or timer pending,
-      // a transient IDLE/ERROR from aborting the previous media stream must NOT kill the session!
-      if (state.loading || nativeLoadTimer) {
+      // If a load request is actively in flight, ignore old track abort error
+      if (state.loading) {
         return
       }
-      const error = new Error('Cast playback failed on receiver')
       state = {
         ...state,
         playing: false,
@@ -1283,13 +1283,6 @@ export const createNativeCastPlaybackTarget = ({
       }
       stopProgressTicker()
       notify()
-      if (onSessionError) {
-        onSessionError(error, {
-          track: currentTrack,
-          autoplay: previousPlaying,
-          position: state.currentTime,
-        })
-      }
     }
   }
 
@@ -1350,10 +1343,6 @@ export const createNativeCastPlaybackTarget = ({
         playbackIntent = false
         wasPlayingBeforeStop = false
         stopProgressTicker()
-        if (nativeLoadTimer) {
-          clearTimeout(nativeLoadTimer)
-          nativeLoadTimer = null
-        }
         currentTrack = null
         currentIndex = -1
         mediaLoaded = false
@@ -1443,7 +1432,7 @@ export const createNativeCastPlaybackTarget = ({
     },
     setVolume: (volume) => {
       const nextVolume = clamp(Number(volume) || 0, 0, 1)
-      state = { ...state, volume: nextVolume * nextVolume }
+      state = { ...state, volume: nextVolume }
       notify()
       if (typeof window !== 'undefined')
         window?.BragiNative?.setVolume?.(nextVolume)
@@ -1460,10 +1449,6 @@ export const createNativeCastPlaybackTarget = ({
       playbackIntent = false
       wasPlayingBeforeStop = false
       stopProgressTicker()
-      if (nativeLoadTimer) {
-        clearTimeout(nativeLoadTimer)
-        nativeLoadTimer = null
-      }
       state = { ...state, playing: false, loading: false }
       notify()
       if (typeof window !== 'undefined') window?.BragiNative?.pause?.()
@@ -1472,10 +1457,6 @@ export const createNativeCastPlaybackTarget = ({
     },
     destroy: () => {
       destroyed = true
-      if (nativeLoadTimer) {
-        clearTimeout(nativeLoadTimer)
-        nativeLoadTimer = null
-      }
       stopProgressTicker()
       subscribers.clear()
       if (

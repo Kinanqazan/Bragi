@@ -40,31 +40,9 @@ vi.mock('react-admin', async () => {
 })
 
 describe('Pagination', () => {
-  let mockContext
-  let setPerPage
-
-  beforeEach(async () => {
-    vi.clearAllMocks()
-    localStorage.clear()
-    setPerPage = vi.fn()
-    const { useListPaginationContext } = await import('react-admin')
-    mockContext = vi.mocked(useListPaginationContext)
-  })
-
-  const selectPerPage = () => fireEvent.click(screen.getByText('select 50'))
-
-  it('persists the page size globally in localStorage', () => {
-    mockContext.mockReturnValue({ perPage: 15, setPerPage })
-    render(<Pagination />)
-    selectPerPage()
-    expect(localStorage.getItem('itemsPerPage')).toEqual('50')
-    expect(setPerPage).toHaveBeenCalledWith(50)
-  })
-
-  it('does not persist a page size the user did not select', () => {
-    mockContext.mockReturnValue({ perPage: 15, setPerPage })
-    render(<Pagination />)
-    expect(localStorage.getItem('itemsPerPage')).toBeNull()
+  it('renders null to eliminate page-based switching', () => {
+    const { container } = render(<Pagination />)
+    expect(container).toBeEmptyDOMElement()
   })
 })
 

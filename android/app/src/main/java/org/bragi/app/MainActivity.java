@@ -41,6 +41,18 @@ import androidx.webkit.WebViewFeature;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.Locale;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.cert.X509Certificate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.json.JSONObject;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -82,10 +94,12 @@ public class MainActivity extends AppCompatActivity {
     private static WeakReference<MainActivity> sInstance;
     private BroadcastReceiver volumeReceiver;
     private CastContext castContext;
-    private CastSession currentCastSession;
-    private boolean isMediaLoading = false;
+    private volatile CastSession currentCastSession;
+    private volatile boolean isMediaLoading = false;
     private volatile boolean isCastSessionConnected = false;
     private volatile String currentCastDeviceName = "";
+    private volatile double currentCastVolume = 1.0;
+    private volatile String currentCastMediaBaseUrl = "";
 
     private final RemoteMediaClient.Callback remoteMediaClientCallback = new RemoteMediaClient.Callback() {
         @Override
@@ -105,21 +119,30 @@ public class MainActivity extends AppCompatActivity {
         int playerState = client.getMediaStatus().getPlayerState();
         String stateStr = "PAUSED";
         if (playerState == MediaStatus.PLAYER_STATE_PLAYING) {
+            isMediaLoading = false;
             stateStr = "PLAYING";
-        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING || isMediaLoading) {
+        } else if (isMediaLoading) {
+            stateStr = "BUFFERING";
+        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING) {
             stateStr = "BUFFERING";
         } else if (playerState == MediaStatus.PLAYER_STATE_IDLE) {
             stateStr = "IDLE";
+        } else if (playerState == MediaStatus.PLAYER_STATE_PAUSED) {
+            stateStr = "PAUSED";
         }
         double volume = 1.0;
         try {
             volume = currentCastSession.getVolume();
+            currentCastVolume = volume;
         } catch (Exception ignored) {
             volume = client.getMediaStatus().getStreamVolume();
+            currentCastVolume = volume;
         }
         notifyNativeCastMediaStatus(stateStr, "NONE", progressMs / 1000.0, durationMs / 1000.0, volume);
         boolean isPlaying = (playerState == MediaStatus.PLAYER_STATE_PLAYING || playerState == MediaStatus.PLAYER_STATE_BUFFERING);
-        PlaybackService.updateMetadata(MainActivity.this, null, null, null, null, isPlaying, durationMs / 1000.0, progressMs / 1000.0);
+        if (!isCastSessionConnected) {
+            PlaybackService.updatePosition(MainActivity.this, progressMs / 1000.0, durationMs / 1000.0, isPlaying);
+        }
     };
 
     private void notifyCastStatus() {
@@ -136,17 +159,24 @@ public class MainActivity extends AppCompatActivity {
         double volume = 1.0;
         try {
             volume = currentCastSession.getVolume();
+            currentCastVolume = volume;
         } catch (Exception ignored) {
             volume = status.getStreamVolume();
+            currentCastVolume = volume;
         }
 
         String stateStr = "PAUSED";
         if (playerState == MediaStatus.PLAYER_STATE_PLAYING) {
+            isMediaLoading = false;
             stateStr = "PLAYING";
-        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING || isMediaLoading) {
+        } else if (isMediaLoading) {
+            stateStr = "BUFFERING";
+        } else if (playerState == MediaStatus.PLAYER_STATE_BUFFERING) {
             stateStr = "BUFFERING";
         } else if (playerState == MediaStatus.PLAYER_STATE_IDLE) {
             stateStr = "IDLE";
+        } else if (playerState == MediaStatus.PLAYER_STATE_PAUSED) {
+            stateStr = "PAUSED";
         }
 
         String idleReasonStr = "NONE";
@@ -159,9 +189,12 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        Log.d("BragiCast", "notifyCastStatus: playerState=" + stateStr + " (" + playerState + "), idleReason=" + idleReasonStr + " (" + idleReason + "), isMediaLoading=" + isMediaLoading);
         notifyNativeCastMediaStatus(stateStr, idleReasonStr, streamPosition / 1000.0, streamDuration / 1000.0, volume);
         boolean isPlaying = (playerState == MediaStatus.PLAYER_STATE_PLAYING || playerState == MediaStatus.PLAYER_STATE_BUFFERING);
-        PlaybackService.updateMetadata(MainActivity.this, null, null, null, null, isPlaying, streamDuration / 1000.0, streamPosition / 1000.0);
+        if (!isCastSessionConnected) {
+            PlaybackService.updateMetadata(MainActivity.this, null, null, null, null, isPlaying, streamDuration / 1000.0, streamPosition / 1000.0);
+        }
     }
 
     private void notifyNativeCastMediaStatus(String playerState, String idleReason, double currentTime, double duration, double volume) {
@@ -218,15 +251,20 @@ public class MainActivity extends AppCompatActivity {
     private final SessionManagerListener<CastSession> sessionManagerListener = new SessionManagerListener<CastSession>() {
         @Override
         public void onSessionStarting(@NonNull CastSession session) {
+            PlaybackService.stopImmediately(MainActivity.this);
             updateNativeCastState("SESSION_STARTING", session);
         }
 
         @Override
         public void onSessionStarted(@NonNull CastSession session, @NonNull String sessionId) {
             currentCastSession = session;
+            isCastSessionConnected = true;
+            PlaybackService.stopImmediately(MainActivity.this);
             RemoteMediaClient client = session.getRemoteMediaClient();
             if (client != null) {
+                client.unregisterCallback(remoteMediaClientCallback);
                 client.registerCallback(remoteMediaClientCallback);
+                client.removeProgressListener(progressListener);
                 client.addProgressListener(progressListener, 1000L);
             }
             updateNativeCastState("SESSION_STARTED", session);
@@ -234,7 +272,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSessionStartFailed(@NonNull CastSession session, int error) {
+            isMediaLoading = false;
             currentCastSession = null;
+            isCastSessionConnected = false;
             updateNativeCastState("SESSION_START_FAILED", null);
         }
 
@@ -246,6 +286,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSessionEnded(@NonNull CastSession session, int error) {
             isMediaLoading = false;
+            isCastSessionConnected = false;
             if (currentCastSession != null) {
                 RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
                 if (client != null) {
@@ -259,15 +300,20 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSessionResuming(@NonNull CastSession session, @NonNull String sessionId) {
+            PlaybackService.stopImmediately(MainActivity.this);
             updateNativeCastState("SESSION_STARTING", session);
         }
 
         @Override
         public void onSessionResumed(@NonNull CastSession session, boolean wasSuspended) {
             currentCastSession = session;
+            isCastSessionConnected = true;
+            PlaybackService.stopImmediately(MainActivity.this);
             RemoteMediaClient client = session.getRemoteMediaClient();
             if (client != null) {
+                client.unregisterCallback(remoteMediaClientCallback);
                 client.registerCallback(remoteMediaClientCallback);
+                client.removeProgressListener(progressListener);
                 client.addProgressListener(progressListener, 1000L);
             }
             updateNativeCastState("SESSION_STARTED", session);
@@ -275,12 +321,15 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSessionResumeFailed(@NonNull CastSession session, int error) {
+            isMediaLoading = false;
             currentCastSession = null;
+            isCastSessionConnected = false;
             updateNativeCastState("SESSION_START_FAILED", null);
         }
 
         @Override
         public void onSessionSuspended(@NonNull CastSession session, int reason) {
+            isCastSessionConnected = false;
             if (currentCastSession != null) {
                 RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
                 if (client != null) {
@@ -341,6 +390,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        currentCastMediaBaseUrl = prefs.getString("cast_media_base_url", "");
 
         webView = findViewById(R.id.webview);
         serverConnectLayout = findViewById(R.id.server_connect_layout);
@@ -360,12 +410,13 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Enable Chrome remote debugging only in debug builds
+        // Enable Chrome remote debugging in debug builds
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         // Initialize Google Cast
         try {
             castContext = CastContext.getSharedInstance(this);
+            castContext.getSessionManager().addSessionManagerListener(sessionManagerListener, CastSession.class);
             CastButtonFactory.setUpMediaRouteButton(getApplicationContext(), mediaRouteButton);
         } catch (Exception e) {
             // Google Play Services Cast may be unavailable or outdated on some devices
@@ -410,36 +461,37 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (!TextUtils.isEmpty(currentServerUrl)) {
+            fetchServerConfig(currentServerUrl);
+        }
         if (castContext != null) {
-            castContext.getSessionManager().addSessionManagerListener(sessionManagerListener, CastSession.class);
-            currentCastSession = castContext.getSessionManager().getCurrentCastSession();
-            if (currentCastSession != null && currentCastSession.isConnected()) {
-                isCastSessionConnected = true;
-                try {
-                    if (currentCastSession.getCastDevice() != null) {
-                        currentCastDeviceName = currentCastSession.getCastDevice().getFriendlyName();
+            try {
+                CastSession session = castContext.getSessionManager().getCurrentCastSession();
+                if (session != null && session.isConnected()) {
+                    currentCastSession = session;
+                    isCastSessionConnected = true;
+                    try {
+                        if (session.getCastDevice() != null) {
+                            currentCastDeviceName = session.getCastDevice().getFriendlyName();
+                        }
+                    } catch (Exception ignored) {}
+                    RemoteMediaClient client = session.getRemoteMediaClient();
+                    if (client != null) {
+                        client.removeProgressListener(progressListener);
+                        client.addProgressListener(progressListener, 1000L);
+                        client.unregisterCallback(remoteMediaClientCallback);
+                        client.registerCallback(remoteMediaClientCallback);
                     }
-                } catch (Exception ignored) {}
-                RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
-                if (client != null) {
-                    client.removeProgressListener(progressListener);
-                    client.addProgressListener(progressListener, 1000L);
-                    client.unregisterCallback(remoteMediaClientCallback);
-                    client.registerCallback(remoteMediaClientCallback);
+                    updateNativeCastState("SESSION_STARTED", session);
                 }
-            } else {
-                isCastSessionConnected = false;
-                currentCastDeviceName = "";
-            }
+            } catch (Exception ignored) {}
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (castContext != null) {
-            castContext.getSessionManager().removeSessionManagerListener(sessionManagerListener, CastSession.class);
-        }
+        // Keep sessionManagerListener registered across pause/resume so background casting works uninterrupted
         // Do NOT call webView.onPause() so background music playback remains uninterrupted
     }
 
@@ -465,8 +517,10 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             settings.setOffscreenPreRaster(true);
         }
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // Allow Chromium's internal compositor to render directly without intermediate offscreen layer
+        webView.setLayerType(View.LAYER_TYPE_NONE, null);
 
         String defaultUa = settings.getUserAgentString();
         settings.setUserAgentString(defaultUa + " BragiNativeApp/1.0");
@@ -794,8 +848,105 @@ public class MainActivity extends AppCompatActivity {
 
     private void injectServerBindingScript() {
         String cleanUrl = currentServerUrl != null ? currentServerUrl.replaceAll("/+$", "") : "";
-        String script = String.format("window.__BRAGI_SERVER_URL__ = '%s';", cleanUrl);
+        String cleanCastUrl = currentCastMediaBaseUrl != null ? currentCastMediaBaseUrl.replaceAll("/+$", "") : "";
+        String script = String.format("window.__BRAGI_SERVER_URL__ = '%s'; window.__BRAGI_CAST_MEDIA_BASE_URL__ = '%s';", cleanUrl, cleanCastUrl);
         webView.evaluateJavascript(script, null);
+    }
+
+    private void fetchServerConfig(String serverUrl) {
+        if (TextUtils.isEmpty(serverUrl)) return;
+        final String cleanUrl = serverUrl.replaceAll("/+$", "");
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(cleanUrl + "/app/");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(6000);
+                conn.setReadTimeout(6000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 BragiNativeApp/1.0");
+
+                if (conn instanceof HttpsURLConnection) {
+                    HttpsURLConnection httpsConn = (HttpsURLConnection) conn;
+                    TrustManager[] trustAllCerts = new TrustManager[]{
+                            new X509TrustManager() {
+                                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                            }
+                    };
+                    SSLContext sc = SSLContext.getInstance("TLS");
+                    sc.init(null, trustAllCerts, new java.security.SecureRandom());
+                    httpsConn.setSSLSocketFactory(sc.getSocketFactory());
+                    httpsConn.setHostnameVerifier((hostname, session) -> true);
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line).append("\n");
+                    }
+                    reader.close();
+
+                    String body = sb.toString();
+                    int startIdx = body.indexOf("window.__APP_CONFIG__");
+                    if (startIdx != -1) {
+                        int eqIdx = body.indexOf("=", startIdx);
+                        int scriptEnd = body.indexOf("</script>", startIdx);
+                        if (eqIdx != -1 && (scriptEnd == -1 || eqIdx < scriptEnd)) {
+                            int firstQuote = body.indexOf("\"", eqIdx);
+                            int firstBrace = body.indexOf("{", eqIdx);
+                            String jsonStr = null;
+                            if (firstQuote != -1 && (firstBrace == -1 || firstQuote < firstBrace)) {
+                                // Quoted JSON string: window.__APP_CONFIG__ = "{\"baseURL\"...}";
+                                int lastQuote = scriptEnd != -1 ? body.lastIndexOf("\"", scriptEnd) : body.lastIndexOf("\"");
+                                if (lastQuote > firstQuote) {
+                                    String rawVal = body.substring(firstQuote + 1, lastQuote);
+                                    jsonStr = rawVal.replace("\\\"", "\"").replace("\\\\", "\\");
+                                }
+                            } else if (firstBrace != -1) {
+                                // Raw JSON object: window.__APP_CONFIG__ = {"baseURL"...};
+                                int lastBrace = scriptEnd != -1 ? body.lastIndexOf("}", scriptEnd) : body.lastIndexOf("}");
+                                if (lastBrace > firstBrace) {
+                                    jsonStr = body.substring(firstBrace, lastBrace + 1);
+                                }
+                            }
+                            if (jsonStr != null) {
+                                try {
+                                    JSONObject json = new JSONObject(jsonStr);
+                                    if (json.has("castMediaBaseURL")) {
+                                        String castBase = json.optString("castMediaBaseURL", "").trim();
+                                        if (!TextUtils.isEmpty(castBase)) {
+                                            currentCastMediaBaseUrl = castBase;
+                                            prefs.edit().putString("cast_media_base_url", castBase).apply();
+                                            Log.i("BragiCast", "Discovered server castMediaBaseURL: " + castBase);
+                                            runOnUiThread(() -> {
+                                                if (webView != null) {
+                                                    String script = String.format(Locale.US,
+                                                            "window.__BRAGI_CAST_MEDIA_BASE_URL__ = '%s'; if (window.__bragiSetCastMediaBaseUrl) { window.__bragiSetCastMediaBaseUrl('%s'); }",
+                                                            castBase.replace("'", "\\'"), castBase.replace("'", "\\'"));
+                                                    webView.evaluateJavascript(script, null);
+                                                }
+                                            });
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    Log.w("BragiCast", "Failed to parse __APP_CONFIG__ JSON: " + e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.w("BragiCast", "Failed to fetch remote server config: " + e.getMessage());
+            } finally {
+                if (conn != null) {
+                    try { conn.disconnect(); } catch (Exception ignored) {}
+                }
+            }
+        }).start();
     }
 
     private void saveAndLoadServer(String url) {
@@ -815,6 +966,7 @@ public class MainActivity extends AppCompatActivity {
         loadingProgress.setVisibility(View.VISIBLE);
         serverConnectLayout.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
+        fetchServerConfig(currentServerUrl);
         boolean devMode = BuildConfig.DEBUG && prefs.getBoolean(KEY_DEV_MODE, false);
         if (devMode && !TextUtils.isEmpty(currentServerUrl)) {
             String cleanUrl = currentServerUrl.replaceAll("/+$", "");
@@ -867,6 +1019,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (castContext != null && castContext.getSessionManager() != null) {
+            try {
+                castContext.getSessionManager().removeSessionManagerListener(sessionManagerListener, CastSession.class);
+            } catch (Exception ignored) {}
+        }
         if (volumeReceiver != null) {
             try { unregisterReceiver(volumeReceiver); } catch (Exception ignored) {}
             volumeReceiver = null;
@@ -910,22 +1067,22 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        @JavascriptInterface
+        public String getCastMediaBaseUrl() {
+            try {
+                return currentCastMediaBaseUrl != null ? currentCastMediaBaseUrl : "";
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+
         private CastSession getActiveCastSession() {
-            if (currentCastSession != null && currentCastSession.isConnected()) {
-                return currentCastSession;
-            }
-            if (castContext != null && castContext.getSessionManager() != null) {
-                CastSession session = castContext.getSessionManager().getCurrentCastSession();
-                if (session != null && session.isConnected()) {
-                    currentCastSession = session;
-                    return session;
-                }
-            }
-            return null;
+            return isCastSessionConnected ? currentCastSession : null;
         }
 
         @JavascriptInterface
         public void setVolume(double volume) {
+            currentCastVolume = volume;
             runOnUiThread(() -> {
                 CastSession session = getActiveCastSession();
                 if (session != null) {
@@ -952,11 +1109,8 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public double getVolume() {
-            CastSession session = getActiveCastSession();
-            if (session != null) {
-                try {
-                    return session.getVolume();
-                } catch (Exception ignored) {}
+            if (isCastSessionConnected) {
+                return currentCastVolume;
             }
             try {
                 AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -976,12 +1130,16 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void updateMetadata(String title, String artist, String album, String artworkUrl, boolean isPlaying, double durationSec, double positionSec) {
-            PlaybackService.updateMetadata(MainActivity.this, title, artist, album, artworkUrl, isPlaying, durationSec, positionSec);
+            if (!isCastSessionConnected) {
+                PlaybackService.updateMetadata(MainActivity.this, title, artist, album, artworkUrl, isPlaying, durationSec, positionSec);
+            }
         }
 
         @JavascriptInterface
         public void onPlaybackStarted() {
-            PlaybackService.start(MainActivity.this);
+            if (!isCastSessionConnected) {
+                PlaybackService.start(MainActivity.this);
+            }
         }
 
         @JavascriptInterface
@@ -1050,12 +1208,72 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+            String effectiveStreamUrl = streamUrl;
+            String effectiveArtworkUrl = artworkUrl;
+
+            // If a receiver-accessible Cast media base URL is configured (e.g. http://192.168.x.x:4533),
+            // rewrite the stream and artwork URLs so Chromecast devices can stream directly over LAN HTTP
+            if (!TextUtils.isEmpty(currentCastMediaBaseUrl)) {
+                try {
+                    Uri origStreamUri = Uri.parse(streamUrl);
+                    Uri baseUri = Uri.parse(currentCastMediaBaseUrl);
+                    boolean schemeDiff = origStreamUri.getScheme() != null && baseUri.getScheme() != null &&
+                            !origStreamUri.getScheme().equalsIgnoreCase(baseUri.getScheme());
+                    boolean hostDiff = origStreamUri.getHost() != null && baseUri.getHost() != null &&
+                            !origStreamUri.getHost().equalsIgnoreCase(baseUri.getHost());
+                    boolean portDiff = origStreamUri.getPort() != baseUri.getPort();
+
+                    if (schemeDiff || hostDiff || portDiff) {
+                        Uri.Builder builder = baseUri.buildUpon();
+                        String origPath = origStreamUri.getPath();
+                        String basePath = baseUri.getPath() != null ? baseUri.getPath().replaceAll("/+$", "") : "";
+                        if (!TextUtils.isEmpty(basePath) && origPath != null && origPath.startsWith(basePath)) {
+                            origPath = origPath.substring(basePath.length());
+                        }
+                        builder.encodedPath((basePath != null ? basePath : "") + (origPath != null ? origPath : ""));
+                        builder.encodedQuery(origStreamUri.getEncodedQuery());
+                        String rewritten = builder.build().toString();
+                        Log.i("BragiCast", "Rewrote streamUrl for Cast receiver: " + rewritten);
+                        effectiveStreamUrl = rewritten;
+                    }
+                } catch (Exception e) {
+                    Log.w("BragiCast", "Could not rewrite streamUrl: " + e.getMessage());
+                }
+
+                if (!TextUtils.isEmpty(artworkUrl)) {
+                    try {
+                        Uri origArtUri = Uri.parse(artworkUrl);
+                        Uri baseUri = Uri.parse(currentCastMediaBaseUrl);
+                        boolean schemeDiff = origArtUri.getScheme() != null && baseUri.getScheme() != null &&
+                                !origArtUri.getScheme().equalsIgnoreCase(baseUri.getScheme());
+                        boolean hostDiff = origArtUri.getHost() != null && baseUri.getHost() != null &&
+                                !origArtUri.getHost().equalsIgnoreCase(baseUri.getHost());
+                        boolean portDiff = origArtUri.getPort() != baseUri.getPort();
+
+                        if (schemeDiff || hostDiff || portDiff) {
+                            Uri.Builder builder = baseUri.buildUpon();
+                            String origPath = origArtUri.getPath();
+                            String basePath = baseUri.getPath() != null ? baseUri.getPath().replaceAll("/+$", "") : "";
+                            if (!TextUtils.isEmpty(basePath) && origPath != null && origPath.startsWith(basePath)) {
+                                origPath = origPath.substring(basePath.length());
+                            }
+                            builder.encodedPath((basePath != null ? basePath : "") + (origPath != null ? origPath : ""));
+                            builder.encodedQuery(origArtUri.getEncodedQuery());
+                            effectiveArtworkUrl = builder.build().toString();
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            final String finalStreamUrl = effectiveStreamUrl;
+            final String finalArtworkUrl = effectiveArtworkUrl;
+
             CastSession session = getActiveCastSession();
             if (session == null) {
                 Log.w("BragiCast", "No active Cast session when loadMedia called (attempt " + attempt + ", opId " + opId + ")");
                 if (attempt < 4) {
                     pendingLoadRetry = () -> {
-                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
+                        executeLoadMedia(title, artist, album, finalStreamUrl, finalArtworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
                     };
                     loadMediaHandler.postDelayed(pendingLoadRetry, 400);
                 } else {
@@ -1072,7 +1290,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.w("BragiCast", "RemoteMediaClient is null (attempt " + attempt + ", opId " + opId + ")");
                 if (attempt < 4) {
                     pendingLoadRetry = () -> {
-                        executeLoadMedia(title, artist, album, streamUrl, artworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
+                        executeLoadMedia(title, artist, album, finalStreamUrl, finalArtworkUrl, positionSec, durationSec, autoplay, attempt + 1, opId);
                     };
                     loadMediaHandler.postDelayed(pendingLoadRetry, 400);
                 } else {
@@ -1086,15 +1304,6 @@ public class MainActivity extends AppCompatActivity {
 
             isMediaLoading = true;
 
-            // Ensure listeners are registered
-            client.removeProgressListener(progressListener);
-            client.addProgressListener(progressListener, 1000L);
-            client.unregisterCallback(remoteMediaClientCallback);
-            client.registerCallback(remoteMediaClientCallback);
-
-            // Update Android system notification player immediately
-            PlaybackService.updateMetadata(MainActivity.this, title, artist, album, artworkUrl, autoplay, durationSec, positionSec);
-
             MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
             if (!TextUtils.isEmpty(title)) metadata.putString(MediaMetadata.KEY_TITLE, title);
             if (!TextUtils.isEmpty(artist)) {
@@ -1102,17 +1311,16 @@ public class MainActivity extends AppCompatActivity {
                 metadata.putString(MediaMetadata.KEY_SUBTITLE, artist);
             }
             if (!TextUtils.isEmpty(album)) metadata.putString(MediaMetadata.KEY_ALBUM_TITLE, album);
-            if (!TextUtils.isEmpty(artworkUrl)) {
+            if (!TextUtils.isEmpty(finalArtworkUrl)) {
                 try {
-                    Uri artUri = Uri.parse(artworkUrl);
+                    Uri artUri = Uri.parse(finalArtworkUrl);
                     if (artUri != null && artUri.isAbsolute()) {
                         metadata.addImage(new WebImage(artUri));
                     }
                 } catch (Exception ignored) {}
             }
 
-            MediaInfo.Builder mediaInfoBuilder = new MediaInfo.Builder(streamUrl)
-                    .setContentUrl(streamUrl)
+            MediaInfo.Builder mediaInfoBuilder = new MediaInfo.Builder(finalStreamUrl)
                     .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
                     .setContentType("audio/mpeg")
                     .setMetadata(metadata);
@@ -1130,6 +1338,16 @@ public class MainActivity extends AppCompatActivity {
             }
             MediaLoadRequestData requestData = requestBuilder.build();
 
+            final int watchOpId = opId;
+            loadMediaHandler.postDelayed(() -> {
+                if (isMediaLoading && currentLoadOperationId == watchOpId) {
+                    Log.w("BragiCast", "Media load timed out waiting for playback (opId=" + watchOpId + ")");
+                    isMediaLoading = false;
+                    notifyCastStatus();
+                }
+            }, 12000L);
+
+            // Transmit Cast load request immediately
             client.load(requestData).setResultCallback(result -> {
                 if (opId != currentLoadOperationId) {
                     Log.d("BragiCast", "Ignoring obsolete load result (opId=" + opId + ", current=" + currentLoadOperationId + ")");
@@ -1147,7 +1365,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.e("BragiCast", "Media load failed on Cast receiver (attempt " + attempt + ", opId " + opId + "): " + statusCode);
                     if (attempt < 3 && positionSec > 0) {
                         pendingLoadRetry = () -> {
-                            executeLoadMedia(title, artist, album, streamUrl, artworkUrl, 0.0, durationSec, autoplay, attempt + 1, opId);
+                            executeLoadMedia(title, artist, album, finalStreamUrl, finalArtworkUrl, 0.0, durationSec, autoplay, attempt + 1, opId);
                         };
                         loadMediaHandler.postDelayed(pendingLoadRetry, 500);
                     } else {
@@ -1158,7 +1376,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else {
                     if (opId == currentLoadOperationId) {
-                        isMediaLoading = false;
                         Log.i("BragiCast", "Media load accepted by Cast receiver for opId=" + opId);
                         if (autoplay) {
                             client.play();
@@ -1166,6 +1383,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+
+            // CastMediaOptions and RemoteMediaClient manage the remote Cast notification and media session automatically
         }
 
         @JavascriptInterface

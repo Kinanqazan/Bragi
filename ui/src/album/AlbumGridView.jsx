@@ -1,5 +1,7 @@
 import React, { useRef } from 'react'
 import {
+  Button,
+  CircularProgress,
   GridList,
   GridListTile,
   Typography,
@@ -7,6 +9,7 @@ import {
   LinearProgress,
   useMediaQuery,
 } from '@material-ui/core'
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore'
 import { alpha, makeStyles } from '@material-ui/core/styles'
 import withWidth from '@material-ui/core/withWidth'
 import { Link } from 'react-router-dom'
@@ -31,7 +34,7 @@ const useStyles = makeStyles(
       width: '100%',
       maxWidth: '100%',
       minWidth: 0,
-      maxHeight: 'calc(100vh - 150px)',
+      maxHeight: 'calc(100vh - 105px)',
       overflowY: 'auto',
       overscrollBehavior: 'contain',
       WebkitOverflowScrolling: 'touch',
@@ -44,13 +47,19 @@ const useStyles = makeStyles(
         height: '0 !important',
       },
       [theme.breakpoints.down('sm')]: {
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 72px)',
-        paddingBottom: 72,
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
+        paddingBottom: 0,
       },
       [theme.breakpoints.down('xs')]: {
         margin: '10px 0',
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 68px)',
-        paddingBottom: 72,
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
+        paddingBottom: 0,
       },
     },
     tileBar: {
@@ -113,6 +122,64 @@ const useStyles = makeStyles(
     },
     albumContainer: {},
     albumPlayButton: { color: 'white' },
+    showMoreContainer: {
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      padding: '12px 16px',
+      gap: 12,
+      boxSizing: 'border-box',
+      [theme.breakpoints.down('sm')]: {
+        flexDirection: 'column',
+        padding: '10px 16px 6px',
+        gap: 4,
+      },
+    },
+    showMoreButton: {
+      borderRadius: '16px !important',
+      height: '32px !important',
+      minWidth: '120px !important',
+      padding: '0 14px !important',
+      textTransform: 'none !important',
+      fontSize: '0.82rem !important',
+      fontWeight: '600 !important',
+      color: `${theme.palette.primary.main} !important`,
+      backgroundColor:
+        theme.palette.type === 'dark'
+          ? 'rgba(255, 255, 255, 0.08) !important'
+          : 'rgba(0, 0, 0, 0.05) !important',
+      border: `1px solid ${alpha(theme.palette.primary.main, 0.35)} !important`,
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1) !important',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
+      display: 'inline-flex !important',
+      alignItems: 'center !important',
+      justifyContent: 'center !important',
+      gap: 6,
+      WebkitTapHighlightColor: 'transparent',
+      '&:hover': {
+        backgroundColor: `${alpha(theme.palette.primary.main, 0.15)} !important`,
+        borderColor: `${theme.palette.primary.main} !important`,
+        transform: 'translateY(-1px)',
+        boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2) !important',
+      },
+      '&:active': {
+        transform: 'scale(0.96)',
+      },
+      '& .MuiSvgIcon-root': {
+        fontSize: '1.1rem !important',
+      },
+    },
+    showMoreCaption: {
+      color: theme.palette.text.secondary,
+      fontSize: '0.8rem',
+      fontWeight: 500,
+      opacity: 0.8,
+      lineHeight: 1.2,
+      margin: 0,
+      whiteSpace: 'nowrap',
+    },
   }),
   { name: 'NDAlbumGridView' },
 )
@@ -222,8 +289,16 @@ const AlbumGridTile = ({ showArtist, record, basePath, ...props }) => {
 
 const LoadedAlbumGrid = ({ ids, data, basePath, width }) => {
   const classes = useStyles()
-  const { filterValues } = useListContext()
+  const isMobile = useMediaQuery('(max-width:959.95px)')
+  const { filterValues, total, loading, perPage, setPerPage } = useListContext()
   const isArtistView = !!(filterValues && filterValues.artist_id)
+
+  const handleShowMore = () => {
+    if (loading || !setPerPage) return
+    const currentCount = perPage || (ids ? ids.length : 25)
+    setPerPage(currentCount + 25)
+  }
+
   return (
     <div className={classes.root}>
       <GridList
@@ -242,6 +317,37 @@ const LoadedAlbumGrid = ({ ids, data, basePath, width }) => {
           </GridListTile>
         ))}
       </GridList>
+      {total > ids.length && (
+        <div className={classes.showMoreContainer}>
+          <Button
+            className={classes.showMoreButton}
+            onClick={handleShowMore}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <CircularProgress size={14} color="inherit" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <ExpandMoreIcon fontSize="small" />
+                <span>Show more</span>
+              </>
+            )}
+          </Button>
+          <Typography className={classes.showMoreCaption}>
+            {`Showing ${ids.length} of ${total} albums`}
+          </Typography>
+        </div>
+      )}
+      {ids.length >= total && total > 25 && (
+        <div className={classes.showMoreContainer}>
+          <Typography className={classes.showMoreCaption}>
+            {`All ${total} albums loaded`}
+          </Typography>
+        </div>
+      )}
     </div>
   )
 }

@@ -745,6 +745,44 @@ describe('createCastPlaybackTarget', () => {
     target.destroy()
   })
 
+  it('suppresses stale remote player volume events during local interaction settle window', async () => {
+    const fake = createFakeRuntime()
+    const track = { id: 'track-1', duration: 200 }
+    const session = {
+      loadMedia: vi.fn(async (request) => {
+        const player = fake.controller().player
+        player.isMediaLoaded = true
+        player.isPaused = !request.autoplay
+        player.duration = 200
+        fake.controller().emit()
+      }),
+    }
+    const target = createCastPlaybackTarget({
+      runtime: fake.runtime,
+      getSession: () => session,
+      resolveMedia: () =>
+        Promise.resolve({
+          url: 'https://server.test/song.mp3',
+          contentType: 'audio/mpeg',
+        }),
+    })
+
+    await target.setQueue([track], 0, { autoplay: true })
+
+    // User sets volume to 0.45
+    target.setVolume(0.45)
+    expect(target.getSnapshot().volume).toBe(0.45)
+
+    // Remote player fires ANY_CHANGE with a stale volumeLevel (e.g. 0.8) from an earlier packet
+    fake.controller().player.volumeLevel = 0.8
+    fake.controller().emit()
+
+    // Local volume must NOT snap to the stale remote value
+    expect(target.getSnapshot().volume).toBe(0.45)
+
+    target.destroy()
+  })
+
   it('routes controls when the receiver normalizes the stream URL', async () => {
     const fake = createFakeRuntime()
     let normalizedMediaSession = {

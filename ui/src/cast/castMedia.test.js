@@ -74,4 +74,28 @@ describe('resolveCastMedia', () => {
       contentType: 'audio/mpeg',
     })
   })
+
+  it('rebases media in Android APK standalone wrapper when origin is appassets', () => {
+    config.baseURL = 'https://bragi.lan'
+    config.castMediaBaseURL = 'http://192.168.2.28:4533'
+
+    const rewritten = toCastReceiverUrl(
+      'https://bragi.lan/rest/stream?id=song-apk&format=mp3',
+    )
+    expect(rewritten).toBe(
+      'http://192.168.2.28:4533/rest/stream?id=song-apk&format=mp3',
+    )
+  })
+
+  it('rebases media in Android APK when stream URL is under appassets', () => {
+    config.baseURL = 'https://bragi.lan'
+    config.castMediaBaseURL = 'http://192.168.2.28:4533'
+
+    const rewritten = toCastReceiverUrl(
+      'https://appassets.androidplatform.net/rest/stream?id=song-assets&format=mp3',
+    )
+    expect(rewritten).toBe(
+      'http://192.168.2.28:4533/rest/stream?id=song-assets&format=mp3',
+    )
+  })
 })

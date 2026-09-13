@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import {
   Box,
+  Button,
   Checkbox,
   Chip,
+  CircularProgress,
   IconButton,
   LinearProgress,
   Typography,
@@ -14,6 +16,7 @@ import EqualizerIcon from '@material-ui/icons/Equalizer'
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward'
 import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward'
 import CloseIcon from '@material-ui/icons/Close'
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore'
 import FavoriteBorderIcon from '@material-ui/icons/FavoriteBorder'
 import { useListContext, useTranslate } from 'react-admin'
 import { useDispatch, useSelector } from 'react-redux'
@@ -52,12 +55,19 @@ const useStyles = makeStyles((theme) => {
       maxWidth: '100%',
       minWidth: 0,
       boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      flex: '1 1 auto',
+      minHeight: 0,
+      height: '100%',
+      maxHeight: '100%',
+      overflow: 'hidden',
     },
     tableContainer: {
       width: '100%',
       maxWidth: '100%',
       minWidth: 0,
-      maxHeight: 'calc(100vh - 150px)',
+      maxHeight: 'calc(100vh - 105px)',
       overflowX: 'auto',
       overflowY: 'auto',
       overscrollBehavior: 'contain',
@@ -71,10 +81,16 @@ const useStyles = makeStyles((theme) => {
         height: '0 !important',
       },
       [theme.breakpoints.down('sm')]: {
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 72px)',
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
       },
       [theme.breakpoints.down('xs')]: {
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 68px)',
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
       },
     },
     tableContainerUnconstrained: {
@@ -87,8 +103,65 @@ const useStyles = makeStyles((theme) => {
       minWidth: '100%',
       boxSizing: 'border-box',
       [theme.breakpoints.down('sm')]: {
-        paddingBottom: 72,
+        paddingBottom: 0,
       },
+    },
+    showMoreContainer: {
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      padding: '12px 16px',
+      gap: 12,
+      boxSizing: 'border-box',
+      [theme.breakpoints.down('sm')]: {
+        flexDirection: 'column',
+        padding: '10px 16px 6px',
+        gap: 4,
+      },
+    },
+    showMoreButton: {
+      borderRadius: '16px !important',
+      height: '32px !important',
+      minWidth: '120px !important',
+      padding: '0 14px !important',
+      textTransform: 'none !important',
+      fontSize: '0.82rem !important',
+      fontWeight: '600 !important',
+      color: `${theme.palette.primary.main} !important`,
+      backgroundColor: isDark
+        ? 'rgba(255, 255, 255, 0.08) !important'
+        : 'rgba(0, 0, 0, 0.05) !important',
+      border: `1px solid ${alpha(theme.palette.primary.main, 0.35)} !important`,
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1) !important',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
+      display: 'inline-flex !important',
+      alignItems: 'center !important',
+      justifyContent: 'center !important',
+      gap: 6,
+      WebkitTapHighlightColor: 'transparent',
+      '&:hover': {
+        backgroundColor: `${alpha(theme.palette.primary.main, 0.15)} !important`,
+        borderColor: `${theme.palette.primary.main} !important`,
+        transform: 'translateY(-1px)',
+        boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2) !important',
+      },
+      '&:active': {
+        transform: 'scale(0.96)',
+      },
+      '& .MuiSvgIcon-root': {
+        fontSize: '1.1rem !important',
+      },
+    },
+    showMoreCaption: {
+      color: theme.palette.text.secondary,
+      fontSize: '0.8rem',
+      fontWeight: 500,
+      opacity: 0.8,
+      lineHeight: 1.2,
+      margin: 0,
+      whiteSpace: 'nowrap',
     },
     summary: {
       display: 'flex',
@@ -776,7 +849,7 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
   const classes = useStyles()
   const dispatch = useDispatch()
   const translate = useTranslate()
-  const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery('(max-width:959.95px)')
   const [selectionMode, setSelectionMode] = useState(false)
   const {
     data,
@@ -787,7 +860,15 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
     total,
     currentSort,
     setSort,
+    perPage,
+    setPerPage,
   } = useListContext()
+
+  const handleShowMore = () => {
+    if (loading || !setPerPage) return
+    const currentCount = perPage || (ids ? ids.length : 25)
+    setPerPage(currentCount + 25)
+  }
 
   const currentSongId = useSelector(
     (state) => state.player.current?.song?.id || state.player.current?.trackId,
@@ -948,26 +1029,59 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
           )}
 
           {songs.length > 0 ? (
-            <ModernTrackRows
-              songs={songs}
-              currentSongId={currentSongId}
-              onPlay={(song) => dispatch(playTracks(data, ids, song.id))}
-              selectedIds={selectedIds}
-              selectionMode={selectionMode}
-              activeColumns={activeColumns}
-              gridTemplateColumns={gridTemplateColumns}
-              onStartSelection={(id) => {
-                setSelectionMode(true)
-                if (!selectedIds.includes(id)) onSelect([...selectedIds, id])
-              }}
-              onToggleSelection={(id) =>
-                onSelect(
-                  selectedIds.includes(id)
-                    ? selectedIds.filter((selectedId) => selectedId !== id)
-                    : [...selectedIds, id],
-                )
-              }
-            />
+            <>
+              <ModernTrackRows
+                songs={songs}
+                currentSongId={currentSongId}
+                onPlay={(song) => dispatch(playTracks(data, ids, song.id))}
+                selectedIds={selectedIds}
+                selectionMode={selectionMode}
+                activeColumns={activeColumns}
+                gridTemplateColumns={gridTemplateColumns}
+                onStartSelection={(id) => {
+                  setSelectionMode(true)
+                  if (!selectedIds.includes(id)) onSelect([...selectedIds, id])
+                }}
+                onToggleSelection={(id) =>
+                  onSelect(
+                    selectedIds.includes(id)
+                      ? selectedIds.filter((selectedId) => selectedId !== id)
+                      : [...selectedIds, id],
+                  )
+                }
+              />
+              {total > songs.length && (
+                <div className={classes.showMoreContainer}>
+                  <Button
+                    className={classes.showMoreButton}
+                    onClick={handleShowMore}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <CircularProgress size={14} color="inherit" />
+                        <span>Loading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ExpandMoreIcon fontSize="small" />
+                        <span>Show more</span>
+                      </>
+                    )}
+                  </Button>
+                  <Typography className={classes.showMoreCaption}>
+                    {`Showing ${songs.length} of ${total} songs`}
+                  </Typography>
+                </div>
+              )}
+              {songs.length >= total && total > 25 && (
+                <div className={classes.showMoreContainer}>
+                  <Typography className={classes.showMoreCaption}>
+                    {`All ${total} songs loaded`}
+                  </Typography>
+                </div>
+              )}
+            </>
           ) : (
             <div className={classes.empty}>
               <Typography color="textSecondary">No songs found</Typography>

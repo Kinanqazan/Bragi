@@ -33,7 +33,9 @@ public class PlaybackService extends Service {
 
     public static final String ACTION_START = "org.bragi.app.ACTION_START_PLAYBACK";
     public static final String ACTION_STOP = "org.bragi.app.ACTION_STOP_PLAYBACK";
+    public static final String ACTION_STOP_IMMEDIATELY = "org.bragi.app.ACTION_STOP_IMMEDIATELY";
     public static final String ACTION_UPDATE_METADATA = "org.bragi.app.ACTION_UPDATE_METADATA";
+    public static final String ACTION_UPDATE_POSITION = "org.bragi.app.ACTION_UPDATE_POSITION";
     public static final String ACTION_PLAY_PAUSE = "org.bragi.app.ACTION_PLAY_PAUSE";
     public static final String ACTION_NEXT = "org.bragi.app.ACTION_NEXT";
     public static final String ACTION_PREVIOUS = "org.bragi.app.ACTION_PREVIOUS";
@@ -76,6 +78,25 @@ public class PlaybackService extends Service {
         Intent intent = new Intent(context, PlaybackService.class);
         intent.setAction(ACTION_STOP);
         context.startService(intent);
+    }
+
+    public static void stopImmediately(Context context) {
+        Intent intent = new Intent(context, PlaybackService.class);
+        intent.setAction(ACTION_STOP_IMMEDIATELY);
+        try {
+            context.startService(intent);
+        } catch (Exception ignored) {}
+    }
+
+    public static void updatePosition(Context context, double positionSec, double durationSec, boolean isPlaying) {
+        Intent intent = new Intent(context, PlaybackService.class);
+        intent.setAction(ACTION_UPDATE_POSITION);
+        intent.putExtra(EXTRA_IS_PLAYING, isPlaying);
+        intent.putExtra(EXTRA_DURATION_SEC, durationSec);
+        intent.putExtra(EXTRA_POSITION_SEC, positionSec);
+        try {
+            context.startService(intent);
+        } catch (Exception ignored) {}
     }
 
     public static void updateMetadata(Context context, String title, String artist, String album, boolean isPlaying) {
@@ -151,6 +172,14 @@ public class PlaybackService extends Service {
         if (intent == null) return START_NOT_STICKY;
 
         String action = intent.getAction();
+        if (ACTION_STOP_IMMEDIATELY.equals(action)) {
+            if (mediaSession != null) {
+                mediaSession.setActive(false);
+            }
+            stopForegroundPlayback();
+            return START_NOT_STICKY;
+        }
+
         if (ACTION_STOP.equals(action)) {
             currentIsPlaying = false;
             syncMediaSession();
@@ -167,26 +196,59 @@ public class PlaybackService extends Service {
 
         handler.removeCallbacks(stopRunnable);
 
+        if (ACTION_UPDATE_POSITION.equals(action)) {
+            currentIsPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, currentIsPlaying);
+            currentDurationSec = intent.getDoubleExtra(EXTRA_DURATION_SEC, currentDurationSec);
+            currentPositionSec = intent.getDoubleExtra(EXTRA_POSITION_SEC, currentPositionSec);
+            syncMediaSession();
+            return START_STICKY;
+        }
+
         if (ACTION_UPDATE_METADATA.equals(action)) {
             String title = intent.getStringExtra(EXTRA_TITLE);
             String artist = intent.getStringExtra(EXTRA_ARTIST);
             String album = intent.getStringExtra(EXTRA_ALBUM);
             String artworkUrl = intent.getStringExtra(EXTRA_ARTWORK_URL);
-            if (title != null && !title.isEmpty()) currentTitle = title;
-            if (artist != null && !artist.isEmpty()) currentArtist = artist;
-            if (album != null) currentAlbum = album;
-            currentIsPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, true);
-            currentDurationSec = intent.getDoubleExtra(EXTRA_DURATION_SEC, currentDurationSec);
-            currentPositionSec = intent.getDoubleExtra(EXTRA_POSITION_SEC, currentPositionSec);
+            boolean isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, true);
+            double durationSec = intent.getDoubleExtra(EXTRA_DURATION_SEC, currentDurationSec);
+            double positionSec = intent.getDoubleExtra(EXTRA_POSITION_SEC, currentPositionSec);
 
-            if (artworkUrl != null && !artworkUrl.equals(currentArtworkUrl)) {
+            boolean metadataChanged = false;
+            if (title != null && !title.isEmpty() && !title.equals(currentTitle)) {
+                currentTitle = title;
+                metadataChanged = true;
+            }
+            if (artist != null && !artist.isEmpty() && !artist.equals(currentArtist)) {
+                currentArtist = artist;
+                metadataChanged = true;
+            }
+            if (album != null && !album.equals(currentAlbum)) {
+                currentAlbum = album;
+                metadataChanged = true;
+            }
+            if (artworkUrl != null && !artworkUrl.isEmpty() && !artworkUrl.equals(currentArtworkUrl)) {
                 currentArtworkUrl = artworkUrl;
                 loadArtworkBitmap(artworkUrl);
+                metadataChanged = true;
             }
+            boolean playStateChanged = (currentIsPlaying != isPlaying);
+            currentIsPlaying = isPlaying;
+            currentDurationSec = durationSec;
+            currentPositionSec = positionSec;
+
+            syncMediaSession();
+            if (!isForegroundRunning) {
+                startForegroundPlayback();
+            } else if (metadataChanged || playStateChanged) {
+                updateNotification();
+            }
+            return START_STICKY;
         }
 
         syncMediaSession();
-        startForegroundPlayback();
+        if (!isForegroundRunning) {
+            startForegroundPlayback();
+        }
         return START_STICKY;
     }
 
@@ -274,6 +336,11 @@ public class PlaybackService extends Service {
     }
 
     private void startForegroundPlayback() {
+        if (isForegroundRunning) {
+            updateNotification();
+            return;
+        }
+
         if (wakeLock != null && !wakeLock.isHeld()) {
             wakeLock.acquire(24 * 60 * 60 * 1000L); // 24 hour safety cap
         }

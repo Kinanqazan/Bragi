@@ -57,9 +57,10 @@ try {
   config = { ...defaultConfig }
 }
 
-// Bind native Android server address if running inside APK wrapper
+// Bind native Android server address and Cast receiver base if running inside APK wrapper
 if (typeof window !== 'undefined') {
   let nativeServer = ''
+  let castMediaBase = ''
   try {
     if (window.__BRAGI_SERVER_URL__) {
       nativeServer = window.__BRAGI_SERVER_URL__
@@ -71,6 +72,17 @@ if (typeof window !== 'undefined') {
     } else if (localStorage.getItem('bragi_server_url')) {
       nativeServer = localStorage.getItem('bragi_server_url')
     }
+
+    if (window.__BRAGI_CAST_MEDIA_BASE_URL__) {
+      castMediaBase = window.__BRAGI_CAST_MEDIA_BASE_URL__
+    } else if (
+      window.BragiNative &&
+      typeof window.BragiNative.getCastMediaBaseUrl === 'function'
+    ) {
+      castMediaBase = window.BragiNative.getCastMediaBaseUrl()
+    } else if (localStorage.getItem('bragi_cast_media_base_url')) {
+      castMediaBase = localStorage.getItem('bragi_cast_media_base_url')
+    }
   } catch (e) {}
 
   if (nativeServer) {
@@ -78,6 +90,23 @@ if (typeof window !== 'undefined') {
     config.baseURL = cleanUrl
     try {
       localStorage.setItem('bragi_server_url', cleanUrl)
+    } catch (e) {}
+  }
+
+  if (castMediaBase) {
+    const cleanCastUrl = castMediaBase.trim().replace(/\/+$/, '')
+    config.castMediaBaseURL = cleanCastUrl
+    try {
+      localStorage.setItem('bragi_cast_media_base_url', cleanCastUrl)
+    } catch (e) {}
+  }
+
+  window.__bragiSetCastMediaBaseUrl = (url) => {
+    if (!url) return
+    const clean = url.trim().replace(/\/+$/, '')
+    config.castMediaBaseURL = clean
+    try {
+      localStorage.setItem('bragi_cast_media_base_url', clean)
     } catch (e) {}
   }
 }

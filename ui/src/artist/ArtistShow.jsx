@@ -42,10 +42,16 @@ const useStyles = makeStyles(
         height: '0 !important',
       },
       [theme.breakpoints.down('sm')]: {
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 72px)',
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
       },
       [theme.breakpoints.down('xs')]: {
-        maxHeight: 'calc(100vh - var(--nd-mobile-bottom-offset, 200px) - 68px)',
+        flex: '1 1 auto',
+        minHeight: 0,
+        height: '100%',
+        maxHeight: '100% !important',
       },
     },
     actions: {

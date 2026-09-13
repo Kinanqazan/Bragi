@@ -64,11 +64,17 @@ const BridgeProbe = () => {
       data-playing={String(bridge.snapshot.playing)}
       data-src={bridge.audioElement?.src || ''}
       data-redux-track={state.current?.trackId || ''}
+      data-ui-volume={String(bridge.uiVolume)}
     >
       <button
         type="button"
         data-testid="pause"
         onClick={bridge.commands.pause}
+      />
+      <button
+        type="button"
+        data-testid="set-volume-half"
+        onClick={() => bridge.commands.setVolume(0.5)}
       />
     </audio>
   )
@@ -609,5 +615,62 @@ describe('usePlaybackBridge', () => {
     await waitFor(() => expect(castTarget.adoptSession).toHaveBeenCalled())
     expect(castTarget.setQueue.mock.calls[0][0]).toHaveLength(2)
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
+  })
+
+  it('manages UI volume linearly when casting without square-root distortion', async () => {
+    let subscriber = null
+    const castSnapshot = {
+      currentTrack: song('first'),
+      currentIndex: 0,
+      playing: true,
+      loading: false,
+      currentTime: 10,
+      duration: 120,
+      volume: 0.5,
+      mode: 'order',
+      error: null,
+    }
+    const castTarget = {
+      setQueue: vi.fn(() => Promise.resolve(true)),
+      play: vi.fn(() => Promise.resolve(true)),
+      setMode: vi.fn(),
+      setVolume: vi.fn((vol) => {
+        castSnapshot.volume = vol
+        subscriber?.(castSnapshot)
+      }),
+      getSnapshot: vi.fn(() => castSnapshot),
+      subscribe: vi.fn((cb) => {
+        subscriber = cb
+        return () => {
+          subscriber = null
+        }
+      }),
+      destroy: vi.fn(),
+    }
+    mockedCreateCastPlaybackTarget.mockReturnValue(castTarget)
+    const store = renderBridge()
+
+    act(() => {
+      store.dispatch(playTracks({ first: song('first') }))
+    })
+
+    mockedCastState.initialized = true
+    mockedCastState.connected = true
+    act(() => {
+      store.dispatch(addTracks({ second: song('second') }))
+    })
+
+    await waitFor(() => expect(castTarget.setQueue).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(screen.getByTestId('audio')).toHaveAttribute('data-ui-volume', '0.5'),
+    )
+
+    // When setting volume to 0.5 while casting, uiVolume must be exactly 0.5, NOT Math.sqrt(0.5) ≈ 0.707
+    act(() => {
+      screen.getByTestId('set-volume-half').click()
+    })
+
+    expect(castTarget.setVolume).toHaveBeenCalledWith(0.5)
+    expect(screen.getByTestId('audio')).toHaveAttribute('data-ui-volume', '0.5')
   })
 })

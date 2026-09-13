@@ -5,7 +5,7 @@ import {
   useListPaginationContext,
   useTranslate,
 } from 'react-admin'
-import { IconButton, makeStyles, useTheme } from '@material-ui/core'
+import { IconButton, makeStyles, useMediaQuery, useTheme } from '@material-ui/core'
 import ChevronLeft from '@material-ui/icons/ChevronLeft'
 import ChevronRight from '@material-ui/icons/ChevronRight'
 import { setStoredPerPage } from './perPageStore'
@@ -121,39 +121,7 @@ MinimalPaginationActions.propTypes = {
 
 const emptyRowsPerPageOptions = []
 
-export const Pagination = ({
-  rowsPerPageOptions = emptyRowsPerPageOptions,
-  actions = MinimalPaginationActions,
-  labelDisplayedRows = defaultLabelDisplayedRows,
-  classes: classesProp,
-  className,
-  ...props
-}) => {
-  const classes = useStyles()
-  const { setPerPage } = useListPaginationContext()
-  const handleSetPerPage = useCallback(
-    (value) => {
-      setStoredPerPage(value)
-      setPerPage(value)
-    },
-    [setPerPage],
-  )
-  return (
-    <RAPagination
-      rowsPerPageOptions={rowsPerPageOptions}
-      actions={actions}
-      labelDisplayedRows={labelDisplayedRows}
-      className={className ? `${classes.root} ${className}` : classes.root}
-      classes={{
-        toolbar: classes.toolbar,
-        spacer: classes.spacer,
-        ...classesProp,
-      }}
-      {...props}
-      setPerPage={handleSetPerPage}
-    />
-  )
-}
+export const Pagination = () => null
 
 Pagination.propTypes = {
   rowsPerPageOptions: PropTypes.arrayOf(PropTypes.number),

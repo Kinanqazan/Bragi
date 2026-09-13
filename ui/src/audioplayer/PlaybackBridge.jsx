@@ -27,11 +27,12 @@ const queueKeyOf = (queue) =>
     .map((track) => track?.uuid || track?.trackId || track?.id || '')
     .join('|')
 
-const toCurrentInfo = (snapshot) => {
+const toCurrentInfo = (snapshot, isLocal = true) => {
   if (!snapshot.currentTrack) return { ended: true, volume: 1 }
+  const rawVolume = Math.max(0, snapshot.volume || 0)
   return {
     ...snapshot.currentTrack,
-    volume: Math.sqrt(Math.max(0, snapshot.volume || 0)),
+    volume: isLocal ? Math.sqrt(rawVolume) : Math.min(1, rawVolume),
   }
 }
 
@@ -65,6 +66,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
   })
   const eventHandlerRef = useRef(onPlaybackEvent)
   const currentKeyRef = useRef(null)
+  const [activeTarget, setActiveTarget] = useState('local')
   const activeTargetRef = useRef('local')
   const castHandoffRef = useRef(0)
   const castHandoffKeyRef = useRef(null)
@@ -109,7 +111,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
         null
       if (nextKey && nextKey !== currentKeyRef.current) {
         currentKeyRef.current = nextKey
-        dispatch(currentPlaying(toCurrentInfo(nextSnapshot)))
+        dispatch(currentPlaying(toCurrentInfo(nextSnapshot, true)))
       }
       if (!nextKey) currentKeyRef.current = null
     })
@@ -132,7 +134,11 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
         null
       if (nextKey && nextKey !== currentKeyRef.current) {
         currentKeyRef.current = nextKey
-        dispatch(currentPlaying(toCurrentInfo(nextSnapshot)))
+        dispatch(
+          currentPlaying(
+            toCurrentInfo(nextSnapshot, targetName === 'local'),
+          ),
+        )
       }
       if (!nextKey) currentKeyRef.current = null
     },
@@ -172,6 +178,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       ++castHandoffRef.current
       castHandoffKeyRef.current = null
       activeTargetRef.current = 'local'
+      setActiveTarget('local')
       setEngine(currentLocalEngine)
 
       let loadResult
@@ -270,6 +277,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       const handoffId = ++castHandoffRef.current
       const restoreLocal = () => {
         activeTargetRef.current = 'local'
+        setActiveTarget('local')
         setEngine(localEngine)
         if (wasPlaying) localEngine.play()
         publishSnapshot(
@@ -324,6 +332,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
           // Activate Cast only after the receiver has accepted the media.
           // This prevents a failed handoff from silencing local playback.
           activeTargetRef.current = 'cast'
+          setActiveTarget('cast')
           setEngine(castTarget)
           localEngine.pause()
           publishSnapshot(castTarget.getSnapshot(), 'cast')
@@ -341,6 +350,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       castHandoffKeyRef.current = null
       const remoteSnapshot = castTarget.getSnapshot() || {}
       activeTargetRef.current = 'local'
+      setActiveTarget('local')
       setEngine(localEngine)
       // Forget the remote queue after capturing its position. This prevents
       // a later Cast connection from treating an old receiver track as the
@@ -571,12 +581,17 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     [engine, setVolume],
   )
 
+  const isLocal =
+    activeTarget === 'local' && activeTargetRef.current === 'local'
+
   return {
     audioRef: setAudioElement,
     audioElement,
     engine,
     snapshot,
     commands,
-    uiVolume: Math.sqrt(Math.max(0, snapshot.volume || 0)),
+    uiVolume: isLocal
+      ? Math.sqrt(Math.max(0, snapshot.volume || 0))
+      : Math.min(1, Math.max(0, snapshot.volume || 0)),
   }
 }
