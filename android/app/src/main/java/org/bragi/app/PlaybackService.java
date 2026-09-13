@@ -92,10 +92,14 @@ public class PlaybackService extends Service {
         intent.putExtra(EXTRA_IS_PLAYING, isPlaying);
         intent.putExtra(EXTRA_DURATION_SEC, durationSec);
         intent.putExtra(EXTRA_POSITION_SEC, positionSec);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
+        try {
             context.startService(intent);
+        } catch (Exception e) {
+            if (isPlaying && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    context.startForegroundService(intent);
+                } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -276,16 +280,12 @@ public class PlaybackService extends Service {
 
         Notification notification = buildNotification();
 
-        if (!isForegroundRunning) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            } else {
-                startForeground(NOTIFICATION_ID, notification);
-            }
-            isForegroundRunning = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         } else {
-            updateNotification();
+            startForeground(NOTIFICATION_ID, notification);
         }
+        isForegroundRunning = true;
     }
 
     private void updateNotification() {

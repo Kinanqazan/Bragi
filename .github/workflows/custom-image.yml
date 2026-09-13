@@ -62,9 +62,10 @@ jobs:
             sh << 'EOF'
           set -e
           apk add --no-cache clang lld file git gcc musl-dev zlib-dev
+          git config --global --add safe.directory '*'
           export CGO_ENABLED=1
           BUILD_TAGS=$(./release/build-tags.sh)
-          go build -tags="${BUILD_TAGS}" -ldflags="-w -s \
+          go build -buildvcs=false -tags="${BUILD_TAGS}" -ldflags="-w -s \
             -linkmode=external -extldflags '-latomic' \
             -X github.com/navidrome/navidrome/consts.gitSha=${{ github.sha }} \
             -X github.com/navidrome/navidrome/consts.gitTag=custom-${{ github.ref_name }}" \
