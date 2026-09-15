@@ -204,25 +204,30 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
 
     let target
     try {
+      const handleSessionError = (error, details) => {
+        const errCode = getCastErrorCode(error).toUpperCase()
+        const isFatal =
+          ['SESSION_ERROR', 'CHANNEL_ERROR', 'NO_SESSION'].includes(errCode)
+        if (isFatal) {
+          recoverLocalFromCast(target, details)
+          Promise.resolve()
+            .then(() => endCastSession(false))
+            .catch(() => undefined)
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn('[Bragi Cast] Non-fatal cast track error, keeping session active:', errCode)
+        }
+      }
+
       if (isNativeCastAvailable()) {
         target = createNativeCastPlaybackTarget({
           onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
-          onSessionError: (error, details) => {
-            recoverLocalFromCast(target, details)
-            Promise.resolve()
-              .then(() => endCastSession(false))
-              .catch(() => undefined)
-          },
+          onSessionError: handleSessionError,
         })
       } else {
         target = createCastPlaybackTarget({
           onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
-          onSessionError: (error, details) => {
-            recoverLocalFromCast(target, details)
-            Promise.resolve()
-              .then(() => endCastSession(false))
-              .catch(() => undefined)
-          },
+          onSessionError: handleSessionError,
         })
       }
     } catch (error) {
