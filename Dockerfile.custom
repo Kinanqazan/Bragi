@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/alpine:3.20 AS final
+FROM alpine:3.20 AS final
 LABEL maintainer="deluan@navidrome.org"
 LABEL org.opencontainers.image.source="https://github.com/navidrome/navidrome"
 

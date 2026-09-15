@@ -53,12 +53,31 @@ jobs:
       - name: Build Navidrome binary (dynamic musl)
         run: |
           mkdir -p "$HOME/.cache/go-build" "$HOME/go/pkg/mod" out
+
+          IMAGE=""
+          for candidate in "golang:1.26-alpine" "public.ecr.aws/docker/library/golang:1.26-alpine"; do
+            echo "Attempting to pull $candidate..."
+            for attempt in 1 2 3; do
+              if docker pull "$candidate"; then
+                IMAGE="$candidate"
+                break 2
+              fi
+              echo "Pull failed (attempt $attempt/3), retrying in 3s..."
+              sleep 3
+            done
+          done
+
+          if [ -z "$IMAGE" ]; then
+            echo "Error: Failed to pull golang:1.26-alpine from any registry" >&2
+            exit 1
+          fi
+
           docker run --rm -i \
             -v "${{ github.workspace }}:/workspace" \
             -v "$HOME/.cache/go-build:/root/.cache/go-build" \
             -v "$HOME/go/pkg/mod:/go/pkg/mod" \
             -w /workspace \
-            public.ecr.aws/docker/library/golang:1.26-alpine \
+            "$IMAGE" \
             sh << 'EOF'
           set -e
           apk add --no-cache clang lld file git gcc musl-dev zlib-dev
