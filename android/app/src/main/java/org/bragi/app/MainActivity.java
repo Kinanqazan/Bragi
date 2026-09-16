@@ -1538,15 +1538,29 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        private final Handler seekHandler = new Handler(Looper.getMainLooper());
+        private Runnable pendingSeekRunnable = null;
+
         @JavascriptInterface
         public void seek(double positionSec) {
             runOnUiThread(() -> {
-                CastSession session = getActiveCastSession();
-                if (session != null && session.getRemoteMediaClient() != null) {
-                    session.getRemoteMediaClient().seek(
-                            new MediaSeekOptions.Builder().setPosition((long) Math.round(positionSec * 1000.0)).build()
-                    );
+                if (pendingSeekRunnable != null) {
+                    seekHandler.removeCallbacks(pendingSeekRunnable);
                 }
+                pendingSeekRunnable = () -> {
+                    CastSession session = getActiveCastSession();
+                    if (session != null && session.getRemoteMediaClient() != null) {
+                        try {
+                            session.getRemoteMediaClient().seek(
+                                    new MediaSeekOptions.Builder().setPosition((long) Math.round(positionSec * 1000.0)).build()
+                            );
+                        } catch (Exception e) {
+                            Log.w("BragiCast", "Error executing native Cast seek: " + e.getMessage());
+                        }
+                    }
+                    pendingSeekRunnable = null;
+                };
+                seekHandler.postDelayed(pendingSeekRunnable, 100);
             });
         }
     }

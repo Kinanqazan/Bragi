@@ -170,21 +170,21 @@ const inspectReceiverMedia = (
   }
 }
 
-const receiverFailureFrom = (status, { previousPlaying = false } = {}) => {
+const receiverFailureFrom = (status) => {
   if (
     !status.contentMatches ||
     status.playerState !== 'IDLE' ||
     !status.idleReason ||
-    status.idleReason === 'FINISHED'
+    status.idleReason === 'FINISHED' ||
+    status.idleReason === 'CANCELLED' ||
+    status.idleReason === 'CANCELED' ||
+    status.idleReason === 'INTERRUPTED'
   ) {
     return null
   }
 
   const reason = String(status.idleReason).toUpperCase()
-  if (
-    !previousPlaying &&
-    (reason === 'CANCELLED' || reason === 'INTERRUPTED')
-  ) {
+  if (reason !== 'ERROR') {
     return null
   }
 
@@ -330,6 +330,7 @@ export const createCastPlaybackTarget = ({
   let lastLocalVolumeChange = 0
   let loggedReceiverFailure = null
   let recoveredReceiverFailureOperation = null
+  let finishedTrackId = null
   let state = {
     currentTrack: null,
     currentIndex: -1,
@@ -429,7 +430,13 @@ export const createCastPlaybackTarget = ({
     const receiverFailure = receiverStatus
       ? receiverFailureFrom(receiverStatus, { previousPlaying })
       : null
+    if (playing) {
+      finishedTrackId = null
+    }
+    const currentTrackId = trackKey(currentTrack)
     const finished = Boolean(
+      currentTrackId &&
+      finishedTrackId !== currentTrackId &&
       receiverStatus?.contentMatches &&
       receiverStatus.playerState === 'IDLE' &&
       receiverStatus.idleReason === 'FINISHED' &&
@@ -497,6 +504,7 @@ export const createCastPlaybackTarget = ({
     notify()
 
     if (finished) {
+      finishedTrackId = currentTrackId
       Promise.resolve(
         navigate('next', { autoplay: true, manual: false }),
       ).catch(() => undefined)
@@ -723,6 +731,21 @@ export const createCastPlaybackTarget = ({
           )
           .catch(() => undefined)
       }
+      const hasMoreTracks = queue.length > 1 && currentIndex + 1 < queue.length
+      if (autoplay && hasMoreTracks) {
+        state = {
+          ...state,
+          loading: true,
+          playing: true,
+          error: null,
+        }
+        notify()
+        Promise.resolve(
+          navigate('next', { autoplay: true, manual: false }),
+        ).catch(() => undefined)
+        return false
+      }
+
       state = {
         ...state,
         loading: false,
@@ -841,16 +864,20 @@ export const createCastPlaybackTarget = ({
     queuePolicy.setQueue(queue.length, currentIndex)
     const nextTrack = queue[currentIndex]
     const sameTrack = trackKey(currentTrack) === trackKey(nextTrack)
+    const shouldAutoplay =
+      typeof options.autoplay === 'boolean'
+        ? (options.autoplay || state.playing)
+        : Boolean(state.playing)
 
     if (sameTrack) {
       currentTrack = nextTrack
       state = { ...state, currentTrack, currentIndex }
       notify()
-      return options.autoplay && !state.playing ? play() : Promise.resolve(true)
+      return shouldAutoplay && !state.playing ? play() : Promise.resolve(true)
     }
 
     return loadTrack(nextTrack, {
-      autoplay: options.autoplay,
+      autoplay: shouldAutoplay,
       position: options.position,
       index: currentIndex,
     })
@@ -912,6 +939,15 @@ export const createCastPlaybackTarget = ({
     return loadTrack(queue[nextIndex], { autoplay, index: nextIndex })
   }
 
+  const throttledControllerSeek = throttle(
+    () => {
+      if (destroyed) return
+      controller.seek?.()
+    },
+    150,
+    { leading: false, trailing: true },
+  )
+
   const seek = (seconds) => {
     const remoteStatus = getRemoteStatus()
     if (
@@ -930,8 +966,9 @@ export const createCastPlaybackTarget = ({
       Infinity
     const nextTime = clamp(Number(seconds) || 0, 0, duration)
     remotePlayer.currentTime = nextTime
-    controller.seek?.()
-    syncFromRemote()
+    state = { ...state, currentTime: nextTime }
+    notify()
+    throttledControllerSeek()
     return nextTime
   }
 
@@ -990,6 +1027,7 @@ export const createCastPlaybackTarget = ({
       destroyed = true
       ++loadOperation
       throttledSetRemoteVolume.cancel?.()
+      throttledControllerSeek.cancel?.()
       controller.removeEventListener?.(anyChangeType, handleRemoteChange)
       if (connectionChangeType && connectionChangeType !== anyChangeType) {
         controller.removeEventListener?.(
@@ -1022,6 +1060,16 @@ export const createNativeCastPlaybackTarget = ({
   const queuePolicy = createQueuePolicy()
   let loadOperation = 0
   let mediaLoaded = false
+  let finishedTrackId = null
+
+  const throttledNativeSeek = throttle(
+    (time) => {
+      if (destroyed) return
+      if (typeof window !== 'undefined') window?.BragiNative?.seek?.(time)
+    },
+    150,
+    { leading: false, trailing: true },
+  )
 
   let state = {
     currentTrack: null,
@@ -1195,6 +1243,7 @@ export const createNativeCastPlaybackTarget = ({
       wasPlayingBeforeStop = true
       wasActuallyPlaying = true
       playbackIntent = true
+      finishedTrackId = null
     } else if (isLoading) {
       nextLoading = true
       if (playbackIntent) {
@@ -1254,7 +1303,10 @@ export const createNativeCastPlaybackTarget = ({
     }
     notify()
 
+    const currentTrackId = trackKey(currentTrack)
     const finished = Boolean(
+      currentTrackId &&
+      finishedTrackId !== currentTrackId &&
       contentMatches &&
       isIdle &&
       idleReason === 'FINISHED' &&
@@ -1262,11 +1314,17 @@ export const createNativeCastPlaybackTarget = ({
     )
 
     if (finished) {
+      finishedTrackId = currentTrackId
       wasActuallyPlaying = false
       navigate('next', { autoplay: true, manual: false })
     } else if (contentMatches && isIdle && idleReason === 'ERROR') {
       // If a load request is actively in flight, ignore abort error
       if (state.loading) {
+        return
+      }
+      const hasMoreTracks = queue.length > 1 && currentIndex + 1 < queue.length
+      if ((playbackIntent || wasPlayingBeforeStop) && hasMoreTracks) {
+        navigate('next', { autoplay: true, manual: false })
         return
       }
       state = {
@@ -1358,25 +1416,29 @@ export const createNativeCastPlaybackTarget = ({
       queuePolicy.setQueue(queue.length, currentIndex)
       const nextTrack = queue[currentIndex]
       const sameTrack = trackKey(currentTrack) === trackKey(nextTrack)
+      const shouldAutoplay =
+        typeof options.autoplay === 'boolean'
+          ? (options.autoplay || playbackIntent || state.playing)
+          : Boolean(playbackIntent || state.playing)
 
       if (sameTrack) {
         currentTrack = nextTrack
         state = { ...state, currentTrack, currentIndex, error: null }
         notify()
-        if (options.autoplay && !state.playing) {
+        if (shouldAutoplay && !state.playing) {
           return play()
         }
         return Promise.resolve(true)
       }
 
-      if (typeof options.autoplay === 'boolean') {
-        playbackIntent = options.autoplay
-        if (options.autoplay) wasPlayingBeforeStop = true
+      if (shouldAutoplay) {
+        playbackIntent = true
+        wasPlayingBeforeStop = true
       }
 
       mediaLoaded = false
       return loadTrack(nextTrack, {
-        autoplay: options.autoplay,
+        autoplay: shouldAutoplay,
         position: options.position || 0,
         index: currentIndex,
       })
@@ -1411,7 +1473,7 @@ export const createNativeCastPlaybackTarget = ({
       const nextTime = clamp(Number(seconds) || 0, 0, duration)
       state = { ...state, currentTime: nextTime }
       notify()
-      if (typeof window !== 'undefined') window?.BragiNative?.seek?.(nextTime)
+      throttledNativeSeek(nextTime)
       return nextTime
     },
     previous: () => navigate('previous', { manual: true }),
@@ -1449,6 +1511,7 @@ export const createNativeCastPlaybackTarget = ({
     },
     destroy: () => {
       destroyed = true
+      throttledNativeSeek.cancel?.()
       subscribers.clear()
       if (
         typeof window !== 'undefined' &&

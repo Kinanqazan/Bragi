@@ -1633,4 +1633,118 @@ describe('createNativeCastPlaybackTarget', () => {
 
     delete window.BragiNative
   })
+
+  it('does not produce an error when the receiver becomes idle with reason CANCELLED or INTERRUPTED during playback', async () => {
+    const fake = createFakeRuntime()
+    const session = {
+      loadMedia: vi.fn(async () => {
+        const player = fake.controller().player
+        player.isMediaLoaded = true
+        player.isPaused = false
+        player.playerState = 'PLAYING'
+        player.idleReason = null
+        fake.controller().emit()
+      }),
+    }
+    const target = createCastPlaybackTarget({
+      runtime: fake.runtime,
+      getSession: () => session,
+      resolveMedia: () => Promise.resolve({ url: 'https://test/song.mp3', contentType: 'audio/mpeg' }),
+    })
+
+    await target.setQueue([track], 0, { autoplay: true })
+    expect(target.getSnapshot().playing).toBe(true)
+
+    // Simulate transient receiver interrupt/cancel during seek
+    fake.controller().player.playerState = 'IDLE'
+    fake.controller().player.idleReason = 'INTERRUPTED'
+    fake.controller().emit()
+
+    expect(target.getSnapshot().error).toBeNull()
+
+    fake.controller().player.playerState = 'IDLE'
+    fake.controller().player.idleReason = 'CANCELLED'
+    fake.controller().emit()
+
+    expect(target.getSnapshot().error).toBeNull()
+  })
+
+  it('auto-advances to the next song in the queue when a track load fails during continuous queue playback', async () => {
+    const fake = createFakeRuntime()
+    const first = { ...track, trackId: 'first', uuid: 'first' }
+    const second = { ...track, trackId: 'second', uuid: 'second' }
+    let loadCount = 0
+    const session = {
+      loadMedia: vi.fn(async (request) => {
+        loadCount += 1
+        if (loadCount === 1) {
+          throw new Error('First track network error')
+        }
+        const player = fake.controller().player
+        player.isMediaLoaded = true
+        player.isPaused = false
+        player.playerState = 'PLAYING'
+        player.idleReason = null
+        fake.controller().emit()
+      }),
+    }
+    const target = createCastPlaybackTarget({
+      runtime: fake.runtime,
+      getSession: () => session,
+      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.trackId}.mp3`, contentType: 'audio/mpeg' }),
+      mediaLoadTimeoutMs: 50,
+    })
+
+    await target.setQueue([first, second], 0, { autoplay: true })
+
+    await vi.waitFor(() => {
+      expect(target.getSnapshot().currentTrack).toEqual(second)
+      expect(target.getSnapshot().error).toBeNull()
+    })
+  })
+
+  it('guards against multiple track finish events for the same track', async () => {
+    const fake = createFakeRuntime()
+    const first = { ...track, trackId: 'first', uuid: 'first' }
+    const second = { ...track, trackId: 'second', uuid: 'second' }
+    let loadCount = 0
+    const session = {
+      loadMedia: vi.fn(async (request) => {
+        loadCount += 1
+        const player = fake.controller().player
+        player.mediaInfo = { contentId: request.media.contentId }
+        player.isMediaLoaded = true
+        player.isPaused = false
+        player.playerState = 'PLAYING'
+        player.idleReason = null
+        fake.controller().emit()
+      }),
+    }
+    const target = createCastPlaybackTarget({
+      runtime: fake.runtime,
+      getSession: () => session,
+      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.trackId}.mp3`, contentType: 'audio/mpeg' }),
+    })
+
+    await target.setQueue([first, second], 0, { autoplay: true })
+    expect(loadCount).toBe(1)
+
+    // Simulate track finish event twice rapidly
+    fake.controller().player.isMediaLoaded = false
+    fake.controller().player.isPaused = true
+    fake.controller().player.playerState = 'IDLE'
+    fake.controller().player.idleReason = 'FINISHED'
+    fake.controller().emit()
+    fake.controller().emit()
+
+    await vi.waitFor(() => {
+      expect(target.getSnapshot()).toMatchObject({
+        currentTrack: second,
+        currentIndex: 1,
+        playing: true,
+      })
+    })
+    // loadMedia should only be called once for song 1 and once for song 2 (total 2)
+    expect(loadCount).toBe(2)
+  })
 })
