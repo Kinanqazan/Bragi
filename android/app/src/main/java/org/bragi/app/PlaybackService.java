@@ -37,8 +37,6 @@ public class PlaybackService extends Service {
     public static final String ACTION_UPDATE_METADATA = "org.bragi.app.ACTION_UPDATE_METADATA";
     public static final String ACTION_UPDATE_POSITION = "org.bragi.app.ACTION_UPDATE_POSITION";
     public static final String ACTION_PLAY_PAUSE = "org.bragi.app.ACTION_PLAY_PAUSE";
-    public static final String ACTION_PLAY = "org.bragi.app.ACTION_PLAY";
-    public static final String ACTION_PAUSE = "org.bragi.app.ACTION_PAUSE";
     public static final String ACTION_NEXT = "org.bragi.app.ACTION_NEXT";
     public static final String ACTION_PREVIOUS = "org.bragi.app.ACTION_PREVIOUS";
 
@@ -143,12 +141,12 @@ public class PlaybackService extends Service {
         mediaSession.setCallback(new MediaSessionCompat.Callback() {
             @Override
             public void onPlay() {
-                MainActivity.handlePlaybackAction(ACTION_PLAY);
+                MainActivity.handlePlaybackAction(ACTION_PLAY_PAUSE);
             }
 
             @Override
             public void onPause() {
-                MainActivity.handlePlaybackAction(ACTION_PAUSE);
+                MainActivity.handlePlaybackAction(ACTION_PLAY_PAUSE);
             }
 
             @Override
@@ -191,30 +189,18 @@ public class PlaybackService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (ACTION_PREVIOUS.equals(action) || ACTION_PLAY_PAUSE.equals(action)
-                || ACTION_PLAY.equals(action) || ACTION_PAUSE.equals(action) || ACTION_NEXT.equals(action)) {
+        if (ACTION_PREVIOUS.equals(action) || ACTION_PLAY_PAUSE.equals(action) || ACTION_NEXT.equals(action)) {
             MainActivity.handlePlaybackAction(action);
             return START_NOT_STICKY;
         }
 
-        // A new start/play or position update while playing cancels a pending
-        // delayed shutdown; paused metadata deliberately schedules one below.
-        if (!ACTION_UPDATE_METADATA.equals(action)
-                || intent.getBooleanExtra(EXTRA_IS_PLAYING, true)) {
-            handler.removeCallbacks(stopRunnable);
-        }
+        handler.removeCallbacks(stopRunnable);
 
         if (ACTION_UPDATE_POSITION.equals(action)) {
             currentIsPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, currentIsPlaying);
             currentDurationSec = intent.getDoubleExtra(EXTRA_DURATION_SEC, currentDurationSec);
             currentPositionSec = intent.getDoubleExtra(EXTRA_POSITION_SEC, currentPositionSec);
             syncMediaSession();
-            if (currentIsPlaying) {
-                handler.removeCallbacks(stopRunnable);
-            } else if (isForegroundRunning) {
-                handler.removeCallbacks(stopRunnable);
-                handler.postDelayed(stopRunnable, STOP_GRACE_PERIOD_MS);
-            }
             return START_STICKY;
         }
 
@@ -251,11 +237,7 @@ public class PlaybackService extends Service {
             currentPositionSec = positionSec;
 
             syncMediaSession();
-            if (!isPlaying && isForegroundRunning) {
-                updateNotification();
-                handler.removeCallbacks(stopRunnable);
-                handler.postDelayed(stopRunnable, STOP_GRACE_PERIOD_MS);
-            } else if (isPlaying && !isForegroundRunning) {
+            if (!isForegroundRunning) {
                 startForegroundPlayback();
             } else if (metadataChanged || playStateChanged) {
                 updateNotification();

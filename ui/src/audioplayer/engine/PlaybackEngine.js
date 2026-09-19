@@ -72,8 +72,6 @@ export const createPlaybackEngine = ({
   let fallbackPromise = null
   let autoplayForLoad = false
   let playbackIntent = false
-  let playedForLoad = false
-  let terminalHandledForLoad = null
   let state = {
     currentTrack: null,
     currentIndex: -1,
@@ -124,7 +122,6 @@ export const createPlaybackEngine = ({
   const handlePlay = () => {
     if (destroyed) return
     const wasPlaying = state.playing
-    playedForLoad = true
     update({ playing: true, loading: false, error: null })
     if (!wasPlaying) {
       report('playing')
@@ -221,11 +218,6 @@ export const createPlaybackEngine = ({
 
   const handleEnded = () => {
     if (destroyed) return
-    if (!adapter.ended || !playedForLoad || terminalHandledForLoad === loadId) return
-    const duration = Number(adapter.duration)
-    const position = Number(adapter.currentTime)
-    if (Number.isFinite(duration) && duration > 0 && position < duration - 1) return
-    terminalHandledForLoad = loadId
     syncFromAudio()
     report('stopped', currentTrack, adapter.duration)
     const nextIndex = queuePolicy.next()
@@ -270,8 +262,6 @@ export const createPlaybackEngine = ({
     fallbackAttemptedForLoad = null
     autoplayForLoad = autoplay
     playbackIntent = autoplay
-    playedForLoad = false
-    terminalHandledForLoad = null
 
     if (
       !skipStopped &&
@@ -504,7 +494,7 @@ export const createPlaybackEngine = ({
         ? queuePolicy.previous({ manual: true })
         : queuePolicy.next({ manual: true })
     if (nextIndex < 0) return false
-    return loadTrack(nextIndex, { autoplay: playbackIntent || state.playing })
+    return loadTrack(nextIndex, { autoplay: state.playing })
   }
 
   const setVolume = (volume) => {

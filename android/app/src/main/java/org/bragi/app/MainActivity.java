@@ -328,11 +328,7 @@ public class MainActivity extends AppCompatActivity {
     private void executePlaybackAction(String action) {
         runOnUiThread(() -> {
             if (webView == null) return;
-            if (PlaybackService.ACTION_PLAY.equals(action)) {
-                webView.evaluateJavascript("if (window.__bragiPlay) { window.__bragiPlay(); }", null);
-            } else if (PlaybackService.ACTION_PAUSE.equals(action)) {
-                webView.evaluateJavascript("if (window.__bragiPause) { window.__bragiPause(); }", null);
-            } else if (PlaybackService.ACTION_PLAY_PAUSE.equals(action)) {
+            if (PlaybackService.ACTION_PLAY_PAUSE.equals(action)) {
                 webView.evaluateJavascript("if (window.__bragiTogglePlayback) { window.__bragiTogglePlayback(); }", null);
             } else if (PlaybackService.ACTION_NEXT.equals(action)) {
                 webView.evaluateJavascript("if (window.__bragiNextTrack) { window.__bragiNextTrack(); }", null);
@@ -395,7 +391,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSessionResuming(@NonNull CastSession session, @NonNull String sessionId) {
             PlaybackService.stopImmediately(MainActivity.this);
-            updateNativeCastState("SESSION_RESUMING", session);
+            updateNativeCastState("SESSION_STARTING", session);
         }
 
         @Override
@@ -410,7 +406,7 @@ public class MainActivity extends AppCompatActivity {
                 client.removeProgressListener(progressListener);
                 client.addProgressListener(progressListener, 1000L);
             }
-            updateNativeCastState("SESSION_RESUMED", session);
+            updateNativeCastState("SESSION_STARTED", session);
         }
 
         @Override
@@ -673,6 +669,7 @@ public class MainActivity extends AppCompatActivity {
                 webView.setVisibility(View.VISIBLE);
 
                 injectServerBindingScript();
+                injectAudioListeners();
                 injectCastBridge();
             }
 
@@ -707,6 +704,29 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void injectAudioListeners() {
+        String script = "(function() {" +
+                "  if (window.__bragiAudioHooked) return;" +
+                "  window.__bragiAudioHooked = true;" +
+                "  document.addEventListener('play', function(e) {" +
+                "    if (e.target && e.target.tagName === 'AUDIO') {" +
+                "      if (window.BragiNative) window.BragiNative.onPlaybackStarted();" +
+                "    }" +
+                "  }, true);" +
+                "  document.addEventListener('pause', function(e) {" +
+                "    if (e.target && e.target.tagName === 'AUDIO') {" +
+                "      if (window.BragiNative) window.BragiNative.onPlaybackStopped();" +
+                "    }" +
+                "  }, true);" +
+                "  document.addEventListener('ended', function(e) {" +
+                "    if (e.target && e.target.tagName === 'AUDIO') {" +
+                "      if (window.BragiNative) window.BragiNative.onPlaybackStopped();" +
+                "    }" +
+                "  }, true);" +
+                "})();";
+        webView.evaluateJavascript(script, null);
     }
 
     /**
