@@ -437,23 +437,25 @@ const AboutDialog = ({ open, onClose }) => {
   const { data: insightsData, loading } = useGetOne(
     'insights',
     'insights_status',
+    { enabled: open },
   )
   const [serverVersion, setServerVersion] = useState('')
   const showConfigTab = permissions === 'admin' && config.devUIShowConfig
   const [tab, setTab] = useState(0)
   const { data: configData } = useGetOne('config', 'config', {
-    enabled: showConfigTab,
+    enabled: showConfigTab && open,
   })
   const expanded = showConfigTab && tab === 1
   const uiVersion = config.version
 
   useEffect(() => {
+    if (!open) return undefined
     let isMounted = true
     subsonic
       .ping()
-      .then((resp) => resp.json['subsonic-response'])
+      .then((resp) => resp?.json?.['subsonic-response'])
       .then((data) => {
-        if (isMounted && data.status === 'ok') {
+        if (isMounted && data?.status === 'ok') {
           setServerVersion(data.serverVersion)
         }
       })
@@ -466,7 +468,7 @@ const AboutDialog = ({ open, onClose }) => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [open])
 
   return (
     <Dialog

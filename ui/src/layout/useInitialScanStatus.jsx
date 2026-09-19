@@ -8,11 +8,12 @@ export const useInitialScanStatus = () => {
   useEffect(() => {
     subsonic
       .getScanStatus()
-      .then((resp) => resp.json['subsonic-response'])
+      .then((resp) => resp?.json?.['subsonic-response'])
       .then((data) => {
-        if (data.status === 'ok') {
+        if (data?.status === 'ok' && data.scanStatus) {
           dispatch(scanStatusUpdate(data.scanStatus))
         }
       })
+      .catch(() => undefined)
   }, [dispatch])
 }

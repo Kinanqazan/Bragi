@@ -71,10 +71,28 @@ const authProvider = {
     return Promise.resolve()
   },
 
-  checkAuth: () =>
-    localStorage.getItem('is-authenticated')
-      ? Promise.resolve()
-      : Promise.reject(),
+  checkAuth: () => {
+    if (!localStorage.getItem('is-authenticated')) {
+      return Promise.reject()
+    }
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const decoded = jwtDecode(token)
+        if (decoded?.exp && decoded.exp * 1000 < Date.now()) {
+          removeItems()
+          return Promise.reject({
+            redirectTo: '/login',
+            message: 'Session expired. Please log in again.',
+          })
+        }
+      } catch {
+        removeItems()
+        return Promise.reject()
+      }
+    }
+    return Promise.resolve()
+  },
 
   checkError: ({ status }) => {
     if (status === 401) {

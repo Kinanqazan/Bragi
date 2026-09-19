@@ -12,6 +12,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 export const STREAM_RESOLUTION_TIMEOUT_MS = 15000
 export const PLAYBACK_START_TIMEOUT_MS = 30000
+export const MAX_PREMATURE_RETRIES = 2
 
 const resolveWithTimeout = (
   resolver,
@@ -72,6 +73,7 @@ export const createPlaybackEngine = ({
   let fallbackPromise = null
   let autoplayForLoad = false
   let playbackIntent = false
+  let prematureEndedRetries = 0
   let state = {
     currentTrack: null,
     currentIndex: -1,
@@ -112,6 +114,9 @@ export const createPlaybackEngine = ({
     const currentTime = Number.isFinite(adapter.currentTime)
       ? adapter.currentTime
       : 0
+    if (currentTime > 15) {
+      prematureEndedRetries = 0
+    }
     update({
       currentTime,
       duration,
@@ -219,6 +224,39 @@ export const createPlaybackEngine = ({
   const handleEnded = () => {
     if (destroyed) return
     syncFromAudio()
+
+    const expectedDuration =
+      Number.isFinite(currentTrack?.duration) && currentTrack.duration > 0
+        ? currentTrack.duration
+        : Number.isFinite(adapter.duration) && adapter.duration > 0
+          ? adapter.duration
+          : 0
+
+    const currentPos = adapter.currentTime || 0
+    const isPremature =
+      expectedDuration > 10 && expectedDuration - currentPos > 5
+
+    if (isPremature) {
+      if (prematureEndedRetries < MAX_PREMATURE_RETRIES) {
+        prematureEndedRetries += 1
+        loadTrack(currentIndex, {
+          autoplay: true,
+          position: currentPos,
+          skipStopped: true,
+        })
+        return
+      }
+      prematureEndedRetries = 0
+      update({
+        playing: false,
+        loading: false,
+        error: new Error('Stream terminated prematurely'),
+      })
+      report('stopped', currentTrack, currentPos)
+      return
+    }
+
+    prematureEndedRetries = 0
     report('stopped', currentTrack, adapter.duration)
     const nextIndex = queuePolicy.next()
     if (nextIndex < 0) {
@@ -270,6 +308,9 @@ export const createPlaybackEngine = ({
     ) {
       report('stopped')
     }
+    if (index !== currentIndex) {
+      prematureEndedRetries = 0
+    }
     currentTrack = track
     currentIndex = index
     queuePolicy.setQueue(queue.length, index)
@@ -293,7 +334,10 @@ export const createPlaybackEngine = ({
       let url
       try {
         url = await resolveWithTimeout(
-          () => resolveStreamUrl(track),
+          () =>
+            targetPosition > 0
+              ? resolveStreamUrl(track, targetPosition)
+              : resolveStreamUrl(track),
           STREAM_RESOLUTION_TIMEOUT_MS,
         )
       } catch (error) {
@@ -301,7 +345,10 @@ export const createPlaybackEngine = ({
           if (typeof fallbackStreamUrl !== 'function') throw error
           fallbackAttemptedForLoad = operation
           url = await resolveWithTimeout(
-            () => fallbackStreamUrl(track, error),
+            () =>
+              targetPosition > 0
+                ? fallbackStreamUrl(track, error, targetPosition)
+                : fallbackStreamUrl(track, error),
             STREAM_RESOLUTION_TIMEOUT_MS,
           )
         } catch (fallbackError) {
@@ -326,7 +373,9 @@ export const createPlaybackEngine = ({
             if (adapter.currentTime !== targetPosition) {
               adapter.currentTime = targetPosition
             }
-          } catch {}
+          } catch {
+            // Ignore seek errors before metadata is loaded
+          }
           adapter.removeEventListener('loadedmetadata', onLoaded)
           adapter.removeEventListener('canplay', onLoaded)
         }
@@ -427,6 +476,12 @@ export const createPlaybackEngine = ({
         seek(options.position)
       }
       update({ currentTrack, currentIndex })
+      if (options.autoplay && (state.error || !adapter.src)) {
+        return loadTrack(nextIndex, {
+          autoplay: true,
+          position: options.position ?? state.currentTime,
+        })
+      }
       return options.autoplay ? play() : Promise.resolve(true)
     }
     return loadTrack(nextIndex, {
@@ -441,6 +496,16 @@ export const createPlaybackEngine = ({
     if (!currentTrack) return false
     if (state.playing) return true
     playbackIntent = true
+
+    // If there is no src or an error occurred on the media pipeline or engine state,
+    // reload the track fresh instead of calling adapter.play() on an unplayable element.
+    if (!state.loading && (!adapter.src || state.error)) {
+      return loadTrack(currentIndex >= 0 ? currentIndex : 0, {
+        autoplay: true,
+        position: state.currentTime,
+      })
+    }
+
     if (state.loading && !adapter.src) {
       // Keep the intent alive until the stream URL exists, but do not wait for
       // an asynchronous resolver from a user gesture.
@@ -464,6 +529,19 @@ export const createPlaybackEngine = ({
       handlePlay()
       return true
     } catch (error) {
+      if (destroyed) return false
+      // Attempt recovery by reloading the track if native playback startup rejected or pipeline died
+      if (playbackIntent && currentIndex >= 0) {
+        try {
+          const recovered = await loadTrack(currentIndex, {
+            autoplay: true,
+            position: state.currentTime,
+          })
+          if (recovered) return true
+        } catch {
+          // Ignore recovery failure and fall through to reporting error
+        }
+      }
       update({ loading: false, playing: false, error })
       return false
     }

@@ -127,19 +127,27 @@ export function createDecisionService(fetchFn) {
       mediaId: songId,
       mediaType: 'song',
       transcodeParams,
+      ts: true,
     }
     if (offset != null && offset > 0) {
-      params.offset = offset
+      params.offset = Math.floor(offset)
     }
     return baseUrl(subsonic.url('getTranscodeStream', null, params))
   }
 
-  async function resolveStreamUrl(songId) {
+  async function resolveStreamUrl(songId, offset) {
     const decision = await getDecision(songId)
+    const roundedOffset =
+      offset != null && offset > 0 ? Math.floor(offset) : undefined
     if (!decision?.transcodeParams) {
-      return baseUrl(subsonic.streamUrl(songId))
+      return baseUrl(
+        subsonic.streamUrl(
+          songId,
+          roundedOffset ? { offset: roundedOffset } : undefined,
+        ),
+      )
     }
-    return buildStreamUrl(songId, decision.transcodeParams)
+    return buildStreamUrl(songId, decision.transcodeParams, roundedOffset)
   }
 
   function getCachedDecision(songId) {

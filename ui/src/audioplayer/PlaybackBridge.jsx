@@ -90,13 +90,21 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     const adapter = createAudioElementAdapter(audioElement)
     const playbackEngine = createPlaybackEngine({
       audio: adapter,
-      resolveStreamUrl: (track) => {
+      resolveStreamUrl: (track, position) => {
         if (track.isRadio)
           return track.streamUrl || subsonic.streamUrl(trackIdOf(track))
-        return decisionService.resolveStreamUrl(trackIdOf(track))
+        return position != null && position > 0
+          ? decisionService.resolveStreamUrl(trackIdOf(track), position)
+          : decisionService.resolveStreamUrl(trackIdOf(track))
       },
-      fallbackStreamUrl: (track) =>
-        track.streamUrl || subsonic.streamUrl(trackIdOf(track)),
+      fallbackStreamUrl: (track, error, position) =>
+        track.streamUrl ||
+        subsonic.streamUrl(
+          trackIdOf(track),
+          position && position > 0
+            ? { offset: Math.floor(position) }
+            : undefined,
+        ),
       reportPlayback: (event) => eventHandlerRef.current?.(event),
     })
 

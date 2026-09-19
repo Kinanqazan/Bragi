@@ -50,6 +50,15 @@ export const createAudioElementAdapter = (audioElement) => {
     get buffered() {
       return audioElement.buffered
     },
+    get error() {
+      return audioElement.error || null
+    },
+    get readyState() {
+      return audioElement.readyState ?? 0
+    },
+    get networkState() {
+      return audioElement.networkState ?? 0
+    },
     play: () => audioElement.play(),
     pause: () => audioElement.pause(),
     load: () => audioElement.load(),
@@ -82,6 +91,9 @@ export const createMemoryAudioElementAdapter = (options = {}) => {
   let ended = false
   let bufferedRanges = []
   let playImplementation = options.playImplementation
+  let error = options.error || null
+  let readyState = options.readyState ?? 4
+  let networkState = options.networkState ?? 1
 
   const emit = (name, detail) => {
     const event = detail || { type: name, target: adapter }
@@ -96,6 +108,7 @@ export const createMemoryAudioElementAdapter = (options = {}) => {
       src = value || ''
       currentTime = 0
       ended = false
+      error = null
     },
     get currentTime() {
       return currentTime
@@ -124,8 +137,18 @@ export const createMemoryAudioElementAdapter = (options = {}) => {
     get buffered() {
       return makeTimeRanges(bufferedRanges)
     },
+    get error() {
+      return error
+    },
+    get readyState() {
+      return readyState
+    },
+    get networkState() {
+      return networkState
+    },
     play: () => {
       if (playImplementation) return playImplementation()
+      if (error) return Promise.reject(error)
       paused = false
       ended = false
       emit('play')
@@ -135,7 +158,9 @@ export const createMemoryAudioElementAdapter = (options = {}) => {
       paused = true
       emit('pause')
     },
-    load: () => undefined,
+    load: () => {
+      error = null
+    },
     addEventListener: (name, listener) => {
       if (!listeners.has(name)) listeners.set(name, new Set())
       listeners.get(name).add(listener)
@@ -162,6 +187,16 @@ export const createMemoryAudioElementAdapter = (options = {}) => {
     },
     setEnded: (value) => {
       ended = value
+    },
+    setError: (value) => {
+      error = value
+      if (value) emit('error', { error: value, target: adapter })
+    },
+    setReadyState: (value) => {
+      readyState = value
+    },
+    setNetworkState: (value) => {
+      networkState = value
     },
     listenerCount: (name) => listeners.get(name)?.size || 0,
   }

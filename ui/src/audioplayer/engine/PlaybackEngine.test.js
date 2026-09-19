@@ -409,4 +409,113 @@ describe('PlaybackEngine', () => {
       error: null,
     })
   })
+
+  it('recovers and loads track when play is called without an active src', async () => {
+    const { audio, engine } = makeEngine()
+    await engine.setQueue(tracks, 0, { autoplay: false })
+    audio.src = ''
+
+    await engine.play()
+
+    expect(audio.src).toBe('stream:song-a')
+    expect(engine.getSnapshot()).toMatchObject({
+      currentTrack: tracks[0],
+      playing: true,
+      loading: false,
+      error: null,
+    })
+  })
+
+  it('recovers when play rejects due to a dead pipeline after idle', async () => {
+    let playAttempts = 0
+    const audio = createMemoryAudioElementAdapter({
+      playImplementation: () => {
+        playAttempts += 1
+        if (playAttempts === 1) {
+          return Promise.reject(new Error('pipeline broken'))
+        }
+        return Promise.resolve()
+      },
+    })
+    const { engine } = makeEngine({ audio })
+    await engine.setQueue(tracks, 0, { autoplay: false })
+    audio.src = 'stream:stale-song-a'
+
+    const playResult = await engine.play()
+
+    expect(playResult).toBe(true)
+    expect(engine.getSnapshot().playing).toBe(true)
+    expect(engine.getSnapshot().error).toBeNull()
+  })
+
+  it('reloads when setQueue is called on the same track after an error', async () => {
+    const { audio, engine } = makeEngine()
+    await engine.setQueue(tracks, 0, { autoplay: true })
+
+    // Simulate error and missing src
+    audio.src = ''
+    audio.setError(new Error('playback interrupted'))
+
+    await engine.setQueue(tracks, 0, { autoplay: true })
+
+    expect(audio.src).toBe('stream:song-a')
+    expect(engine.getSnapshot()).toMatchObject({
+      currentTrack: tracks[0],
+      playing: true,
+      loading: false,
+      error: null,
+    })
+  })
+
+  it('detects premature ended event and attempts resume instead of advancing queue', async () => {
+    const longTracks = [
+      { uuid: 'a', trackId: 'song-a', title: 'A', duration: 240 },
+      { uuid: 'b', trackId: 'song-b', title: 'B', duration: 240 },
+    ]
+    const { audio, engine } = makeEngine()
+    await engine.setQueue(longTracks, 0, { autoplay: true })
+
+    // Simulate audio playing 5 seconds and abruptly firing ended
+    audio.currentTime = 5.2
+    audio.emit('ended')
+    await Promise.resolve()
+
+    // Must NOT advance to longTracks[1]!
+    expect(engine.getSnapshot().currentTrack).toBe(longTracks[0])
+    expect(engine.getSnapshot().currentTime).toBe(5.2)
+  })
+
+  it('stops cleanly with error when premature ended retries are exhausted without looping', async () => {
+    const longTracks = [
+      { uuid: 'a', trackId: 'song-a', title: 'A', duration: 240 },
+      { uuid: 'b', trackId: 'song-b', title: 'B', duration: 240 },
+    ]
+    const { audio, engine } = makeEngine()
+    await engine.setQueue(longTracks, 0, { autoplay: true })
+
+    // 1st premature end
+    audio.currentTime = 5.0
+    audio.emit('ended')
+    await Promise.resolve()
+    expect(engine.getSnapshot().currentTrack).toBe(longTracks[0])
+
+    // 2nd premature end
+    audio.currentTime = 5.1
+    audio.emit('ended')
+    await Promise.resolve()
+    expect(engine.getSnapshot().currentTrack).toBe(longTracks[0])
+
+    // 3rd premature end - retries exhausted (MAX_PREMATURE_RETRIES = 2)
+    audio.currentTime = 5.2
+    audio.emit('ended')
+    await Promise.resolve()
+
+    // Engine must halt, NOT advance to longTracks[1]!
+    expect(engine.getSnapshot().currentTrack).toBe(longTracks[0])
+    expect(engine.getSnapshot().playing).toBe(false)
+    expect(engine.getSnapshot().error).toHaveProperty(
+      'message',
+      'Stream terminated prematurely',
+    )
+  })
 })

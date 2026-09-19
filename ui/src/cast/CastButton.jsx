@@ -133,6 +133,11 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
           )
         } else if (code === 'NO_DEVICES_AVAILABLE') {
           notify('No Cast devices found on this network.', 'warning')
+        } else if (String(code).toUpperCase() === 'SESSION_ERROR') {
+          notify(
+            'Cast session could not be started. Check your connection or Cast device.',
+            'warning',
+          )
         }
       }
       // The button remains usable so a transient discovery failure can retry.

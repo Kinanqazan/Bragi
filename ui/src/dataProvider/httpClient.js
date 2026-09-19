@@ -60,6 +60,10 @@ const httpClient = (url, options = {}) => {
       return response
     })
     .catch((error) => {
+      if (error?.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('is-authenticated')
+      }
       if (error?.name === 'AbortError') {
         // Silently resolve aborted search requests with empty payload and total count header
         const headers = new Headers()
