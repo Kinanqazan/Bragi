@@ -1218,10 +1218,13 @@ export const createNativeCastPlaybackTarget = ({
     if (destroyed) return
 
     // Verify whether this event belongs to the currently requested track
+    // Receiver status payloads from older Android builds omit contentId while
+    // loading/playing. Keep those non-terminal updates compatible, but never
+    // let an identity-less terminal callback finish or fail the current item.
     const contentMatches =
-      !contentId ||
-      !currentMediaUrl ||
-      mediaIdentity(contentId) === mediaIdentity(currentMediaUrl)
+      (contentId && currentMediaUrl &&
+        mediaIdentity(contentId) === mediaIdentity(currentMediaUrl)) ||
+      (!contentId && playerState !== 'IDLE')
 
     const previousPlaying = state.playing
     const isPlaying = playerState === 'PLAYING'
@@ -1230,7 +1233,7 @@ export const createNativeCastPlaybackTarget = ({
     const isIdle = playerState === 'IDLE'
 
     // If an IDLE, PAUSED or BUFFERING event arrived from an old superseded track, ignore it
-    if (!contentMatches && !isPlaying) {
+    if (!contentMatches) {
       return
     }
 
@@ -1522,4 +1525,3 @@ export const createNativeCastPlaybackTarget = ({
     },
   }
 }
-

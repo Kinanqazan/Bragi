@@ -523,6 +523,8 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
 
     // Hardware/notification media action buttons
     window.__bragiTogglePlayback = () => engine?.toggle()
+    window.__bragiPlay = () => engine?.play()
+    window.__bragiPause = () => engine?.pause()
     window.__bragiNextTrack = () => engine?.next()
     window.__bragiPreviousTrack = () => engine?.previous()
     window.__bragiSeek = (pos) => {
@@ -532,6 +534,8 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     return () => {
       window.__bragiNativeVolumeChanged = null
       window.__bragiTogglePlayback = null
+      window.__bragiPlay = null
+      window.__bragiPause = null
       window.__bragiNextTrack = null
       window.__bragiPreviousTrack = null
       window.__bragiSeek = null
