@@ -90,8 +90,10 @@ const useStyles = makeStyles((theme) => {
       [theme.breakpoints.down('sm')]: {
         height: '100%',
         minHeight: '100vh',
-        paddingTop: theme.spacing(1.5),
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+        paddingTop: 'max(20px, calc(env(safe-area-inset-top, 0px) + 16px))',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+        paddingLeft: theme.spacing(1.5),
+        paddingRight: theme.spacing(1.5),
         marginBottom: 0,
         borderRight: 'none',
         backgroundColor: 'transparent',
@@ -107,6 +109,12 @@ const useStyles = makeStyles((theme) => {
       borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
       boxSizing: 'border-box',
       flexShrink: 0,
+      [theme.breakpoints.down('sm')]: {
+        padding: '0 4px 14px 6px',
+        marginBottom: theme.spacing(1.5),
+        minHeight: 42,
+        justifyContent: 'flex-start',
+      },
     },
     brandHeaderClosed: {
       display: 'flex',
@@ -132,6 +140,10 @@ const useStyles = makeStyles((theme) => {
       height: 28,
       color: theme.palette.primary.main,
       filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
+      [theme.breakpoints.down('sm')]: {
+        width: 30,
+        height: 30,
+      },
     },
     brandLogoSmall: {
       width: 28,
@@ -148,6 +160,9 @@ const useStyles = makeStyles((theme) => {
       letterSpacing: '-0.02em',
       color: theme.palette.text.primary,
       lineHeight: 1,
+      [theme.breakpoints.down('sm')]: {
+        fontSize: '1.2rem',
+      },
     },
     brandToggleButton: {
       color: theme.palette.text.secondary,
@@ -170,6 +185,9 @@ const useStyles = makeStyles((theme) => {
       scrollbarWidth: 'none',
       '&::-webkit-scrollbar': {
         display: 'none',
+      },
+      [theme.breakpoints.down('sm')]: {
+        paddingTop: theme.spacing(1),
       },
     },
     open: {
@@ -248,6 +266,13 @@ const useStyles = makeStyles((theme) => {
         minWidth: 36,
         color: 'inherit',
         transition: 'color 0.16s ease-in-out',
+      },
+      [theme.breakpoints.down('sm')]: {
+        margin: '3px 0',
+        padding: '9px 12px',
+        '& .RaMenuItemLink-icon': {
+          minWidth: 38,
+        },
       },
     },
     active: {
@@ -712,19 +737,24 @@ const Menu = ({ dense = false }) => {
       })}
     >
       {/* Brand Header at Top-Left of Sidebar */}
-      {!isMobile && (
-        open ? (
-          <div className={classes.brandHeader}>
-            <div
-              className={classes.brandContent}
-              onClick={() => history.push('/')}
-              role="button"
-              tabIndex={0}
-            >
-              <BragiLogo className={classes.brandLogo} />
-              <Typography className={classes.brandTitle}>Bragi</Typography>
-            </div>
-            <Tooltip title="Collapse sidebar">
+      {open ? (
+        <div className={classes.brandHeader}>
+          <div
+            className={classes.brandContent}
+            onClick={() => {
+              if (isMobile) {
+                dispatch(toggleSidebar())
+              }
+              history.push('/')
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <BragiLogo className={classes.brandLogo} />
+            <Typography className={classes.brandTitle}>Bragi</Typography>
+          </div>
+          {!isMobile && (
+            <Tooltip title={translate('ra.action.collapse', { _: 'Collapse sidebar' })}>
               <IconButton
                 size="small"
                 className={classes.brandToggleButton}
@@ -734,8 +764,10 @@ const Menu = ({ dense = false }) => {
                 <MenuOpenIcon style={{ fontSize: 20 }} />
               </IconButton>
             </Tooltip>
-          </div>
-        ) : (
+          )}
+        </div>
+      ) : (
+        !isMobile && (
           <div className={classes.brandHeaderClosed}>
             <Tooltip title="Expand sidebar (Bragi)" placement="right">
               <IconButton
@@ -755,7 +787,7 @@ const Menu = ({ dense = false }) => {
         {open && <LibrarySelector />}
 
         {/* Library Section */}
-        {open && (
+        {!isMobile && open && (
           <Typography className={classes.sectionHeader}>
             {translate('menu.library', { _: 'Library' })}
           </Typography>

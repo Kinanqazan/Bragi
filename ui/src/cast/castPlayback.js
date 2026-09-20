@@ -1090,8 +1090,13 @@ export const createNativeCastPlaybackTarget = ({
     subscribers.forEach((l) => l(snapshot))
   }
 
-  const report = (event, position = state.currentTime) => {
-    onPlaybackEvent?.(event, position)
+  const report = (type, position = state.currentTime) => {
+    if (!currentTrack || currentTrack.isRadio) return
+    onPlaybackEvent?.({
+      type,
+      track: currentTrack,
+      positionMs: toPositionMs(position),
+    })
   }
 
   const loadTrack = async (
@@ -1162,6 +1167,7 @@ export const createNativeCastPlaybackTarget = ({
             Boolean(shouldAutoplay),
           )
         } catch (e) {
+          // eslint-disable-next-line no-console
           console.error('[Bragi Cast] Native loadMedia error', e)
         }
       }

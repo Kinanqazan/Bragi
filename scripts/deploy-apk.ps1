@@ -29,8 +29,8 @@ if (Test-Path $bubblewrapAdb) {
 }
 
 Write-Host "Checking for connected Android devices..." -ForegroundColor Cyan
-$deviceLines = & $adb devices | Where-Object { $_ -match "\bdevice\b" -and $_ -notmatch "List of devices" }
-if (-not $deviceLines) {
+$deviceLines = @(& $adb devices | Where-Object { $_ -match "\bdevice\b" -and $_ -notmatch "List of devices" })
+if ($deviceLines.Count -eq 0) {
     Write-Warning "No connected Android devices found via ADB."
     Write-Host "`nTo connect your phone for 1-click deployment:"
     Write-Host "1. Enable 'Developer Options' and 'USB Debugging' on your phone."

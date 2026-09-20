@@ -26,6 +26,7 @@ export const useImmediateControlPress = (command, stopPropagation = false) => {
       if (event.pointerType === 'mouse') return
 
       event.preventDefault()
+      event.currentTarget?.blur?.()
       skipClickRef.current = true
       clearResetTimer()
       resetTimerRef.current = window.setTimeout(() => {
@@ -38,7 +39,8 @@ export const useImmediateControlPress = (command, stopPropagation = false) => {
   )
 
   const onClick = useCallback(
-    () => {
+    (event) => {
+      event?.currentTarget?.blur?.()
       if (skipClickRef.current) {
         skipClickRef.current = false
         clearResetTimer()

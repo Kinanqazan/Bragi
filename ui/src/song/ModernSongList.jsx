@@ -162,6 +162,9 @@ const useStyles = makeStyles((theme) => {
       lineHeight: 1.2,
       margin: 0,
       whiteSpace: 'nowrap',
+      [theme.breakpoints.down('sm')]: {
+        display: 'none',
+      },
     },
     summary: {
       display: 'flex',
@@ -300,6 +303,10 @@ const useStyles = makeStyles((theme) => {
         duration: theme.transitions.duration.shortest,
       }),
       '&:last-child': { borderBottom: 0 },
+      '&:active': {
+        background: alpha(theme.palette.action.selected, 0.2),
+        transform: 'scale(0.995)',
+      },
       '@media (hover: hover)': {
         '&:hover': { background: alpha(theme.palette.action.hover, 0.6) },
       },
@@ -1069,9 +1076,11 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
                       </>
                     )}
                   </Button>
-                  <Typography className={classes.showMoreCaption}>
-                    {`Showing ${songs.length} of ${total} songs`}
-                  </Typography>
+                  {!isMobile && (
+                    <Typography className={classes.showMoreCaption}>
+                      {`Showing ${songs.length} of ${total} songs`}
+                    </Typography>
+                  )}
                 </div>
               )}
               {songs.length >= total && total > 25 && (

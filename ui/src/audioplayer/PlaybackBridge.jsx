@@ -515,7 +515,9 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
         if (Number.isFinite(initialNativeVol) && initialNativeVol >= 0) {
           dispatch(setReduxVolume(initialNativeVol))
         }
-      } catch {}
+      } catch {
+        // Native volume bridge not available or failed
+      }
     }
 
     // Hardware volume buttons broadcast listener
@@ -566,6 +568,8 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       duration,
       position,
     )
+    // snapshot.currentTime is intentionally excluded to prevent native bridge overhead on every tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot.currentTrack, snapshot.playing, snapshot.duration])
 
   // Keep native PlaybackService active whenever playing

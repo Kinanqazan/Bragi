@@ -131,6 +131,9 @@ const useStyles = makeStyles((theme) => {
       lineHeight: 1.2,
       margin: 0,
       whiteSpace: 'nowrap',
+      [theme.breakpoints.down('sm')]: {
+        display: 'none',
+      },
     },
     headerRow: {
       position: 'sticky',
@@ -188,6 +191,10 @@ const useStyles = makeStyles((theme) => {
         duration: theme.transitions.duration.shortest,
       }),
       '&:last-child': { borderBottom: 0 },
+      '&:active': {
+        background: alpha(theme.palette.action.selected, 0.2),
+        transform: 'scale(0.995)',
+      },
       '@media (hover: hover)': {
         '&:hover': { background: alpha(theme.palette.action.hover, 0.6) },
       },

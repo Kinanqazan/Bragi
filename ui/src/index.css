@@ -456,3 +456,76 @@ body.is-resizing [role="separator"] {
   }
 }
 
+/* ==========================================================================
+   Fluid Micro-Animations & Page Transitions (Zero Performance Overhead)
+   ========================================================================== */
+
+/* Subtle, gentle page entrance animation when switching views */
+@keyframes nd-page-fade-in {
+  0% {
+    opacity: 0.15;
+    transform: translate3d(0, 5px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+#main-content > .list-page,
+#main-content > [class*="RaList-root"],
+#main-content > [class*="RaShow-root"],
+#main-content > [class*="RaEdit-root"],
+#main-content > [class*="RaCreate-root"],
+#main-content > [class*="personal-root"],
+#main-content > .MuiCard-root,
+#main-content > div:not(.MuiDialog-root) {
+  animation: nd-page-fade-in 0.16s cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+/* Tactile micro-press feedback for buttons, cards, and interactive items */
+.MuiButton-root,
+.MuiIconButton-root,
+.MuiFab-root,
+.MuiChip-clickable,
+.MuiMenuItem-root,
+.MuiListItem-button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease-out, background-color 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+.MuiButton-root:active:not(:disabled),
+.MuiFab-root:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.MuiIconButton-root:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.MuiChip-clickable:active {
+  transform: scale(0.94);
+}
+
+.MuiMenuItem-root:active,
+.MuiListItem-button:active {
+  transform: scale(0.985);
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Accessibility: Disable animations if user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #main-content > *,
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiFab-root,
+  .MuiChip-clickable,
+  .MuiMenuItem-root,
+  .MuiListItem-button {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+

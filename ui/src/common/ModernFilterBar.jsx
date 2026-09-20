@@ -664,7 +664,7 @@ export const ModernFilterBar = ({
     userFacetKeys.forEach((key) => {
       delete newFilters[key]
     })
-    setFilters(newFilters, displayedFilters)
+    setFilters(newFilters, displayedFilters, false)
     if (Object.keys(newFilters).length === 0 && history && basePath) {
       history.replace(basePath)
     }
@@ -683,7 +683,7 @@ export const ModernFilterBar = ({
       } else {
         newFilters[field] = value
       }
-      setFilters(newFilters, displayedFilters)
+      setFilters(newFilters, displayedFilters, false)
       if (Object.keys(newFilters).length === 0 && history && basePath) {
         history.replace(basePath)
       }

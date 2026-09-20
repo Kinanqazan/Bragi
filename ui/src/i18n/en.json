@@ -708,5 +708,10 @@
       "vol_down": "Volume Down",
       "toggle_love": "Add this track to favourites"
     }
+  },
+  "cast": {
+    "timeout": "Cast request timed out. Make sure your Cast device is on the same Wi-Fi.",
+    "no_devices": "No Cast devices found on this network. Make sure your Cast device is on the same Wi-Fi.",
+    "session_error": "Cast session could not be started. Check your connection or Cast device."
   }
 }

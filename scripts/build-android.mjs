@@ -41,9 +41,11 @@ const uiBuildDir = path.join(uiDir, 'build');
 if (fs.existsSync(assetsDir)) {
   fs.rmSync(assetsDir, { recursive: true, force: true });
 }
-fs.mkdirSync(assetsDir, { recursive: true });
-fs.cpSync(uiBuildDir, assetsDir, { recursive: true });
-console.log(`Copied ${fs.readdirSync(assetsDir).length} top-level asset entries into ${assetsDir}`);
+fs.cpSync(uiBuildDir, assetsDir, {
+  recursive: true,
+  filter: (src) => !src.endsWith('.map'),
+});
+console.log(`Copied ${fs.readdirSync(assetsDir).length} top-level asset entries into ${assetsDir} (excluding .map files)`);
 
 // 3. Ensure local.properties
 fs.writeFileSync(

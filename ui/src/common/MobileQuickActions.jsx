@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   makeStyles,
   Typography,
@@ -31,10 +31,12 @@ import {
   useDataProvider,
   useNotify,
   useGetList,
+  changeListParams,
 } from 'react-admin'
 import clsx from 'clsx'
 import { playTracks } from '../actions'
 import config from '../config'
+import { getStoredPerPage } from './perPageStore'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -210,7 +212,15 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
     basePath,
   } = useListContext()
 
-  const isStarred = Boolean(filterValues?.starred)
+  const isFilterStarred = Boolean(filterValues?.starred)
+  const [optimisticStarred, setOptimisticStarred] = useState(null)
+  const isStarred =
+    optimisticStarred !== null ? optimisticStarred : isFilterStarred
+
+  useEffect(() => {
+    setOptimisticStarred(null)
+  }, [filterValues?.starred])
+
   const [dialogOpen, setDialogOpen] = useState(false)
 
   // Fetch Genres when dialog opens
@@ -269,7 +279,8 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
     userFacetKeys.forEach((key) => {
       delete newFilters[key]
     })
-    setFilters(newFilters, displayedFilters)
+    setOptimisticStarred(false)
+    setFilters(newFilters, displayedFilters, false)
     if (Object.keys(newFilters).length === 0 && history && basePath) {
       history.replace(basePath)
     }
@@ -288,7 +299,10 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
       } else {
         newFilters[field] = value
       }
-      setFilters(newFilters, displayedFilters)
+      if (field === 'starred') {
+        setOptimisticStarred(Boolean(value))
+      }
+      setFilters(newFilters, displayedFilters, false)
       if (Object.keys(newFilters).length === 0 && history && basePath) {
         history.replace(basePath)
       }
@@ -314,6 +328,23 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
         notify('ra.page.error', 'warning')
       })
   }, [dataProvider, filterValues, dispatch, notify])
+
+  const handleToggleMostPlayed = useCallback(() => {
+    if (isMostPlayed) {
+      dispatch(
+        changeListParams('song', {
+          sort: 'random',
+          order: 'ASC',
+          page: 1,
+          perPage: getStoredPerPage(),
+          filter: {},
+        }),
+      )
+      history.push('/song')
+    } else {
+      history.push('/song/mostPlayed')
+    }
+  }, [isMostPlayed, dispatch, history])
 
   return (
     <>
@@ -343,11 +374,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
         {/* 2. Most Played Button */}
         <div
           className={classes.item}
-          onClick={() =>
-            isMostPlayed
-              ? history.push('/song')
-              : history.push('/song/mostPlayed')
-          }
+          onClick={handleToggleMostPlayed}
           role="button"
           aria-label={translate('resources.song.lists.mostPlayed', {
             _: 'Most Played',

@@ -18,8 +18,10 @@ const VolumeControl = ({ value = 1, onChange }) => {
   )
 
   const activeValue = dragValue ?? value
-  const toggleMute = () =>
+  const toggleMute = (event) => {
+    event?.currentTarget?.blur?.()
     setValue(activeValue > 0 ? 0 : previousValue.current || 1)
+  }
   const Icon =
     activeValue === 0
       ? VolumeOffIcon
@@ -33,7 +35,9 @@ const VolumeControl = ({ value = 1, onChange }) => {
     isDraggingRef.current = true
     try {
       event.currentTarget?.setPointerCapture?.(event.pointerId)
-    } catch {}
+    } catch {
+      // Ignore browsers that do not support pointer capture
+    }
   }
 
   const handleChange = (event) => {

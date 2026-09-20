@@ -28,18 +28,59 @@ describe('resolveCastMedia', () => {
     config.castMediaBaseURL = originalCastMediaBaseURL
   })
 
-  it('always uses the authenticated MP3 stream contract for songs', async () => {
-    const media = await resolveCastMedia({ trackId: 'song-1' })
+  it('direct plays Cast-native formats with native MIME types and no transcode parameters', async () => {
+    const flacMedia = await resolveCastMedia({
+      trackId: 'song-flac',
+      suffix: 'flac',
+    })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-flac')
+    expect(flacMedia.url).toContain('id=song-flac')
+    expect(flacMedia.contentType).toBe('audio/flac')
 
-    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-1', {
+    const mp3Media = await resolveCastMedia({
+      trackId: 'song-mp3',
+      suffix: 'mp3',
+    })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-mp3')
+    expect(mp3Media.contentType).toBe('audio/mpeg')
+
+    const m4aMedia = await resolveCastMedia({
+      trackId: 'song-m4a',
+      song: { suffix: 'm4a' },
+    })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-m4a')
+    expect(m4aMedia.contentType).toBe('audio/mp4')
+
+    const opusMedia = await resolveCastMedia({
+      trackId: 'song-opus',
+      suffix: 'opus',
+    })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-opus')
+    expect(opusMedia.contentType).toBe('audio/ogg')
+  })
+
+  it('falls back to MP3 transcoding without estimateContentLength for unsupported or unknown formats', async () => {
+    const wmaMedia = await resolveCastMedia({
+      trackId: 'song-wma',
+      suffix: 'wma',
+    })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-wma', {
       format: 'mp3',
       maxBitRate: 320,
-      estimateContentLength: true,
     })
-    expect(media.url).toContain('/rest/stream')
-    expect(media.url).toContain('format=mp3')
-    expect(media.url).toContain('maxBitRate=320')
-    expect(media.contentType).toBe('audio/mpeg')
+    expect(wmaMedia.url).toContain('/rest/stream')
+    expect(wmaMedia.url).toContain('format=mp3')
+    expect(wmaMedia.url).toContain('maxBitRate=320')
+    expect(wmaMedia.url).not.toContain('estimateContentLength')
+    expect(wmaMedia.contentType).toBe('audio/mpeg')
+
+    const bareMedia = await resolveCastMedia({ trackId: 'song-bare' })
+    expect(subsonic.streamUrl).toHaveBeenCalledWith('song-bare', {
+      format: 'mp3',
+      maxBitRate: 320,
+    })
+    expect(bareMedia.url).not.toContain('estimateContentLength')
+    expect(bareMedia.contentType).toBe('audio/mpeg')
   })
 
   it('rebases Navidrome media onto the receiver-accessible URL', async () => {

@@ -149,7 +149,27 @@ const SongList = (props) => {
 
   useEffect(() => {
     if (!location.search && !songListType) {
-      if (songParams?.filter && Object.keys(songParams.filter).length > 0) {
+      const isSpecialSort =
+        songParams?.sort === 'play_count' ||
+        songParams?.sort === 'recently_added' ||
+        songParams?.sort === 'play_date'
+      const hasSpecialFilter =
+        songParams?.filter?.recently_played !== undefined
+
+      if (isSpecialSort || hasSpecialFilter) {
+        dispatch(
+          changeListParams('song', {
+            sort: 'random',
+            order: 'ASC',
+            page: 1,
+            perPage: getStoredPerPage(),
+            filter: {},
+          }),
+        )
+      } else if (
+        songParams?.filter &&
+        Object.keys(songParams.filter).length > 0
+      ) {
         dispatch(
           changeListParams('song', {
             ...songParams,

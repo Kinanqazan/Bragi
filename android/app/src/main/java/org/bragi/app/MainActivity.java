@@ -102,12 +102,46 @@ public class MainActivity extends AppCompatActivity {
     private volatile CastSession currentCastSession;
     private volatile boolean isMediaLoading = false;
     private volatile boolean isCastSessionConnected = false;
+    private volatile boolean isActivityResumed = false;
     private volatile String currentCastDeviceName = "";
     private volatile double currentCastVolume = 1.0;
     private volatile String currentCastMediaBaseUrl = "";
     private WifiManager.MulticastLock multicastLock;
     private MediaRouter mediaRouter;
     private MediaRouter.Callback mediaRouterCallback;
+
+    private synchronized CastContext ensureCastContext() {
+        if (castContext != null) {
+            return castContext;
+        }
+        try {
+            castContext = CastContext.getSharedInstance(this);
+            if (castContext != null && castContext.getSessionManager() != null) {
+                try {
+                    castContext.getSessionManager().removeSessionManagerListener(sessionManagerListener, CastSession.class);
+                } catch (Exception ignored) {}
+                castContext.getSessionManager().addSessionManagerListener(sessionManagerListener, CastSession.class);
+            }
+        } catch (Exception e) {
+            Log.w("BragiCast", "CastContext initialization pending or unavailable: " + e.getMessage());
+        }
+        return castContext;
+    }
+
+    CastSession getActiveCastSession() {
+        CastContext ctx = ensureCastContext();
+        if (ctx != null && ctx.getSessionManager() != null) {
+            try {
+                CastSession session = ctx.getSessionManager().getCurrentCastSession();
+                if (session != null && session.isConnected()) {
+                    currentCastSession = session;
+                    isCastSessionConnected = true;
+                    return session;
+                }
+            } catch (Exception ignored) {}
+        }
+        return (isCastSessionConnected && currentCastSession != null && currentCastSession.isConnected()) ? currentCastSession : null;
+    }
 
     private void acquireMulticastLock() {
         if (multicastLock == null) {
@@ -143,7 +177,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startMediaRouteDiscovery() {
-        if (castContext == null) return;
+        CastContext ctx = ensureCastContext();
+        if (ctx == null) return;
         try {
             if (mediaRouter == null) {
                 mediaRouter = MediaRouter.getInstance(this);
@@ -156,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 };
             }
-            MediaRouteSelector selector = castContext.getMergedSelector();
+            MediaRouteSelector selector = ctx.getMergedSelector();
             if (selector != null) {
                 mediaRouter.removeCallback(mediaRouterCallback);
                 mediaRouter.addCallback(selector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY);
@@ -365,6 +400,9 @@ public class MainActivity extends AppCompatActivity {
             isMediaLoading = false;
             currentCastSession = null;
             isCastSessionConnected = false;
+            if (!isActivityResumed) {
+                releaseMulticastLock();
+            }
             updateNativeCastState("SESSION_START_FAILED", null);
         }
 
@@ -377,6 +415,9 @@ public class MainActivity extends AppCompatActivity {
         public void onSessionEnded(@NonNull CastSession session, int error) {
             isMediaLoading = false;
             isCastSessionConnected = false;
+            if (!isActivityResumed) {
+                releaseMulticastLock();
+            }
             if (currentCastSession != null) {
                 RemoteMediaClient client = currentCastSession.getRemoteMediaClient();
                 if (client != null) {
@@ -414,6 +455,9 @@ public class MainActivity extends AppCompatActivity {
             isMediaLoading = false;
             currentCastSession = null;
             isCastSessionConnected = false;
+            if (!isActivityResumed) {
+                releaseMulticastLock();
+            }
             updateNativeCastState("SESSION_START_FAILED", null);
         }
 
@@ -504,15 +548,19 @@ public class MainActivity extends AppCompatActivity {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         // Initialize Google Cast
+        ensureCastContext();
         try {
-            castContext = CastContext.getSharedInstance(this);
-            castContext.getSessionManager().addSessionManagerListener(sessionManagerListener, CastSession.class);
-            CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
+            if (mediaRouteButton != null) {
+                CastButtonFactory.setUpMediaRouteButton(this, mediaRouteButton);
+            }
+        } catch (Exception e) {
+            Log.w("BragiCast", "Error setting up mediaRouteButton: " + e.getMessage());
+        }
+        try {
             acquireMulticastLock();
             startMediaRouteDiscovery();
         } catch (Exception e) {
-            // Google Play Services Cast may be unavailable or outdated on some devices
-            castContext = null;
+            Log.w("BragiCast", "Error starting multicast or route discovery: " + e.getMessage());
         }
 
         setupWebView();
@@ -553,14 +601,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        isActivityResumed = true;
         acquireMulticastLock();
         startMediaRouteDiscovery();
         if (!TextUtils.isEmpty(currentServerUrl)) {
             fetchServerConfig(currentServerUrl);
         }
-        if (castContext != null) {
+        if (webView != null && webView.getVisibility() == View.VISIBLE) {
+            webView.post(() -> {
+                if (!webView.hasFocus()) {
+                    webView.requestFocus();
+                }
+            });
+        }
+        CastContext resumeCtx = ensureCastContext();
+        if (resumeCtx != null) {
             try {
-                CastSession session = castContext.getSessionManager().getCurrentCastSession();
+                CastSession session = resumeCtx.getSessionManager().getCurrentCastSession();
                 if (session != null && session.isConnected()) {
                     currentCastSession = session;
                     isCastSessionConnected = true;
@@ -585,6 +642,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        isActivityResumed = false;
         stopMediaRouteDiscovery();
         if (!isCastSessionConnected) {
             releaseMulticastLock();
@@ -617,8 +675,14 @@ public class MainActivity extends AppCompatActivity {
         }
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
-        // Allow Chromium's internal compositor to render directly without intermediate offscreen layer
-        webView.setLayerType(View.LAYER_TYPE_NONE, null);
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
+        webView.setOnTouchListener((v, event) -> {
+            if (!v.hasFocus()) {
+                v.requestFocus();
+            }
+            return false;
+        });
 
         String defaultUa = settings.getUserAgentString();
         settings.setUserAgentString(defaultUa + " BragiNativeApp/1.0");
@@ -889,14 +953,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            CastSession session = null;
-            if (castContext != null && castContext.getSessionManager() != null) {
-                session = castContext.getSessionManager().getCurrentCastSession();
-            }
-            if (session == null && currentCastSession != null && currentCastSession.isConnected()) {
-                session = currentCastSession;
-            }
+        if (event.getAction() == KeyEvent.ACTION_DOWN && isCastSessionConnected) {
+            CastSession session = getActiveCastSession();
             if (session != null && session.isConnected()) {
                 int keyCode = event.getKeyCode();
                 if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
@@ -1064,6 +1122,11 @@ public class MainActivity extends AppCompatActivity {
         loadingProgress.setVisibility(View.VISIBLE);
         serverConnectLayout.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
+        webView.post(() -> {
+            if (!webView.hasFocus()) {
+                webView.requestFocus();
+            }
+        });
         fetchServerConfig(currentServerUrl);
         boolean devMode = BuildConfig.DEBUG && prefs.getBoolean(KEY_DEV_MODE, false);
         if (devMode && !TextUtils.isEmpty(currentServerUrl)) {
@@ -1146,7 +1209,7 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public boolean hasNativeCast() {
-            return castContext != null;
+            return ensureCastContext() != null;
         }
 
         @JavascriptInterface
@@ -1174,20 +1237,6 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {
                 return "";
             }
-        }
-
-        private CastSession getActiveCastSession() {
-            if (castContext != null && castContext.getSessionManager() != null) {
-                try {
-                    CastSession session = castContext.getSessionManager().getCurrentCastSession();
-                    if (session != null && session.isConnected()) {
-                        currentCastSession = session;
-                        isCastSessionConnected = true;
-                        return session;
-                    }
-                } catch (Exception ignored) {}
-            }
-            return (isCastSessionConnected && currentCastSession != null && currentCastSession.isConnected()) ? currentCastSession : null;
         }
 
         @JavascriptInterface
@@ -1265,14 +1314,19 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void requestCastSession() {
             runOnUiThread(() -> {
-                if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) return;
+                if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed()) || getSupportFragmentManager().isStateSaved()) return;
+                if (getSupportFragmentManager().findFragmentByTag("MediaRouteControllerDialogFragment") != null ||
+                        getSupportFragmentManager().findFragmentByTag("MediaRouteChooserDialogFragment") != null) {
+                    return;
+                }
+                CastContext ctx = ensureCastContext();
                 startMediaRouteDiscovery();
                 try {
                     if (isCastConnected()) {
                         MediaRouteControllerDialogFragment controllerDialog = new MediaRouteControllerDialogFragment();
                         controllerDialog.show(getSupportFragmentManager(), "MediaRouteControllerDialogFragment");
-                    } else if (castContext != null) {
-                        MediaRouteSelector selector = castContext.getMergedSelector();
+                    } else if (ctx != null) {
+                        MediaRouteSelector selector = ctx.getMergedSelector();
                         if (selector != null) {
                             MediaRouteChooserDialogFragment chooserDialog = new MediaRouteChooserDialogFragment();
                             chooserDialog.setRouteSelector(selector);
@@ -1295,8 +1349,9 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void endCastSession() {
             runOnUiThread(() -> {
-                if (castContext != null && castContext.getSessionManager() != null) {
-                    castContext.getSessionManager().endCurrentSession(true);
+                CastContext ctx = ensureCastContext();
+                if (ctx != null && ctx.getSessionManager() != null) {
+                    ctx.getSessionManager().endCurrentSession(true);
                 }
             });
         }

@@ -119,6 +119,12 @@ const useStyles = makeStyles(
       position: 'relative',
       display: 'block',
       textDecoration: 'none',
+      WebkitTapHighlightColor: 'transparent',
+      transition: 'transform 0.12s ease-out, opacity 0.12s ease-out',
+      '&:active': {
+        transform: 'scale(0.965)',
+        opacity: 0.92,
+      },
     },
     albumContainer: {},
     albumPlayButton: { color: 'white' },
@@ -179,6 +185,9 @@ const useStyles = makeStyles(
       lineHeight: 1.2,
       margin: 0,
       whiteSpace: 'nowrap',
+      [theme.breakpoints.down('sm')]: {
+        display: 'none',
+      },
     },
   }),
   { name: 'NDAlbumGridView' },

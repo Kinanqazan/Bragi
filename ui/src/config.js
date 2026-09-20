@@ -83,14 +83,18 @@ if (typeof window !== 'undefined') {
     } else if (localStorage.getItem('bragi_cast_media_base_url')) {
       castMediaBase = localStorage.getItem('bragi_cast_media_base_url')
     }
-  } catch (e) {}
+  } catch (_e) {
+    // localStorage or bridge read error
+  }
 
   if (nativeServer) {
     const cleanUrl = nativeServer.trim().replace(/\/+$/, '')
     config.baseURL = cleanUrl
     try {
       localStorage.setItem('bragi_server_url', cleanUrl)
-    } catch (e) {}
+    } catch (_e) {
+      // localStorage write error
+    }
   }
 
   if (castMediaBase) {
@@ -98,7 +102,9 @@ if (typeof window !== 'undefined') {
     config.castMediaBaseURL = cleanCastUrl
     try {
       localStorage.setItem('bragi_cast_media_base_url', cleanCastUrl)
-    } catch (e) {}
+    } catch (_e) {
+      // localStorage write error
+    }
   }
 
   window.__bragiSetCastMediaBaseUrl = (url) => {
@@ -107,7 +113,9 @@ if (typeof window !== 'undefined') {
     config.castMediaBaseURL = clean
     try {
       localStorage.setItem('bragi_cast_media_base_url', clean)
-    } catch (e) {}
+    } catch (_e) {
+      // localStorage write error
+    }
   }
 }
 
@@ -117,7 +125,9 @@ export const setServerUrl = (url) => {
   config.baseURL = cleanUrl
   try {
     localStorage.setItem('bragi_server_url', cleanUrl)
-  } catch (e) {}
+  } catch (_e) {
+    // localStorage write error
+  }
 }
 
 export let shareInfo

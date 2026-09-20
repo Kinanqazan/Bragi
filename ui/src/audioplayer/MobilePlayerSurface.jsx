@@ -42,6 +42,7 @@ const useStyles = makeStyles((theme) => ({
     position: 'fixed',
     inset: 0,
     zIndex: 1400,
+    pointerEvents: 'none',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-start',
@@ -414,7 +415,7 @@ const MobilePlayerSurface = ({
       }
       const target = gesture.opening ? 0 : 1
       setThemeColorActive(target === 1)
-      settleTo(target)
+      settleTo(target, 0, true)
       return
     }
 
@@ -424,7 +425,7 @@ const MobilePlayerSurface = ({
     // swipe ended. A shell-wide click guard can also swallow the first real
     // control click after the transition completes.
     event?.preventDefault?.()
-    settleTo(target, gesture.velocityY, target !== (gesture.opening ? 0 : 1))
+    settleTo(target, gesture.velocityY, true)
   }
 
   const handlePointerCancel = (event) => {
@@ -496,6 +497,7 @@ const MobilePlayerSurface = ({
           background: topColor,
           touchAction: 'none',
           transition: 'none',
+          pointerEvents: expanded ? 'auto' : 'none',
         }}
       >
         <AmbientBackdrop

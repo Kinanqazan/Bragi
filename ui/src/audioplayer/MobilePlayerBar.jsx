@@ -42,6 +42,12 @@ const useStyles = makeStyles((theme) => ({
     background: 'transparent',
     border: 0,
     cursor: 'pointer',
+    WebkitTapHighlightColor: 'transparent',
+    transition: 'transform 0.12s ease-out, opacity 0.12s ease-out',
+    '&:active': {
+      transform: 'scale(0.985)',
+      opacity: 0.92,
+    },
   },
   cover: { width: 92, height: '100%', objectFit: 'cover' },
   emptyCover: {
@@ -141,7 +147,10 @@ const MobilePlayerBar = ({
       <button
         type="button"
         className={classes.openButton}
-        onClick={onOpen}
+        onClick={(event) => {
+          event.currentTarget?.blur()
+          onOpen?.()
+        }}
         aria-label={`Open full-screen player${title ? ` for ${title}` : ''}`}
       >
         {cover ? (

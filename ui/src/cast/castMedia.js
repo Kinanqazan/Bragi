@@ -14,7 +14,9 @@ const getBasePathFromUrlOrPath = (value = '') => {
       const p = new URL(value).pathname.replace(/\/+$/, '')
       return p === '/' ? '' : p
     }
-  } catch (e) {}
+  } catch (_e) {
+    // Malformed URL, fall back to normalizePath
+  }
   return normalizePath(value)
 }
 
@@ -53,7 +55,9 @@ export const toCastReceiverUrl = (url) => {
   if (serverBase) {
     try {
       serverOrigin = new URL(serverBase, origin).origin
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore invalid serverBase URL
+    }
   }
 
   // A track belongs to this Navidrome server if:
@@ -88,12 +92,83 @@ export const toCastReceiverUrl = (url) => {
   return senderUrl.href
 }
 
-const mp3Media = (trackId) => ({
+const CAST_NATIVE_FORMATS = {
+  mp3: 'audio/mpeg',
+  flac: 'audio/flac',
+  m4a: 'audio/mp4',
+  mp4: 'audio/mp4',
+  aac: 'audio/aac',
+  opus: 'audio/ogg',
+  ogg: 'audio/ogg',
+  oga: 'audio/ogg',
+  wav: 'audio/wav',
+  webm: 'audio/webm',
+}
+
+const resolveTrackFormatAndMime = (track) => {
+  const suffix = String(
+    track?.suffix ||
+      track?.song?.suffix ||
+      '',
+  )
+    .toLowerCase()
+    .replace(/^\./, '')
+    .trim()
+
+  const rawContentType = String(
+    track?.contentType ||
+      track?.song?.contentType ||
+      '',
+  ).toLowerCase().trim()
+
+  if (suffix && CAST_NATIVE_FORMATS[suffix]) {
+    return {
+      directPlay: true,
+      contentType: CAST_NATIVE_FORMATS[suffix],
+    }
+  }
+
+  if (rawContentType) {
+    if (
+      rawContentType.includes('audio/mpeg') ||
+      rawContentType.includes('audio/mp3')
+    ) {
+      return { directPlay: true, contentType: 'audio/mpeg' }
+    }
+    if (rawContentType.includes('audio/flac')) {
+      return { directPlay: true, contentType: 'audio/flac' }
+    }
+    if (
+      rawContentType.includes('audio/mp4') ||
+      rawContentType.includes('audio/x-m4a')
+    ) {
+      return { directPlay: true, contentType: 'audio/mp4' }
+    }
+    if (rawContentType.includes('audio/aac')) {
+      return { directPlay: true, contentType: 'audio/aac' }
+    }
+    if (
+      rawContentType.includes('audio/ogg') ||
+      rawContentType.includes('audio/opus')
+    ) {
+      return { directPlay: true, contentType: 'audio/ogg' }
+    }
+    if (
+      rawContentType.includes('audio/wav') ||
+      rawContentType.includes('audio/x-wav')
+    ) {
+      return { directPlay: true, contentType: 'audio/wav' }
+    }
+  }
+
+  return { directPlay: false, contentType: 'audio/mpeg' }
+}
+
+const transcodeMedia = (trackId) => ({
   url: toCastReceiverUrl(
     subsonic.streamUrl(trackId, {
       format: 'mp3',
       maxBitRate: 320,
-      estimateContentLength: true,
     }),
   ),
   contentType: 'audio/mpeg',
@@ -110,8 +185,16 @@ export const resolveCastMedia = async (track) => {
     }
   }
 
-  // This is the deliberately conservative Cast contract: Navidrome's
-  // authenticated Subsonic stream endpoint and universally supported MP3.
-  // It avoids the browser-oriented getTranscodeStream negotiation path.
-  return mp3Media(trackId)
+  const { directPlay, contentType } = resolveTrackFormatAndMime(track)
+  if (directPlay) {
+    return {
+      url: toCastReceiverUrl(subsonic.streamUrl(trackId)),
+      contentType,
+    }
+  }
+
+  // Fallback transcode to universally supported MP3 for non-native formats
+  // (e.g. WMA, APE). estimateContentLength is explicitly excluded to allow
+  // standard HTTP chunked streaming without premature EOF disconnects.
+  return transcodeMedia(trackId)
 }

@@ -191,6 +191,36 @@ describe('<Menu />', () => {
     ])
   })
 
+  it('renders brand header with Bragi title and logo at the top in mobile mode, without sidebar toggle button and omitting Library header text', () => {
+    useMediaQuery.mockReturnValue(true)
+    render(
+      <Provider store={store}>
+        <MemoryRouter>
+          <Menu />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getByText('Bragi')).toBeInTheDocument()
+    expect(screen.getByLabelText('Bragi')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Close sidebar')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Collapse sidebar')).not.toBeInTheDocument()
+    expect(screen.queryByText('Library')).not.toBeInTheDocument()
+  })
+
+  it('renders Library section header in desktop mode', () => {
+    useMediaQuery.mockReturnValue(false)
+    render(
+      <Provider store={store}>
+        <MemoryRouter>
+          <Menu />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getByText('Library')).toBeInTheDocument()
+  })
+
   it('triggers quick scan when sync button is clicked', () => {
     render(
       <Provider store={store}>

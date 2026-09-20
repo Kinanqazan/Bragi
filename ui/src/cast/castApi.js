@@ -30,7 +30,10 @@ const getWindow = () => (typeof window === 'undefined' ? undefined : window)
 export const isNativeCastAvailable = () => {
   const currentWindow = getWindow()
   try {
-    return Boolean(currentWindow?.BragiNative?.hasNativeCast?.())
+    if (currentWindow?.BragiNative?.hasNativeCast?.()) return true
+    if (typeof currentWindow?.BragiNative?.requestCastSession === 'function') return true
+    if (currentWindow?.BragiNative) return true
+    return false
   } catch {
     return false
   }
@@ -184,6 +187,8 @@ export const subscribeCastState = (listener) => {
 
 export const loadCastSenderSdk = () => {
   if (isNativeCastAvailable()) return Promise.resolve(true)
+  const currentWindow = getWindow()
+  if (currentWindow?.BragiNative) return Promise.resolve(false)
   if (hasCastFramework()) return Promise.resolve(true)
   if (sdkPromise) return sdkPromise
 
@@ -191,7 +196,6 @@ export const loadCastSenderSdk = () => {
   // timer open. The runtime is exercised through the adapter tests instead.
   if (import.meta.env?.MODE === 'test') return Promise.resolve(false)
 
-  const currentWindow = getWindow()
   if (!currentWindow?.document) return Promise.resolve(false)
 
   sdkPromise = new Promise((resolve) => {
@@ -294,7 +298,9 @@ const initializeCastOnce = async () => {
       if (typeof prevCastState === 'function') {
         try {
           prevCastState(nativeState)
-        } catch (e) {}
+        } catch (_e) {
+          // Ignore errors from previous handler
+        }
       }
       const connected = Boolean(nativeState?.connected)
       state = {
@@ -330,8 +336,10 @@ const initializeCastOnce = async () => {
   try {
     castContext = framework.CastContext.getInstance()
     castContext.setOptions({
-      receiverApplicationId: chromeCast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-      autoJoinPolicy: chromeCast.AutoJoinPolicy.ORIGIN_SCOPED,
+      receiverApplicationId:
+        chromeCast?.media?.DEFAULT_MEDIA_RECEIVER_APP_ID || 'CC1AD845',
+      autoJoinPolicy:
+        chromeCast?.AutoJoinPolicy?.ORIGIN_SCOPED || 'origin_scoped',
     })
 
     const eventTypes = framework.CastContextEventType || {}
@@ -408,6 +416,26 @@ export const requestCastSession = async (timeoutMs = CAST_REQUEST_TIMEOUT_MS) =>
     forgetCastSession()
   }
 
+  // If a previous session is still lingering in Chrome's CastContext when the user
+  // initiates a new Cast request, cleanly terminate it first so Chrome does not
+  // reject the new session with a session_error collision.
+  try {
+    const existingSession = castContext?.getCurrentSession?.()
+    if (existingSession) {
+      castContext.endCurrentSession?.(false)
+      syncState()
+    }
+  } catch {
+    // Ignore teardown errors
+  }
+
+  const currentCastState = castContext?.getCastState?.()
+  if (currentCastState === 'NO_DEVICES_AVAILABLE') {
+    const err = new Error('No Cast devices available on this network')
+    err.code = 'NO_DEVICES_AVAILABLE'
+    throw err
+  }
+
   let timerId
   const timeoutPromise = new Promise((_, reject) => {
     timerId = setTimeout(() => {
@@ -420,6 +448,12 @@ export const requestCastSession = async (timeoutMs = CAST_REQUEST_TIMEOUT_MS) =>
   try {
     const requestPromise = Promise.resolve(castContext.requestSession())
     return await Promise.race([requestPromise, timeoutPromise])
+  } catch (err) {
+    const code = err?.code || (typeof err === 'string' ? err : err?.message)
+    if (String(code).toUpperCase() === 'SESSION_ERROR') {
+      forgetCastSession()
+    }
+    throw err
   } finally {
     clearTimeout(timerId)
   }

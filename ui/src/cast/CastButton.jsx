@@ -85,7 +85,9 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
   const notify = React.useCallback(
     (message, type = 'info') => {
       if (reduxContext?.store?.dispatch) {
-        reduxContext.store.dispatch(showNotification(message, type))
+        reduxContext.store.dispatch(
+          showNotification(message, type, { translate: false }),
+        )
       }
     },
     [reduxContext],
@@ -102,8 +104,6 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
   }, [castState.connected])
 
   const handleClick = async (event) => {
-    event.currentTarget?.blur()
-
     if (requesting) return
 
     if (castState.connected) {
@@ -118,26 +118,29 @@ const CastButton = ({ className, size, tabIndex = 0 }) => {
     }, 10000)
 
     try {
-      // Keep the request inside the click handler so device discovery retains
-      // the sender SDK's user-gesture permission.
+      // Keep the request synchronously connected to the click event so device discovery retains
+      // the browser's transient user activation token (avoid calling blur() or async ticks before).
       await requestCastSession()
     } catch (error) {
       const code = getCastErrorCode(error)
       if (!isCastRequestCancelled(code)) {
         // eslint-disable-next-line no-console
-        console.warn('[Navidrome Cast] Session request failed', { code })
+        console.warn('[Navidrome Cast] Session request failed', {
+          code,
+          description: error?.description || error?.message || (typeof error === 'string' ? error : undefined),
+          details: error?.details,
+          error,
+        })
         if (code === 'TIMEOUT') {
-          notify(
-            'Cast request timed out. Make sure your Cast device is on the same Wi-Fi.',
-            'warning',
-          )
-        } else if (code === 'NO_DEVICES_AVAILABLE') {
-          notify('No Cast devices found on this network.', 'warning')
+          notify('cast.timeout', 'warning')
+        } else if (
+          code === 'NO_DEVICES_AVAILABLE' ||
+          (String(code).toUpperCase() === 'SESSION_ERROR' &&
+            castState.castState === 'NO_DEVICES_AVAILABLE')
+        ) {
+          notify('cast.no_devices', 'warning')
         } else if (String(code).toUpperCase() === 'SESSION_ERROR') {
-          notify(
-            'Cast session could not be started. Check your connection or Cast device.',
-            'warning',
-          )
+          notify('cast.session_error', 'warning')
         }
       }
       // The button remains usable so a transient discovery failure can retry.
