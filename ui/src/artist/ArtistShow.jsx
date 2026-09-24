@@ -46,12 +46,16 @@ const useStyles = makeStyles(
         minHeight: 0,
         height: '100%',
         maxHeight: '100% !important',
+        paddingTop: 'var(--nd-mobile-top-offset, 82px)',
+        paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 80px) + 24px)',
       },
       [theme.breakpoints.down('xs')]: {
         flex: '1 1 auto',
         minHeight: 0,
         height: '100%',
         maxHeight: '100% !important',
+        paddingTop: 'var(--nd-mobile-top-offset, 82px)',
+        paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 80px) + 24px)',
       },
     },
     actions: {

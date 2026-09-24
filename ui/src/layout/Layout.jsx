@@ -13,6 +13,7 @@ import MobileBottomNav from './MobileBottomNav'
 import useCurrentTheme from '../themes/useCurrentTheme'
 import { useSearchRefocus } from '../common'
 import { desktopPlayerMediaQuery } from '../audioplayer/playerLayout'
+import { MOBILE_BACKGROUND_COLOR } from '../consts'
 
 const useStyles = makeStyles((theme) => ({
   root: (props) => ({
@@ -23,9 +24,12 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: '100vh',
     boxSizing: 'border-box',
     overflow: 'hidden',
+    '@media (max-width: 959.95px)': {
+      backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+    },
     paddingBottom: props.addPadding
-      ? 'calc(174px + env(safe-area-inset-bottom, 0px))'
-      : 'calc(74px + env(safe-area-inset-bottom, 0px))',
+      ? 'calc(156px + env(safe-area-inset-bottom, 0px))'
+      : 'calc(56px + env(safe-area-inset-bottom, 0px))',
     '& .MuiDrawer-root.MuiDrawer-modal, & .MuiDrawer-modal, & .RaSidebar-root .MuiDrawer-modal':
       {
         background: 'transparent !important',
@@ -38,6 +42,14 @@ const useStyles = makeStyles((theme) => ({
         backdropFilter: 'none !important',
         WebkitBackdropFilter: 'none !important',
       },
+    '& .MuiDrawer-paper, & .RaSidebar-drawerPaper': {
+      backgroundColor: `${theme.palette.background?.default || '#0d0d0f'} !important`,
+      background: `${theme.palette.background?.default || '#0d0d0f'} !important`,
+      '@media (max-width: 959.95px)': {
+        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+        background: `${MOBILE_BACKGROUND_COLOR} !important`,
+      },
+    },
     '& [class*="appFrame"], & [class*="contentWithSidebar"], & [class*="RaLayout-appFrame"], & [class*="RaLayout-content"], & [class*="RaLayout-children"], & .RaSidebar-root, & [class*="RaSidebar"], & .MuiDrawer-docked':
       {
         marginTop: '0 !important',
@@ -77,6 +89,9 @@ const useStyles = makeStyles((theme) => ({
       maxHeight: '100%',
       overflow: 'hidden',
       boxSizing: 'border-box',
+      '@media (max-width: 959.95px)': {
+        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+      },
       paddingLeft: theme.spacing(3),
       paddingRight: theme.spacing(3),
       paddingTop: '24px',
@@ -295,8 +310,8 @@ const Layout = (props) => {
 
   useEffect(() => {
     const offset = hasQueue
-      ? 'calc(174px + env(safe-area-inset-bottom, 0px))'
-      : 'calc(74px + env(safe-area-inset-bottom, 0px))'
+      ? 'calc(156px + env(safe-area-inset-bottom, 0px))'
+      : 'calc(56px + env(safe-area-inset-bottom, 0px))'
     document.documentElement.style.setProperty(
       '--nd-mobile-bottom-offset',
       offset,

@@ -1,6 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from 'react'
+import useMediaQuery from '@material-ui/core/useMediaQuery'
 import { createTheme } from '@material-ui/core/styles'
 import useCurrentTheme from './themes/useCurrentTheme'
+import { MOBILE_BACKGROUND_COLOR } from './consts'
 
 // Keep the browser/PWA baseline aligned with the default Material UI dark
 // background and the manifest theme color. Fullscreen playback can override
@@ -72,11 +74,16 @@ const syncThemeColor = () => {
 
 const useChangeThemeColor = () => {
   const themeConfig = useCurrentTheme()
+  const isPhoneMode = useMediaQuery('(max-width: 959.95px)', {
+    noSsr: true,
+  })
 
   useLayoutEffect(() => {
     try {
       const muiTheme = createTheme(themeConfig)
-      const color = muiTheme.palette?.background?.default
+      const color = isPhoneMode
+        ? MOBILE_BACKGROUND_COLOR
+        : muiTheme.palette?.background?.default
       if (color) {
         currentBaseColor = color
         syncThemeColor()
@@ -84,7 +91,7 @@ const useChangeThemeColor = () => {
     } catch {
       // ignore
     }
-  }, [themeConfig])
+  }, [themeConfig, isPhoneMode])
 
   // Standalone PWA hosts can restore their launch theme after a page is
   // resumed. Re-apply the active override so returning to the app does not

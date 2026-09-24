@@ -102,6 +102,7 @@ export const Artwork = ({
           src={imgUrl}
           alt={title}
           title={title}
+          decoding="async"
           className={clsx(
             classes.fill,
             classes.img,

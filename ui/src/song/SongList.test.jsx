@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getAutocompleteArrayClasses, songFilterStyles } from './SongList'
+import { createSongListResetAction } from './songListNavigation'
 
 const createTheme = (type = 'dark') => ({
   breakpoints: { down: (breakpoint) => `@media-${breakpoint}` },
@@ -50,5 +51,31 @@ describe('song facet filter layout', () => {
       borderRadius: '18px !important',
     })
     expect(styles.favoriteToggleButtonActive).toBeDefined()
+    expect(styles.searchSection).toMatchObject({
+      flex: '0 0 130px',
+      width: 130,
+    })
+    expect(styles.leftGroup.flex).toBe('1 1 auto')
+    expect(styles.facetCarousel).toMatchObject({
+      flex: '1 1 auto',
+      overflowX: 'auto',
+    })
+    expect(styles.toolbarActions.flex).toBe('0 0 auto')
+  })
+})
+
+describe('song list navigation', () => {
+  it('resets React-Admin song params when leaving a special list', () => {
+    expect(createSongListResetAction()).toEqual({
+      type: 'RA/CRUD_CHANGE_LIST_PARAMS',
+      payload: {
+        sort: 'random',
+        order: 'ASC',
+        page: 1,
+        perPage: 25,
+        filter: {},
+      },
+      meta: { resource: 'song' },
+    })
   })
 })

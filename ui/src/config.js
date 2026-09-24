@@ -45,6 +45,30 @@ const defaultConfig = {
   pluginsEnabled: true,
 }
 
+const getNativeServerConfig = () => {
+  if (typeof window === 'undefined') return {}
+
+  try {
+    if (window.__BRAGI_SERVER_CONFIG__) {
+      return typeof window.__BRAGI_SERVER_CONFIG__ === 'string'
+        ? JSON.parse(window.__BRAGI_SERVER_CONFIG__)
+        : window.__BRAGI_SERVER_CONFIG__
+    }
+
+    if (
+      window.BragiNative &&
+      typeof window.BragiNative.getServerConfig === 'function'
+    ) {
+      const rawConfig = window.BragiNative.getServerConfig()
+      return rawConfig ? JSON.parse(rawConfig) : {}
+    }
+  } catch (_e) {
+    // Native runtime config is optional; use the embedded config on failure.
+  }
+
+  return {}
+}
+
 let config
 
 try {
@@ -52,9 +76,10 @@ try {
   config = {
     ...defaultConfig,
     ...appConfig,
+    ...getNativeServerConfig(),
   }
 } catch (e) {
-  config = { ...defaultConfig }
+  config = { ...defaultConfig, ...getNativeServerConfig() }
 }
 
 // Bind native Android server address and Cast receiver base if running inside APK wrapper

@@ -5,11 +5,11 @@ import { REST_URL } from '../consts'
 const dataProvider = jsonServerProvider(REST_URL, httpClient)
 
 // Lists are the expensive part of changing tabs on a remote/mobile client.
-// Keep dynamic lists short-lived (30s), but keep static facet resources (genres, tags/moods)
+// Keep dynamic lists cached for 5 minutes, and keep static facet resources (genres, tags/moods)
 // cached longer (15 minutes) so tab navigation is instant (0ms).
-const LIST_CACHE_TTL_MS = 30 * 1000
+const LIST_CACHE_TTL_MS = 5 * 60 * 1000
 const FACET_CACHE_TTL_MS = 15 * 60 * 1000
-const MAX_LIST_CACHE_SIZE = 60
+const MAX_LIST_CACHE_SIZE = 100
 const facetResources = new Set(['genre', 'tag'])
 const cacheableResources = new Set(['album', 'song', 'artist', 'genre', 'tag', 'playlist'])
 const listCache = new Map()

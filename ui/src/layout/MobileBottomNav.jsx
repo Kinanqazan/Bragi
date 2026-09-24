@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useHistory, useLocation } from 'react-router-dom'
-import { makeStyles } from '@material-ui/core/styles'
+import { makeStyles, alpha } from '@material-ui/core/styles'
 import MusicNoteOutlinedIcon from '@material-ui/icons/MusicNoteOutlined'
 import MusicNoteIcon from '@material-ui/icons/MusicNote'
 import PersonOutlineIcon from '@material-ui/icons/PersonOutline'
@@ -12,90 +12,77 @@ import WbSunnyIcon from '@material-ui/icons/WbSunny'
 import clsx from 'clsx'
 import { useTranslate } from 'react-admin'
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1300,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 72,
-    paddingBottom: 'env(safe-area-inset-bottom)',
-    boxSizing: 'content-box',
-    backgroundColor: '#181820',
-    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 -6px 28px rgba(0, 0, 0, 0.4)',
-    userSelect: 'none',
-    [theme.breakpoints.up('md')]: {
-      display: 'none',
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === 'dark'
+  const primaryColor = theme.palette.primary.main
+
+  return {
+    root: {
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1300,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      height: 54,
+      paddingBottom: 'env(safe-area-inset-bottom)',
+      boxSizing: 'content-box',
+      backgroundColor: isDark
+        ? 'rgba(13, 13, 15, 0.92)'
+        : 'rgba(255, 255, 255, 0.92)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.35)',
+      userSelect: 'none',
+      [theme.breakpoints.up('md')]: {
+        display: 'none',
+      },
     },
-  },
-  navItem: {
-    flex: '1 1 0%',
-    width: '25%',
-    maxWidth: '25%',
-    minWidth: 0,
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    textDecoration: 'none',
-    color: 'rgba(255, 255, 255, 0.5)',
-    padding: '4px 2px',
-    boxSizing: 'border-box',
-    transition: 'color 0.22s ease, transform 0.16s ease',
-    WebkitTapHighlightColor: 'transparent',
-    '&:active': {
-      transform: 'scale(0.92)',
+    navItem: {
+      flex: '1 1 0%',
+      width: '25%',
+      maxWidth: '25%',
+      minWidth: 0,
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textDecoration: 'none',
+      color: isDark ? 'rgba(255, 255, 255, 0.52)' : 'rgba(0, 0, 0, 0.5)',
+      padding: '4px',
+      boxSizing: 'border-box',
+      transition: 'color 0.2s ease, transform 0.16s ease',
+      WebkitTapHighlightColor: 'transparent',
+      '&:active': {
+        transform: 'scale(0.88)',
+      },
     },
-  },
-  navItemActive: {
-    color: `${theme.palette.primary.main} !important`,
-    '& $iconContainer': {
-      color: theme.palette.primary.main,
-      backgroundColor: `${theme.palette.primary.main}22`,
+    navItemActive: {
+      color: `${primaryColor} !important`,
+      '& $iconContainer': {
+        color: `${primaryColor} !important`,
+        backgroundColor: alpha(primaryColor, isDark ? 0.18 : 0.12),
+        transform: 'scale(1.05)',
+      },
     },
-    '& $label': {
-      color: theme.palette.primary.main,
-      fontWeight: 700,
-      opacity: 1,
+    iconContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 52,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: 'transparent',
+      transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+      '& svg': {
+        fontSize: 25,
+      },
     },
-  },
-  iconContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 52,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'transparent',
-    transition: 'background-color 0.22s ease, color 0.22s ease',
-    '& svg': {
-      fontSize: 26,
-    },
-  },
-  label: {
-    fontSize: '0.74rem',
-    fontWeight: 500,
-    letterSpacing: '0.01em',
-    lineHeight: 1.15,
-    opacity: 0.75,
-    width: '100%',
-    maxWidth: '100%',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    textAlign: 'center',
-    padding: '0 2px',
-    boxSizing: 'border-box',
-    transition: 'color 0.22s ease, opacity 0.22s ease, font-weight 0.22s ease',
-  },
-}))
+  }
+})
 
 const navItems = [
   {
@@ -215,13 +202,14 @@ const MobileBottomNav = () => {
               [classes.navItemActive]: isActive,
             })}
             aria-label={label}
+            title={label}
             aria-current={isActive ? 'page' : undefined}
             onClick={(event) => navigate(event, item, isActive)}
           >
             <div className={classes.iconContainer}>
               <IconComponent />
             </div>
-            <span className={classes.label}>{label}</span>
+
           </Link>
         )
       })}

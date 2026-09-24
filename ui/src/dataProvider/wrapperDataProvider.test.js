@@ -145,31 +145,33 @@ describe('wrapperDataProvider', () => {
     })
 
     it('bounds the cache and does not grow unbounded', async () => {
-      for (let i = 0; i < 75; i++) {
+      const cacheSize = 100
+      const pageCount = cacheSize + 15
+
+      for (let i = 0; i < pageCount; i++) {
         await wrapperDataProvider.getList('song', {
           pagination: { page: i + 1, perPage: 25 },
           sort: { field: 'title', order: 'ASC' },
           filter: {},
         })
       }
-      expect(mockProvider.getList).toHaveBeenCalledTimes(75)
+      expect(mockProvider.getList).toHaveBeenCalledTimes(pageCount)
 
-      // Querying the most recent page (page 75) should be a cache hit
+      // Querying the most recent page should be a cache hit
       await wrapperDataProvider.getList('song', {
-        pagination: { page: 75, perPage: 25 },
+        pagination: { page: pageCount, perPage: 25 },
         sort: { field: 'title', order: 'ASC' },
         filter: {},
       })
-      expect(mockProvider.getList).toHaveBeenCalledTimes(75)
+      expect(mockProvider.getList).toHaveBeenCalledTimes(pageCount)
 
-      // Querying page 1 (which should have been evicted by the 60 item LRU cap) should fetch again
+      // Querying page 1 should fetch again after exceeding the 100 item LRU cap
       await wrapperDataProvider.getList('song', {
         pagination: { page: 1, perPage: 25 },
         sort: { field: 'title', order: 'ASC' },
         filter: {},
       })
-      expect(mockProvider.getList).toHaveBeenCalledTimes(76)
+      expect(mockProvider.getList).toHaveBeenCalledTimes(pageCount + 1)
     })
   })
 })
-

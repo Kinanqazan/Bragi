@@ -52,6 +52,7 @@ const useStyles = makeStyles(
         height: '100%',
         maxHeight: '100% !important',
         paddingBottom: 0,
+        paddingTop: 'var(--nd-mobile-top-offset, 82px)',
       },
       [theme.breakpoints.down('xs')]: {
         margin: '10px 0',
@@ -60,6 +61,7 @@ const useStyles = makeStyles(
         height: '100%',
         maxHeight: '100% !important',
         paddingBottom: 0,
+        paddingTop: 'var(--nd-mobile-top-offset, 82px)',
       },
     },
     tileBar: {
@@ -134,22 +136,22 @@ const useStyles = makeStyles(
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
-      padding: '12px 16px',
+      padding: '20px 16px',
       gap: 12,
       boxSizing: 'border-box',
       [theme.breakpoints.down('sm')]: {
         flexDirection: 'column',
-        padding: '10px 16px 6px',
-        gap: 4,
+        padding: '24px 16px 36px',
+        gap: 8,
       },
     },
     showMoreButton: {
-      borderRadius: '16px !important',
-      height: '32px !important',
-      minWidth: '120px !important',
-      padding: '0 14px !important',
+      borderRadius: '20px !important',
+      height: '40px !important',
+      minWidth: '144px !important',
+      padding: '0 20px !important',
       textTransform: 'none !important',
-      fontSize: '0.82rem !important',
+      fontSize: '0.9rem !important',
       fontWeight: '600 !important',
       color: `${theme.palette.primary.main} !important`,
       backgroundColor:
@@ -157,7 +159,7 @@ const useStyles = makeStyles(
           ? 'rgba(255, 255, 255, 0.08) !important'
           : 'rgba(0, 0, 0, 0.05) !important',
       border: `1px solid ${alpha(theme.palette.primary.main, 0.35)} !important`,
-      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1) !important',
+      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12) !important',
       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
       display: 'inline-flex !important',
       alignItems: 'center !important',
@@ -174,7 +176,7 @@ const useStyles = makeStyles(
         transform: 'scale(0.96)',
       },
       '& .MuiSvgIcon-root': {
-        fontSize: '1.1rem !important',
+        fontSize: '1.25rem !important',
       },
     },
     showMoreCaption: {

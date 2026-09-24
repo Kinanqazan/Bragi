@@ -2,11 +2,10 @@ import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useMediaQuery } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
-import { useLocation, Redirect } from 'react-router-dom'
+import { useLocation, useHistory, Redirect } from 'react-router-dom'
 import {
   useListContext,
   useTranslate,
-  changeListParams,
   useVersion,
 } from 'react-admin'
 import {
@@ -25,6 +24,7 @@ import {
 import ExpandInfoDialog from '../dialogs/ExpandInfoDialog'
 import { ModernSongList } from './ModernSongList'
 import songLists from './songLists'
+import { createSongListResetAction } from './songListNavigation'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const songFilterStyles = (theme) => ({
@@ -131,6 +131,7 @@ const randomStartingSeed = Math.random().toString()
 const SongList = (props) => {
   const isXsmall = useMediaQuery((theme) => theme.breakpoints.down('xs'))
   const location = useLocation()
+  const history = useHistory()
   const version = useVersion()
   useResourceRefresh('song')
 
@@ -148,37 +149,52 @@ const SongList = (props) => {
   const seed = `${randomStartingSeed}-${version}`
 
   useEffect(() => {
-    if (!location.search && !songListType) {
-      const isSpecialSort =
-        songParams?.sort === 'play_count' ||
-        songParams?.sort === 'recently_added' ||
-        songParams?.sort === 'play_date'
-      const hasSpecialFilter =
-        songParams?.filter?.recently_played !== undefined
+    if (!songListType) {
+      if (!location.search) {
+        const isSpecialSort =
+          songParams?.sort === 'play_count' ||
+          songParams?.sort === 'recently_added' ||
+          songParams?.sort === 'play_date'
+        const hasSpecialFilter =
+          songParams?.filter?.recently_played !== undefined
 
-      if (isSpecialSort || hasSpecialFilter) {
-        dispatch(
-          changeListParams('song', {
-            sort: 'random',
-            order: 'ASC',
-            page: 1,
-            perPage: getStoredPerPage(),
-            filter: {},
-          }),
-        )
-      } else if (
-        songParams?.filter &&
-        Object.keys(songParams.filter).length > 0
-      ) {
-        dispatch(
-          changeListParams('song', {
-            ...songParams,
-            filter: {},
-          }),
-        )
+        if (isSpecialSort || hasSpecialFilter) {
+          dispatch(createSongListResetAction())
+        }
+      } else {
+        // Strip default empty params from URL so URL stays clean (/song)
+        const searchParams = new URLSearchParams(location.search)
+        const filterStr = searchParams.get('filter')
+        const dispFilterStr = searchParams.get('displayedFilters')
+        const sort = searchParams.get('sort')
+        const order = searchParams.get('order')
+        const page = searchParams.get('page')
+
+        const isDefaultFilter =
+          !filterStr || filterStr === '{}' || filterStr === '%7B%7D'
+        const isDefaultDispFilter =
+          !dispFilterStr || dispFilterStr === '{}' || dispFilterStr === '%7B%7D'
+        const isDefaultSort = sort === 'random' && (order === 'ASC' || !order)
+        const isDefaultPage = page === '1' || !page
+
+        if (
+          isDefaultFilter &&
+          isDefaultDispFilter &&
+          isDefaultSort &&
+          isDefaultPage
+        ) {
+          history.replace(location.pathname)
+        }
       }
     }
-  }, [location.pathname, location.search, songListType, songParams, dispatch])
+  }, [
+    location.pathname,
+    location.search,
+    songListType,
+    songParams,
+    dispatch,
+    history,
+  ])
 
   if (!location.search && songListType && songLists[songListType]) {
     return (

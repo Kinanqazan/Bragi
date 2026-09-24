@@ -57,6 +57,7 @@ import { useInitialScanStatus } from './useInitialScanStatus'
 import { useScanElapsedTime } from './useScanElapsedTime'
 import { useInterval } from '../common'
 import { formatDuration, formatShortDuration } from '../utils'
+import { MOBILE_BACKGROUND_COLOR } from '../consts'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -64,8 +65,8 @@ const useStyles = makeStyles((theme) => {
     ? 'rgba(255, 255, 255, 0.12)'
     : 'rgba(0, 0, 0, 0.12)'
   const sidebarBg = isDark
-    ? 'rgba(0, 0, 0, 0.22)'
-    : 'rgba(0, 0, 0, 0.025)'
+    ? (theme.palette?.background?.default || '#0d0d0f')
+    : (theme.palette?.background?.default || '#fafafa')
 
   return {
     root: {
@@ -96,7 +97,7 @@ const useStyles = makeStyles((theme) => {
         paddingRight: theme.spacing(1.5),
         marginBottom: 0,
         borderRight: 'none',
-        backgroundColor: 'transparent',
+        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
       },
     },
     brandHeader: {
@@ -344,15 +345,6 @@ const useStyles = makeStyles((theme) => {
       color: theme.palette.text.primary,
       lineHeight: 1.2,
     },
-    userRole: {
-      fontSize: '0.66rem',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      color: theme.palette.text.secondary,
-      opacity: 0.8,
-      lineHeight: 1.2,
-      marginTop: 2,
-    },
     syncButton: {
       padding: 5,
       color: theme.palette.text.secondary,
@@ -439,13 +431,6 @@ const useStyles = makeStyles((theme) => {
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
-    },
-    popoverUserRole: {
-      fontSize: '0.7rem',
-      textTransform: 'uppercase',
-      letterSpacing: '0.06em',
-      color: theme.palette.text.secondary,
-      marginTop: 2,
     },
     popoverActivitySection: {
       margin: `${theme.spacing(0.5)}px ${theme.spacing(1.5)}px`,
@@ -877,31 +862,18 @@ const Menu = ({ dense = false }) => {
                 <Typography className={classes.userName}>
                   {loaded && identity?.fullName ? identity.fullName : 'Bragi'}
                 </Typography>
-                <Typography className={classes.userRole}>
-                  {permissions === 'admin' ? 'Administrator' : 'User'}
-                </Typography>
               </div>
             </div>
 
             <Box display="flex" alignItems="center" onClick={(e) => e.stopPropagation()}>
-              <Tooltip
-                title={
-                  scanStatus.scanning
-                    ? `${translate('activity.status')}: Scanning...`
-                    : translate('activity.quickScan', { _: 'Quick Scan' })
-                }
-              >
+              <Tooltip title={translate('menu.refresh', { _: 'Refresh App' })}>
                 <IconButton
                   size="small"
-                  className={clsx(
-                    classes.syncButton,
-                    scanStatus.scanning && classes.spinning,
-                  )}
-                  onClick={handleQuickScan}
-                  disabled={scanStatus.scanning}
-                  aria-label="Sync / Quick scan"
+                  className={classes.settingsButton}
+                  onClick={handleReloadApp}
+                  aria-label={translate('menu.refresh', { _: 'Refresh App' })}
                 >
-                  <VscSync size={18} />
+                  <RefreshIcon style={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
 
@@ -998,9 +970,6 @@ const Menu = ({ dense = false }) => {
           <div className={classes.popoverUserInfo}>
             <Typography className={classes.popoverUserName}>
               {loaded && identity?.fullName ? identity.fullName : 'Bragi'}
-            </Typography>
-            <Typography className={classes.popoverUserRole}>
-              {permissions === 'admin' ? 'Administrator' : 'User'}
             </Typography>
           </div>
         </div>
@@ -1183,19 +1152,6 @@ const Menu = ({ dense = false }) => {
             </ListItemIcon>
             <ListItemText
               primary={translate('menu.about', { _: 'About' })}
-              classes={{ primary: classes.popoverMenuText }}
-            />
-          </MenuItem>
-
-          <MenuItem
-            className={classes.popoverMenuItem}
-            onClick={handleReloadApp}
-          >
-            <ListItemIcon className={classes.popoverMenuIcon}>
-              <RefreshIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary={translate('menu.refresh', { _: 'Refresh App' })}
               classes={{ primary: classes.popoverMenuText }}
             />
           </MenuItem>

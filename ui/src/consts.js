@@ -9,6 +9,8 @@ export const AUTO_THEME_ID = 'AUTO_THEME_ID'
 
 export const AUTO_THEME_CONFIG_VALUE = 'Auto'
 
+export const MOBILE_BACKGROUND_COLOR = '#0d0d0f'
+
 export const DEFAULT_SHARE_BITRATE = 128
 
 export const BITRATE_CHOICES = [

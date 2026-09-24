@@ -48,7 +48,7 @@ export const CollapsibleComment = ({ record }) => {
 
   return (
     <Collapse
-      collapsedHeight={'2em'}
+      collapsedSize={'2em'}
       in={expanded}
       timeout={'auto'}
       className={clsx(

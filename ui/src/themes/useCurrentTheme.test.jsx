@@ -7,9 +7,12 @@ import useCurrentTheme from './useCurrentTheme'
 import { themeReducer } from '../reducers/themeReducer'
 import { AUTO_THEME_ID } from '../consts'
 
-function createMatchMedia(theme) {
+function createMatchMedia(theme, width = 1024) {
   return (query) => ({
-    matches: mediaQuery.match(query, { 'prefers-color-scheme': theme }),
+    matches: mediaQuery.match(query, {
+      'prefers-color-scheme': theme,
+      width: `${width}px`,
+    }),
     addListener: () => {},
     removeListener: () => {},
   })
@@ -159,6 +162,19 @@ describe('useCurrentTheme', () => {
       })
       // Spotify theme has explicit background.default: #121212
       expect(document.body.style.backgroundColor).toBe('rgb(18, 18, 18)')
+    })
+    it('uses the fixed near-black background in phone mode', () => {
+      window.matchMedia = createMatchMedia('light', 390)
+
+      renderHook(() => useCurrentTheme(), {
+        wrapper: ({ children }) => (
+          <Provider store={createStore(themeReducer, { theme: 'LightTheme' })}>
+            {children}
+          </Provider>
+        ),
+      })
+
+      expect(document.body.style.backgroundColor).toBe('rgb(13, 13, 15)')
     })
   })
 })

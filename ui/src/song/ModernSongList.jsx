@@ -85,12 +85,18 @@ const useStyles = makeStyles((theme) => {
         minHeight: 0,
         height: '100%',
         maxHeight: '100% !important',
+        width: '100% !important',
+        maxWidth: '100% !important',
+        overflowX: 'hidden !important',
       },
       [theme.breakpoints.down('xs')]: {
         flex: '1 1 auto',
         minHeight: 0,
         height: '100%',
         maxHeight: '100% !important',
+        width: '100% !important',
+        maxWidth: '100% !important',
+        overflowX: 'hidden !important',
       },
     },
     tableContainerUnconstrained: {
@@ -103,7 +109,13 @@ const useStyles = makeStyles((theme) => {
       minWidth: '100%',
       boxSizing: 'border-box',
       [theme.breakpoints.down('sm')]: {
+        width: '100% !important',
+        maxWidth: '100% !important',
+        minWidth: '0 !important',
+        overflowX: 'hidden !important',
+        boxSizing: 'border-box !important',
         paddingBottom: 0,
+        paddingTop: 'var(--nd-mobile-top-offset, 82px)',
       },
     },
     showMoreContainer: {
@@ -112,29 +124,29 @@ const useStyles = makeStyles((theme) => {
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
-      padding: '12px 16px',
+      padding: '20px 16px',
       gap: 12,
       boxSizing: 'border-box',
       [theme.breakpoints.down('sm')]: {
         flexDirection: 'column',
-        padding: '10px 16px 6px',
-        gap: 4,
+        padding: '24px 16px 36px',
+        gap: 8,
       },
     },
     showMoreButton: {
-      borderRadius: '16px !important',
-      height: '32px !important',
-      minWidth: '120px !important',
-      padding: '0 14px !important',
+      borderRadius: '20px !important',
+      height: '40px !important',
+      minWidth: '144px !important',
+      padding: '0 20px !important',
       textTransform: 'none !important',
-      fontSize: '0.82rem !important',
+      fontSize: '0.9rem !important',
       fontWeight: '600 !important',
       color: `${theme.palette.primary.main} !important`,
       backgroundColor: isDark
         ? 'rgba(255, 255, 255, 0.08) !important'
         : 'rgba(0, 0, 0, 0.05) !important',
       border: `1px solid ${alpha(theme.palette.primary.main, 0.35)} !important`,
-      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1) !important',
+      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12) !important',
       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
       display: 'inline-flex !important',
       alignItems: 'center !important',
@@ -151,7 +163,7 @@ const useStyles = makeStyles((theme) => {
         transform: 'scale(0.96)',
       },
       '& .MuiSvgIcon-root': {
-        fontSize: '1.1rem !important',
+        fontSize: '1.25rem !important',
       },
     },
     showMoreCaption: {
@@ -296,7 +308,7 @@ const useStyles = makeStyles((theme) => {
       minHeight: 68,
       padding: theme.spacing(0.75, 1.5, 0.75, 1),
       borderRadius: 0,
-      borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+      borderBottom: 0,
       cursor: 'pointer',
       WebkitTapHighlightColor: 'transparent',
       transition: theme.transitions.create(['background-color', 'transform'], {
@@ -327,9 +339,12 @@ const useStyles = makeStyles((theme) => {
         outline: 'none',
       },
       [theme.breakpoints.down('sm')]: {
-        gap: 16,
-        minHeight: 68,
-        padding: theme.spacing(0.75, 1, 0.75, 1),
+        gap: 12,
+        minHeight: 64,
+        padding: theme.spacing(0.75, 0.5, 0.75, 0.5),
+        width: '100% !important',
+        maxWidth: '100% !important',
+        boxSizing: 'border-box !important',
       },
     },
     playing: {
@@ -388,6 +403,8 @@ const useStyles = makeStyles((theme) => {
       justifyContent: 'flex-end',
       alignItems: 'center',
       flexShrink: 0,
+      minWidth: 44,
+      width: 44,
       whiteSpace: 'nowrap',
       '& .MuiIconButton-root': {
         padding: 8,
@@ -905,8 +922,8 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
   const gridTemplateColumns = useMemo(() => {
     if (isMobile) {
       return selectionMode
-        ? '34px 56px minmax(0, 1fr) auto'
-        : '56px minmax(0, 1fr) auto'
+        ? '34px 56px minmax(0, 1fr) 44px'
+        : '56px minmax(0, 1fr) 44px'
     }
     const cols = [
       selectionMode ? '36px' : '',
@@ -964,7 +981,6 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
 
   return (
     <div className={classes.root}>
-      {isMobile && <MobileQuickActions resource="song" />}
       {selectionMode && (
         <div className={classes.summary}>
           <Box display="flex" alignItems="center" gap={1}>
@@ -999,6 +1015,11 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
         }`}
       >
         <div className={classes.tableWrapper}>
+          {isMobile && (
+            <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>
+              <MobileQuickActions resource="song" />
+            </div>
+          )}
           {!selectionMode && !isMobile && (
             <div className={classes.headerRow} style={{ gridTemplateColumns }}>
               <div />

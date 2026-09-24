@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
 
     private String currentServerUrl = "";
+    private volatile String currentServerConfigJson = "{}";
     private WebViewAssetLoader assetLoader;
 
     // Cast Framework references
@@ -477,6 +478,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        installHttpDiskCache();
         setContentView(R.layout.activity_main);
 
         sInstance = new WeakReference<>(this);
@@ -651,12 +653,38 @@ public class MainActivity extends AppCompatActivity {
         // Do NOT call webView.onPause() so background music playback remains uninterrupted
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            android.net.http.HttpResponseCache cache = android.net.http.HttpResponseCache.getInstalled();
+            if (cache != null) {
+                cache.flush();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void installHttpDiskCache() {
+        try {
+            java.io.File httpCacheDir = new java.io.File(getCacheDir(), "http_cache");
+            long httpCacheSize = 250 * 1024 * 1024; // 250 MB disk cache
+            if (android.net.http.HttpResponseCache.getInstalled() == null) {
+                android.net.http.HttpResponseCache.install(httpCacheDir, httpCacheSize);
+                Log.d("Bragi", "Installed 250MB HTTP disk cache");
+            }
+        } catch (Exception e) {
+            Log.w("Bragi", "HTTP response cache installation skipped: " + e.getMessage());
+        }
+    }
+
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     private void setupWebView() {
         assetLoader = new WebViewAssetLoader.Builder()
                 .setDomain("appassets.androidplatform.net")
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
+
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -1010,7 +1038,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void fetchServerConfig(String serverUrl) {
-        if (TextUtils.isEmpty(serverUrl)) return;
+        fetchServerConfig(serverUrl, null);
+    }
+
+    private void fetchServerConfig(String serverUrl, Runnable onComplete) {
+        if (TextUtils.isEmpty(serverUrl)) {
+            if (onComplete != null) {
+                runOnUiThread(onComplete);
+            }
+            return;
+        }
         final String cleanUrl = serverUrl.replaceAll("/+$", "");
         new Thread(() -> {
             HttpURLConnection conn = null;
@@ -1072,6 +1109,7 @@ public class MainActivity extends AppCompatActivity {
                             if (jsonStr != null) {
                                 try {
                                     JSONObject json = new JSONObject(jsonStr);
+                                    currentServerConfigJson = json.toString();
                                     if (json.has("castMediaBaseURL")) {
                                         String castBase = json.optString("castMediaBaseURL", "").trim();
                                         if (!TextUtils.isEmpty(castBase)) {
@@ -1101,6 +1139,9 @@ public class MainActivity extends AppCompatActivity {
                 if (conn != null) {
                     try { conn.disconnect(); } catch (Exception ignored) {}
                 }
+                if (onComplete != null) {
+                    runOnUiThread(onComplete);
+                }
             }
         }).start();
     }
@@ -1127,16 +1168,17 @@ public class MainActivity extends AppCompatActivity {
                 webView.requestFocus();
             }
         });
-        fetchServerConfig(currentServerUrl);
         boolean devMode = BuildConfig.DEBUG && prefs.getBoolean(KEY_DEV_MODE, false);
-        if (devMode && !TextUtils.isEmpty(currentServerUrl)) {
-            String cleanUrl = currentServerUrl.replaceAll("/+$", "");
-            String devUrl = cleanUrl + "/app/";
-            Log.i("BragiDev", "Live Dev Mode active: loading " + devUrl);
-            webView.loadUrl(devUrl);
-        } else {
-            webView.loadUrl(APP_LOCAL_URL);
-        }
+        fetchServerConfig(currentServerUrl, () -> {
+            if (devMode && !TextUtils.isEmpty(currentServerUrl)) {
+                String cleanUrl = currentServerUrl.replaceAll("/+$", "");
+                String devUrl = cleanUrl + "/app/";
+                Log.i("BragiDev", "Live Dev Mode active: loading " + devUrl);
+                webView.loadUrl(devUrl);
+            } else {
+                webView.loadUrl(APP_LOCAL_URL);
+            }
+        });
     }
 
     private void showServerPicker() {
@@ -1205,6 +1247,11 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public String getServerUrl() {
             return currentServerUrl != null ? currentServerUrl.replaceAll("/+$", "") : "";
+        }
+
+        @JavascriptInterface
+        public String getServerConfig() {
+            return currentServerConfigJson != null ? currentServerConfigJson : "{}";
         }
 
         @JavascriptInterface

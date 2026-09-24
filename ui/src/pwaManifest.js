@@ -1,3 +1,5 @@
+import { MOBILE_BACKGROUND_COLOR } from './consts'
+
 export function createPwaManifest({ development = false } = {}) {
   return {
     name: 'Bragi',
@@ -13,8 +15,8 @@ export function createPwaManifest({ development = false } = {}) {
           scope: '/app/',
         }
       : { start_url: './' }),
-    background_color: '#303030',
-    theme_color: '#303030',
+    background_color: MOBILE_BACKGROUND_COLOR,
+    theme_color: MOBILE_BACKGROUND_COLOR,
     icons: [
       {
         src: './android-chrome-192x192.png',

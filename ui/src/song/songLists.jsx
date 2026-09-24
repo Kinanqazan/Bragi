@@ -35,7 +35,7 @@ const songLists = {
         activeIcon={RepeatIcon}
       />
     ),
-    params: 'sort=play_count&order=DESC&filter={"recently_played":true}',
+    params: 'sort=play_count&order=DESC&filter={}',
   },
 }
 

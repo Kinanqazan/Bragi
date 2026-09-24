@@ -18,12 +18,24 @@ import useChangeThemeColor, {
   normalizeThemeColor,
   useThemeColorOverride,
 } from './useChangeThemeColor'
+import { MOBILE_BACKGROUND_COLOR } from './consts'
+
+const setMatchMedia = (matches) => {
+  window.matchMedia = () => ({
+    matches,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })
+}
 
 describe('useChangeThemeColor', () => {
   let root
 
   beforeEach(() => {
     themeState.color = '#111111'
+    setMatchMedia(false)
     root = document.createElement('div')
     root.id = 'root'
     document.body.appendChild(root)
@@ -62,6 +74,19 @@ describe('useChangeThemeColor', () => {
       'content',
       '#303030',
     )
+    unmount()
+  })
+
+  it('uses the fixed near-black color for phone-mode safe areas', () => {
+    setMatchMedia(true)
+
+    const { unmount } = renderHook(() => useChangeThemeColor())
+
+    expect(document.querySelector("meta[name='theme-color']")).toHaveAttribute(
+      'content',
+      MOBILE_BACKGROUND_COLOR,
+    )
+    expect(document.body.style.backgroundColor).toBe('rgb(13, 13, 15)')
     unmount()
   })
 

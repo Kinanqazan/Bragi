@@ -172,7 +172,7 @@ export const modernFilterStyles = (theme) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing(1),
-      flex: '0 0 auto',
+      flex: '1 1 auto',
       minWidth: 0,
       height: 36,
       minHeight: 36,
@@ -219,6 +219,91 @@ export const modernFilterStyles = (theme) => {
       '& .RaFilterForm-clearfix, & [class*="clearfix"]': {
         display: 'none !important',
       },
+    },
+    searchSection: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      flex: '0 0 130px',
+      width: 130,
+      minWidth: 100,
+      maxWidth: 130,
+      height: 36,
+      minHeight: 36,
+      maxHeight: 36,
+      boxSizing: 'border-box',
+      '& > .RaFilter-root, & > [class*="RaFilter-root"]': {
+        width: '100% !important',
+        minWidth: '0 !important',
+        maxWidth: '100% !important',
+        flex: '0 0 100% !important',
+      },
+    },
+    facetCarousel: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(0.75),
+      flex: '1 1 auto',
+      minWidth: 0,
+      maxWidth: '100%',
+      height: 36,
+      overflowX: 'auto',
+      overflowY: 'hidden',
+      scrollbarWidth: 'none',
+      msOverflowStyle: 'none',
+      '&::-webkit-scrollbar': {
+        display: 'none',
+      },
+      WebkitOverflowScrolling: 'touch',
+      boxSizing: 'border-box',
+      '&:focus-visible': {
+        outline: `2px solid ${primaryColor}`,
+        outlineOffset: 2,
+        borderRadius: 8,
+      },
+    },
+    facetChip: {
+      flex: '0 0 auto',
+      height: 30,
+      maxWidth: 160,
+      padding: '0 11px',
+      borderRadius: 15,
+      border: `1px solid ${controlBorder}`,
+      backgroundColor: controlBackground,
+      color: theme.palette.text.primary,
+      font: 'inherit',
+      fontSize: '0.78rem',
+      fontWeight: 500,
+      lineHeight: 1,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      cursor: 'pointer',
+      transition: 'all 0.18s ease',
+      '&:hover': {
+        backgroundColor: controlHoverBackground,
+        borderColor: controlHoverBorder,
+      },
+      '&:focus-visible': {
+        outline: `2px solid ${primaryColor}`,
+        outlineOffset: 1,
+      },
+    },
+    facetChipActive: {
+      backgroundColor: `${primaryColor} !important`,
+      borderColor: `${primaryColor} !important`,
+      color: `${primaryContrast} !important`,
+      fontWeight: '600 !important',
+    },
+    toolbarActions: {
+      display: 'flex',
+      alignItems: 'center',
+      flex: '0 0 auto',
+      minWidth: 0,
+      height: 36,
+      minHeight: 36,
+      maxHeight: 36,
+      gap: theme.spacing(1),
+      boxSizing: 'border-box',
     },
     searchInput: {
       width: '130px !important',
@@ -412,7 +497,7 @@ export const modernFilterStyles = (theme) => {
       alignItems: 'center',
       gap: theme.spacing(1),
       flex: '0 0 auto',
-      marginLeft: 'auto',
+      marginLeft: 0,
       marginRight: theme.spacing(2),
       height: 36,
       minHeight: 36,
@@ -599,7 +684,8 @@ export const ModernFilterBar = ({
 
   // Fetch genres if needed
   const shouldFetchGenres =
-    (resource === 'song' || resource === 'album') && isFilterOpen
+    (resource === 'song' || resource === 'album') &&
+    (isFilterOpen || (!isMobile && resource === 'song'))
   const { data: genresData } = useGetList(
     'genre',
     { page: 1, perPage: 100 },
@@ -614,7 +700,8 @@ export const ModernFilterBar = ({
 
   // Fetch moods if needed
   const shouldFetchMoods =
-    (resource === 'song' || resource === 'album') && isFilterOpen
+    (resource === 'song' || resource === 'album') &&
+    (isFilterOpen || (!isMobile && resource === 'song'))
   const { data: moodsData } = useGetList(
     'tag',
     { page: 1, perPage: 100 },
@@ -691,6 +778,49 @@ export const ModernFilterBar = ({
     [filterValues, setFilters, displayedFilters, history, basePath],
   )
 
+  const facetTags = useMemo(
+    () =>
+      [
+        ...moodList.map((mood) => ({
+          id: `mood-${mood.id || mood.tagValue}`,
+          label: mood.tagValue || mood.name || mood.id || '',
+          type: 'mood',
+          value: mood.tagValue || mood.name || mood.id,
+        })),
+        ...genreList.map((genre) => ({
+          id: `genre-${genre.id}`,
+          label: genre.name || genre.id || '',
+          type: 'genre',
+          value: genre.id,
+        })),
+      ].filter((tag) => tag.label),
+    [genreList, moodList],
+  )
+
+  const isFacetTagActive = useCallback(
+    (tag) => {
+      const value = filterValues?.[tag.type === 'mood' ? 'mood' : 'genre_id']
+      return Array.isArray(value)
+        ? value.includes(tag.value)
+        : value === tag.value
+    },
+    [filterValues],
+  )
+
+  const handleFacetTagClick = useCallback(
+    (tag) => {
+      handleFilterChange(
+        tag.type === 'mood' ? 'mood' : 'genre_id',
+        isFacetTagActive(tag)
+          ? undefined
+          : tag.type === 'mood'
+            ? tag.value
+            : [tag.value],
+      )
+    },
+    [handleFilterChange, isFacetTagActive],
+  )
+
   const handleShuffleAll = useCallback(() => {
     dataProvider
       .getList('song', {
@@ -731,25 +861,57 @@ export const ModernFilterBar = ({
       {/* Desktop Toolbar */}
       <div className={classes.toolbarRoot}>
         <div className={classes.leftGroup}>
-          <Filter
-            {...props}
-            variant="outlined"
-            classes={{ form: classes.filterForm }}
-          >
-            <SearchInput
-              id="search"
-              key={searchSource}
-              source={searchSource}
-              alwaysOn
-              className={classes.searchInput}
-              placeholder={
-                searchPlaceholder ||
-                translate('ra.action.search') ||
-                'Search...'
-              }
-            />
-          </Filter>
+          <div className={classes.searchSection}>
+            <Filter
+              {...props}
+              variant="outlined"
+              classes={{ form: classes.filterForm }}
+            >
+              <SearchInput
+                id="search"
+                key={searchSource}
+                source={searchSource}
+                alwaysOn
+                className={classes.searchInput}
+                placeholder={
+                  searchPlaceholder ||
+                  translate('ra.action.search') ||
+                  'Search...'
+                }
+              />
+            </Filter>
+          </div>
 
+          {resource === 'song' && facetTags.length > 0 && (
+            <div
+              className={classes.facetCarousel}
+              role="region"
+              aria-label="Genres and moods"
+            >
+              {facetTags.map((tag) => {
+                const active = isFacetTagActive(tag)
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={clsx(
+                      classes.facetChip,
+                      active && classes.facetChipActive,
+                    )}
+                    onClick={() => handleFacetTagClick(tag)}
+                    aria-label={tag.label}
+                    aria-pressed={active}
+                    title={tag.label}
+                  >
+                    {tag.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className={classes.toolbarActions}>
           {config.enableFavourites && (
             <IconButton
               className={clsx(
@@ -789,9 +951,9 @@ export const ModernFilterBar = ({
               )}
             </IconButton>
           )}
-        </div>
 
-        <div className={classes.rightGroup}>{children}</div>
+          <div className={classes.rightGroup}>{children}</div>
+        </div>
       </div>
 
       {/* Filter Menu Dialog/Popover (Vertical List) */}

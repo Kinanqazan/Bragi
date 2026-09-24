@@ -234,4 +234,89 @@ describe('useImageUrl', () => {
     // A remembered failure has no blob, so callers must not treat it as instantly painted.
     expect(result2.current.fromCache).toBe(false)
   })
+
+  it('should deduplicate in-flight fetches for the same URL', async () => {
+    let resolveFetch
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve
+    })
+    const mockBlob = new Blob(['image-data'], { type: 'image/png' })
+    global.fetch = vi.fn(() => fetchPromise)
+
+    // Two hooks mount concurrently with the same URL
+    const { result: res1 } = renderHook(() =>
+      useImageUrl('http://example.com/shared.jpg'),
+    )
+    const { result: res2 } = renderHook(() =>
+      useImageUrl('http://example.com/shared.jpg'),
+    )
+
+    expect(res1.current.loading).toBe(true)
+    expect(res2.current.loading).toBe(true)
+
+    // Allow cache lookup microtask to complete and start the network fetch
+    await act(async () => {
+      await flushPromises()
+    })
+
+    // Only 1 network fetch should be dispatched
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    // Complete the in-flight fetch
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob),
+      })
+      await flushPromises()
+    })
+
+    // Both hooks should receive the blob URL
+    expect(res1.current.loading).toBe(false)
+    expect(res1.current.imgUrl).toBe('blob:mock-url')
+    expect(res2.current.loading).toBe(false)
+    expect(res2.current.imgUrl).toBe('blob:mock-url')
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('should share single in-flight fetch for songs on the same album with identical imageHash', async () => {
+    let resolveFetch
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve
+    })
+    const mockBlob = new Blob(['album-art'], { type: 'image/png' })
+    global.fetch = vi.fn(() => fetchPromise)
+
+    // Song 1 and Song 2 from the same album have different track IDs, but identical imageHash
+    const urlSong1 =
+      'http://localhost:4533/rest/getCoverArt?u=user&t=token1&s=salt1&v=1.8.0&c=NavidromeUI&id=mf-track1_aabbccdd11223344&size=300'
+    const urlSong2 =
+      'http://localhost:4533/rest/getCoverArt?u=user&t=token2&s=salt2&v=1.8.0&c=NavidromeUI&id=mf-track2_aabbccdd11223344&size=300'
+
+    const { result: res1 } = renderHook(() => useImageUrl(urlSong1))
+    const { result: res2 } = renderHook(() => useImageUrl(urlSong2))
+
+    expect(res1.current.loading).toBe(true)
+    expect(res2.current.loading).toBe(true)
+
+    // Allow cache lookup microtask to complete and start the network fetch
+    await act(async () => {
+      await flushPromises()
+    })
+
+    // Should recognize the shared imageHash and fire only 1 fetch!
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        blob: () => Promise.resolve(mockBlob),
+      })
+      await flushPromises()
+    })
+
+    expect(res1.current.imgUrl).toBe('blob:mock-url')
+    expect(res2.current.imgUrl).toBe('blob:mock-url')
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+  })
 })

@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux'
 import useMediaQuery from '@material-ui/core/useMediaQuery'
 import themes from './index'
-import { AUTO_THEME_ID } from '../consts'
+import { AUTO_THEME_ID, MOBILE_BACKGROUND_COLOR } from '../consts'
 import config from '../config'
 import { useEffect, useMemo } from 'react'
 
@@ -9,6 +9,9 @@ const useCurrentTheme = () => {
   // Runs above the ThemeProvider carrying the prop below, so it needs its own noSsr or the
   // auto theme renders dark first and flips.
   const prefersLightMode = useMediaQuery('(prefers-color-scheme: light)', {
+    noSsr: true,
+  })
+  const isPhoneMode = useMediaQuery('(max-width: 959.95px)', {
     noSsr: true,
   })
   const theme = useSelector((state) => {
@@ -49,10 +52,11 @@ const useCurrentTheme = () => {
 
     // Set body background color to match theme (fixes white background on pull-to-refresh)
     const isDark = theme.palette?.type === 'dark'
-    const bgColor =
-      theme.palette?.background?.default || (isDark ? '#303030' : '#fafafa')
+    const bgColor = isPhoneMode
+      ? MOBILE_BACKGROUND_COLOR
+      : theme.palette?.background?.default || (isDark ? '#303030' : '#fafafa')
     document.body.style.backgroundColor = bgColor
-  }, [theme])
+  }, [theme, isPhoneMode])
 
   return useMemo(() => {
     const isDark = theme.palette?.type === 'dark'
@@ -63,7 +67,9 @@ const useCurrentTheme = () => {
       rawDrawerRoot?.backgroundColor ||
       theme.overrides?.RaSidebar?.drawerPaper?.backgroundColor ||
       theme.overrides?.RaSidebar?.drawerPaper?.background ||
-      (isDark ? 'rgba(0, 0, 0, 0.22)' : 'rgba(0, 0, 0, 0.025)')
+      (isPhoneMode
+        ? MOBILE_BACKGROUND_COLOR
+        : theme.palette?.background?.default || (isDark ? '#0d0d0f' : '#fafafa'))
 
     return {
       ...theme,
@@ -119,8 +125,8 @@ const useCurrentTheme = () => {
             },
           },
           paper: {
-            background: drawerBg,
-            backgroundColor: drawerBg,
+            background: `${drawerBg} !important`,
+            backgroundColor: `${drawerBg} !important`,
             ...theme.overrides?.MuiDrawer?.paper,
           },
           modal: {
@@ -190,6 +196,8 @@ const useCurrentTheme = () => {
             height: '100% !important',
             maxHeight: '100vh !important',
             borderRight: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.08)'} !important`,
+            backgroundColor: `${drawerBg} !important`,
+            background: `${drawerBg} !important`,
             boxShadow: 'none !important',
             ...theme.overrides?.RaSidebar?.drawerPaper,
           },
@@ -274,7 +282,7 @@ const useCurrentTheme = () => {
       },
       props: { ...theme.props, MuiUseMediaQuery: { noSsr: true } },
     }
-  }, [theme])
+  }, [theme, isPhoneMode])
 }
 
 export default useCurrentTheme

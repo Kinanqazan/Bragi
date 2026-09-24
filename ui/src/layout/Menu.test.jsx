@@ -136,8 +136,9 @@ describe('<Menu />', () => {
 
     expect(screen.getByTestId('library-selector')).toBeInTheDocument()
     expect(screen.getByText('Test Admin')).toBeInTheDocument()
-    expect(screen.getByText('Administrator')).toBeInTheDocument()
-    expect(screen.getByLabelText('Sync / Quick scan')).toBeInTheDocument()
+    expect(screen.queryByText('Administrator')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Refresh App')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Sync / Quick scan')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Settings & Activity')).toBeInTheDocument()
   })
 
@@ -221,7 +222,7 @@ describe('<Menu />', () => {
     expect(screen.getByText('Library')).toBeInTheDocument()
   })
 
-  it('triggers quick scan when sync button is clicked', () => {
+  it('keeps Quick Scan available in the settings and activity popover', () => {
     render(
       <Provider store={store}>
         <MemoryRouter>
@@ -230,8 +231,8 @@ describe('<Menu />', () => {
       </Provider>,
     )
 
-    const syncButton = screen.getByLabelText('Sync / Quick scan')
-    fireEvent.click(syncButton)
+    fireEvent.click(screen.getByLabelText('User profile & system settings'))
+    fireEvent.click(screen.getByText('Quick Scan'))
     expect(subsonic.startScan).toHaveBeenCalledWith({ fullScan: false })
   })
 
@@ -256,7 +257,7 @@ describe('<Menu />', () => {
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText(/transcoding/i)).toBeInTheDocument()
     expect(screen.getByText('About')).toBeInTheDocument()
-    expect(screen.getByText('Refresh App')).toBeInTheDocument()
+    expect(screen.queryByText('Administrator')).not.toBeInTheDocument()
     expect(screen.getByText('Logout')).toBeInTheDocument()
 
     // Trigger full scan from inside popover
@@ -265,7 +266,7 @@ describe('<Menu />', () => {
     expect(subsonic.startScan).toHaveBeenCalledWith({ fullScan: true })
   })
 
-  it('triggers window.location.reload when Refresh App is clicked', () => {
+  it('triggers window.location.reload when the sidebar Refresh App button is clicked', () => {
     const reloadMock = vi.fn()
     const originalLocation = window.location
     delete window.location
@@ -279,11 +280,8 @@ describe('<Menu />', () => {
         </Provider>,
       )
 
-      const userCard = screen.getByLabelText('User profile & system settings')
-      fireEvent.click(userCard)
-
-      const refreshItem = screen.getByText('Refresh App')
-      fireEvent.click(refreshItem)
+      const refreshButton = screen.getByLabelText('Refresh App')
+      fireEvent.click(refreshButton)
       expect(reloadMock).toHaveBeenCalled()
     } finally {
       window.location = originalLocation

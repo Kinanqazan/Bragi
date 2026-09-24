@@ -1,28 +1,27 @@
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import clsx from 'clsx'
-import {
-  toggleSidebar,
-  changeListParams,
-} from 'react-admin'
+import { toggleSidebar, changeListParams } from 'react-admin'
 import { MdClose } from 'react-icons/md'
 import MenuIcon from '@material-ui/icons/Menu'
-import { useDispatch } from 'react-redux'
+import SearchIcon from '@material-ui/icons/Search'
+import ArrowBackIcon from '@material-ui/icons/ArrowBack'
+import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useLocation } from 'react-router-dom'
 import {
   makeStyles,
   useMediaQuery,
   IconButton,
   InputBase,
+  ClickAwayListener,
+  Typography,
   AppBar as MuiAppBar,
 } from '@material-ui/core'
 import { alpha } from '@material-ui/core/styles'
 import { Dialogs } from '../dialogs/Dialogs'
 import CastButton from '../cast/CastButton'
+import BragiLogo from '../icons/BragiLogo'
+import { MOBILE_BACKGROUND_COLOR } from '../consts'
+import { getStoredPerPage } from '../common/perPageStore'
 
 const useStyles = makeStyles(
   (theme) => {
@@ -73,18 +72,20 @@ const useStyles = makeStyles(
           color: 'inherit',
         },
       },
-      // Sticky Minimalistic Mobile Header with generous top spacing from phone edge
+      // Fixed YouTube Music Style Collapsible Mobile Header
       mobileAppBar: {
-        paddingTop: 'calc(env(safe-area-inset-top) + 14px)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
         paddingBottom: '8px',
-        paddingLeft: 'calc(10vw - 14px)',
-        paddingRight: 'calc(10vw - 14px)',
-        backgroundColor: `${theme.palette.background.default} !important`,
+        paddingLeft: '14px',
+        paddingRight: '14px',
+        background: `${MOBILE_BACKGROUND_COLOR} !important`,
         color: `${theme.palette.text.primary} !important`,
         boxShadow: 'none !important',
         border: 'none !important',
         borderBottom: 'none !important',
-        position: 'sticky !important',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        position: 'fixed !important',
         top: 0,
         left: 0,
         right: 0,
@@ -94,56 +95,94 @@ const useStyles = makeStyles(
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
+        alignItems: 'stretch',
+        transition:
+          'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: 'translateY(0)',
+        opacity: 1,
       },
-      // Floating Dynamic Search Pill
-      searchPill: {
-        width: '100%',
-        height: 52,
-        borderRadius: 26,
+      mobileAppBarHidden: {
+        transform: 'translateY(-100%) !important',
+        opacity: 0,
+        pointerEvents: 'none !important',
+      },
+      topRow: {
         display: 'flex',
+        flexDirection: 'row',
         alignItems: 'center',
-        padding: '0 6px 0 10px',
-        backgroundColor: isDark
-          ? 'rgba(255, 255, 255, 0.08)'
-          : 'rgba(0, 0, 0, 0.05)',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: isDark
-          ? '0 4px 20px rgba(0, 0, 0, 0.35)'
-          : '0 2px 12px rgba(0, 0, 0, 0.08)',
-        transition: 'all 0.2s ease',
+        justifyContent: 'space-between',
+        width: '100%',
+        height: 48,
+        minHeight: 48,
         boxSizing: 'border-box',
       },
-      searchPillFocused: {
-        borderColor: `${theme.palette.primary.main} !important`,
-        backgroundColor: isDark
-          ? 'rgba(255, 255, 255, 0.12) !important'
-          : 'rgba(0, 0, 0, 0.08) !important',
-        boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.25)} !important`,
+      leftGroup: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
       },
-      pillIconButton: {
-        padding: 6,
+      brandContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        cursor: 'pointer',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
+      },
+      brandLogo: {
+        width: 28,
+        height: 28,
+        color: theme.palette.primary.main,
+        flexShrink: 0,
+      },
+      brandTitle: {
+        fontSize: '1.3rem',
+        fontWeight: 700,
+        letterSpacing: '-0.02em',
+        color: theme.palette.text.primary,
+        lineHeight: 1,
+      },
+      rightGroup: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        marginRight: 8,
+      },
+      headerIconButton: {
+        padding: 8,
         color: theme.palette.text.primary,
         flexShrink: 0,
         '&:hover': {
           backgroundColor: isDark
             ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.08)',
+            : 'rgba(0, 0, 0, 0.06)',
         },
       },
-      pillInput: {
+      // Expanded Search Input Row
+      expandedSearchRow: {
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: isDark
+          ? 'rgba(255, 255, 255, 0.12)'
+          : 'rgba(0, 0, 0, 0.06)',
+        padding: '0 4px',
+        boxSizing: 'border-box',
+        transition: 'all 0.2s ease',
+        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'}`,
+      },
+      expandedSearchInput: {
         flex: 1,
         minWidth: 0,
         marginLeft: 8,
         marginRight: 8,
         fontSize: '1rem',
-        fontWeight: 400,
         color: theme.palette.text.primary,
         '& input': {
-          padding: '10px 0',
-          fontSize: '1rem',
+          padding: '8px 0',
           color: `${theme.palette.text.primary} !important`,
           '&::placeholder': {
             color: theme.palette.text.secondary,
@@ -165,12 +204,125 @@ const useStyles = makeStyles(
   },
 )
 
+// Hook to detect scroll direction across any child scrollable container (capture phase)
+const useHeaderVisibility = (enabled = true, resetKey = '') => {
+  const [visible, setVisible] = useState(true)
+  const lastScrollY = useRef(0)
+  const lastScrollTarget = useRef(null)
+  const touchStartY = useRef(0)
+
+  // AppBar survives route changes. Do not carry a hidden state or a scroll
+  // baseline from the previous page into the next one.
+  useEffect(() => {
+    setVisible(true)
+    lastScrollY.current = 0
+    lastScrollTarget.current = null
+    touchStartY.current = 0
+  }, [resetKey])
+
+  useEffect(() => {
+    if (!enabled) {
+      setVisible(true)
+      return
+    }
+
+    const handleScroll = (event) => {
+      const target = event.target
+      const currentScrollY =
+        target === document || target === window
+          ? window.scrollY || document.documentElement.scrollTop
+          : target.scrollTop !== undefined
+            ? target.scrollTop
+            : window.scrollY
+
+      if (currentScrollY === undefined) return
+
+      // Different pages can own different scroll containers. Establish a
+      // baseline for a new container instead of comparing it with the old page.
+      if (target !== lastScrollTarget.current) {
+        lastScrollTarget.current = target
+        lastScrollY.current = 0
+      }
+
+      // Always show when near the very top of the list
+      if (currentScrollY <= 25) {
+        setVisible(true)
+        lastScrollY.current = currentScrollY
+        return
+      }
+
+      const diff = currentScrollY - lastScrollY.current
+
+      // Jitter dampening threshold
+      if (Math.abs(diff) < 10) return
+
+      if (diff > 0) {
+        // Scrolling down -> hide header
+        setVisible(false)
+      } else {
+        // Scrolling up -> show header
+        setVisible(true)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    const handleTouchStart = (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartY.current = e.touches[0].clientY
+      }
+    }
+
+    const handleTouchMove = (e) => {
+      if (!e.touches || !e.touches[0]) return
+      const currentY = e.touches[0].clientY
+      const diff = touchStartY.current - currentY // positive = finger moved up = scroll down
+
+      if (Math.abs(diff) > 12) {
+        if (diff > 0) {
+          setVisible(false)
+        } else {
+          setVisible(true)
+        }
+        touchStartY.current = currentY
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, {
+      capture: true,
+      passive: true,
+    })
+    window.addEventListener('touchstart', handleTouchStart, {
+      capture: true,
+      passive: true,
+    })
+    window.addEventListener('touchmove', handleTouchMove, {
+      capture: true,
+      passive: true,
+    })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true })
+      window.removeEventListener('touchstart', handleTouchStart, {
+        capture: true,
+      })
+      window.removeEventListener('touchmove', handleTouchMove, {
+        capture: true,
+      })
+    }
+  }, [enabled])
+
+  return visible
+}
 
 const MobileTopBar = () => {
   const classes = useStyles()
   const dispatch = useDispatch()
   const history = useHistory()
   const location = useLocation()
+  const listParams = useSelector(
+    (state) => state.admin?.resources?.song?.list?.params,
+  )
 
   const [searchQuery, setSearchQuery] = useState(() => {
     const searchParams = new URLSearchParams(location.search)
@@ -185,8 +337,25 @@ const MobileTopBar = () => {
     }
     return ''
   })
-  const [inputFocused, setInputFocused] = useState(false)
+
+  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery))
   const debounceTimerRef = useRef(null)
+  const isHeaderVisible = useHeaderVisibility(
+    !isSearchOpen,
+    location.key || `${location.pathname}${location.search}${location.hash}`,
+  )
+
+  const isSongPage =
+    location.pathname === '/' || location.pathname.startsWith('/song')
+
+  // Set CSS top offset property dynamically so list content starts cleanly below fixed top bar with a generous gap
+  useEffect(() => {
+    const topOffset = 'calc(env(safe-area-inset-top, 0px) + 82px)'
+    document.documentElement.style.setProperty(
+      '--nd-mobile-top-offset',
+      topOffset,
+    )
+  }, [])
 
   const handleToggleSidebar = (e) => {
     e.currentTarget?.blur()
@@ -215,23 +384,46 @@ const MobileTopBar = () => {
         delete newFilters.title
       }
 
-      const isSongPage = history.location.pathname.startsWith('/song')
-      const targetPath = isSongPage ? history.location.pathname : '/song'
+      const targetPath = history.location.pathname.startsWith('/song')
+        ? history.location.pathname
+        : '/song'
 
-      const newQueryString =
-        Object.keys(newFilters).length > 0
-          ? `?filter=${encodeURIComponent(JSON.stringify(newFilters))}`
-          : ''
+      const nextSearchParams = new URLSearchParams(history.location.search)
+      if (Object.keys(newFilters).length > 0) {
+        nextSearchParams.set('filter', JSON.stringify(newFilters))
+      } else {
+        nextSearchParams.delete('filter')
+      }
 
-      history.replace(`${targetPath}${newQueryString}`)
+      // Keep mobile search URLs consistent with the desktop list state. The
+      // base song route uses these defaults even when they are omitted from
+      // the URL, but retaining them makes shared/search URLs deterministic.
+      if (trimmed && targetPath === '/song') {
+        nextSearchParams.set('displayedFilters', '{}')
+        nextSearchParams.set('order', listParams?.order || 'ASC')
+        nextSearchParams.set('page', '1')
+        nextSearchParams.set(
+          'perPage',
+          String(listParams?.perPage || getStoredPerPage()),
+        )
+        nextSearchParams.set('sort', listParams?.sort || 'random')
+      }
+
+      const queryString = nextSearchParams.toString()
+
+      history.replace(`${targetPath}${queryString ? `?${queryString}` : ''}`)
 
       dispatch(
         changeListParams('song', {
+          sort: listParams?.sort || 'random',
+          order: listParams?.order || 'ASC',
+          page: 1,
+          perPage: listParams?.perPage || getStoredPerPage(),
           filter: newFilters,
         }),
       )
     },
-    [history, dispatch],
+    [history, dispatch, listParams],
   )
 
   const handleSearchChange = (e) => {
@@ -244,11 +436,8 @@ const MobileTopBar = () => {
 
     const trimmed = value.trim()
     if (trimmed === '') {
-      // Immediate reset when input is cleared or backspaced to empty
       applySearchFilter('')
     } else {
-      // Smart debounce: 400ms for 1-character input to give time for 2nd character;
-      // 300ms for normal typing.
       const delay = trimmed.length === 1 ? 400 : 300
       debounceTimerRef.current = setTimeout(() => {
         applySearchFilter(value)
@@ -264,6 +453,21 @@ const MobileTopBar = () => {
     applySearchFilter('')
   }
 
+  const handleCloseSearch = () => {
+    setIsSearchOpen(false)
+    if (!searchQuery) {
+      applySearchFilter('')
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
+
   // Sync searchQuery with location search if modified externally
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search)
@@ -271,63 +475,113 @@ const MobileTopBar = () => {
     if (filterParam) {
       try {
         const parsed = JSON.parse(filterParam)
-        if (parsed.title !== undefined && parsed.title !== searchQuery) {
-          setSearchQuery(parsed.title)
+        const nextQuery =
+          parsed && typeof parsed.title === 'string' ? parsed.title : ''
+        setSearchQuery(nextQuery)
+        if (nextQuery) {
+          setIsSearchOpen(true)
         }
       } catch {
-        // Ignore malformed filter state from an external URL update.
+        // Ignore malformed filter state
       }
-    } else if (searchQuery !== '') {
+    } else {
       setSearchQuery('')
     }
-  }, [location.pathname, location.search, searchQuery])
+  }, [location.pathname, location.search])
 
   return (
-    <MuiAppBar position="sticky" className={classes.mobileAppBar}>
+    <MuiAppBar
+      position="fixed"
+      className={clsx(
+        classes.mobileAppBar,
+        !isHeaderVisible && classes.mobileAppBarHidden,
+      )}
+    >
       {/* Hidden React-Admin Title Portal anchor */}
       <span id="react-admin-title" style={{ display: 'none' }} />
 
-      {/* Floating Dynamic Search Pill */}
-      <div
-        className={clsx(
-          classes.searchPill,
-          inputFocused && classes.searchPillFocused,
+      {/* Row 1: YouTube Music Style Top Bar */}
+      <div className={classes.topRow}>
+        {isSearchOpen ? (
+          <ClickAwayListener onClickAway={handleCloseSearch}>
+            <div className={classes.expandedSearchRow}>
+              <IconButton
+                className={classes.headerIconButton}
+                onClick={handleCloseSearch}
+                aria-label="Close search"
+              >
+                <ArrowBackIcon style={{ fontSize: 24 }} />
+              </IconButton>
+
+              <InputBase
+                autoFocus
+                className={classes.expandedSearchInput}
+                placeholder="Search your music"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                inputProps={{ 'aria-label': 'Search your music' }}
+              />
+
+              {searchQuery ? (
+                <IconButton
+                  className={classes.headerIconButton}
+                  onClick={handleClearSearch}
+                  aria-label="Clear search"
+                >
+                  <MdClose size={22} />
+                </IconButton>
+              ) : null}
+
+              <CastButton
+                className={classes.headerIconButton}
+                size={27}
+                tabIndex={-1}
+              />
+            </div>
+          </ClickAwayListener>
+        ) : (
+          <>
+            {/* Left: Menu Hamburger + App Branding */}
+            <div className={classes.leftGroup}>
+              <IconButton
+                className={classes.headerIconButton}
+                onClick={handleToggleSidebar}
+                aria-label="Open menu"
+                tabIndex={-1}
+              >
+                <MenuIcon style={{ fontSize: 28 }} />
+              </IconButton>
+
+              <div
+                className={classes.brandContainer}
+                onClick={() => history.push('/song')}
+                role="button"
+                tabIndex={0}
+                title="Bragi"
+              >
+                <BragiLogo className={classes.brandLogo} />
+                <Typography className={classes.brandTitle}>Bragi</Typography>
+              </div>
+            </div>
+
+            {/* Right: Search Icon + Cast Button */}
+            <div className={classes.rightGroup}>
+              <IconButton
+                className={classes.headerIconButton}
+                onClick={() => setIsSearchOpen(true)}
+                aria-label="Search your music"
+              >
+                <SearchIcon style={{ fontSize: 27 }} />
+              </IconButton>
+
+              <CastButton
+                className={classes.headerIconButton}
+                size={27}
+                tabIndex={-1}
+              />
+            </div>
+          </>
         )}
-      >
-        <IconButton
-          className={classes.pillIconButton}
-          onClick={handleToggleSidebar}
-          aria-label="Open menu"
-          tabIndex={-1}
-        >
-          <MenuIcon style={{ fontSize: 29 }} />
-        </IconButton>
-
-        <InputBase
-          className={classes.pillInput}
-          placeholder="Search your music"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          inputProps={{ 'aria-label': 'Search your music' }}
-        />
-
-        {searchQuery ? (
-          <IconButton
-            className={classes.pillIconButton}
-            onClick={handleClearSearch}
-            aria-label="Clear search"
-            tabIndex={-1}
-          >
-            <MdClose size={24} />
-          </IconButton>
-        ) : null}
-
-        <CastButton
-          className={classes.pillIconButton}
-          tabIndex={-1}
-        />
       </div>
 
       <Dialogs />
@@ -342,7 +596,6 @@ const shouldHideSearchBar = (pathname) => {
 }
 
 const AppBar = (props) => {
-  const classes = useStyles()
   const location = useLocation()
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
 

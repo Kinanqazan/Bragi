@@ -38,6 +38,13 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: '100%',
     minWidth: 0,
     boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: '1 1 auto',
+    minHeight: 0,
+    height: '100%',
+    maxHeight: '100%',
+    overflow: 'hidden',
   },
   tableContainer: {
     width: '100%',
@@ -61,12 +68,18 @@ const useStyles = makeStyles((theme) => ({
       minHeight: 0,
       height: '100%',
       maxHeight: '100% !important',
+      width: '100% !important',
+      maxWidth: '100% !important',
+      overflowX: 'hidden !important',
     },
     [theme.breakpoints.down('xs')]: {
       flex: '1 1 auto',
       minHeight: 0,
       height: '100%',
       maxHeight: '100% !important',
+      width: '100% !important',
+      maxWidth: '100% !important',
+      overflowX: 'hidden !important',
     },
   },
   tableWrapper: {
@@ -74,7 +87,13 @@ const useStyles = makeStyles((theme) => ({
     minWidth: '100%',
     boxSizing: 'border-box',
     [theme.breakpoints.down('sm')]: {
+      width: '100% !important',
+      maxWidth: '100% !important',
+      minWidth: '0 !important',
+      overflowX: 'hidden !important',
+      boxSizing: 'border-box !important',
       paddingBottom: 0,
+      paddingTop: 'var(--nd-mobile-top-offset, 82px)',
     },
   },
   showMoreContainer: {
@@ -83,22 +102,22 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    padding: '12px 16px',
+    padding: '20px 16px',
     gap: 12,
     boxSizing: 'border-box',
     [theme.breakpoints.down('sm')]: {
       flexDirection: 'column',
-      padding: '10px 16px 6px',
-      gap: 4,
+      padding: '24px 16px 36px',
+      gap: 8,
     },
   },
   showMoreButton: {
-    borderRadius: '16px !important',
-    height: '32px !important',
-    minWidth: '120px !important',
-    padding: '0 14px !important',
+    borderRadius: '20px !important',
+    height: '40px !important',
+    minWidth: '144px !important',
+    padding: '0 20px !important',
     textTransform: 'none !important',
-    fontSize: '0.82rem !important',
+    fontSize: '0.9rem !important',
     fontWeight: '600 !important',
     color: `${theme.palette.primary.main} !important`,
     backgroundColor:
@@ -106,7 +125,7 @@ const useStyles = makeStyles((theme) => ({
         ? 'rgba(255, 255, 255, 0.08) !important'
         : 'rgba(0, 0, 0, 0.05) !important',
     border: `1px solid ${alpha(theme.palette.primary.main, 0.35)} !important`,
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1) !important',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12) !important',
     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
     display: 'inline-flex !important',
     alignItems: 'center !important',
@@ -123,7 +142,7 @@ const useStyles = makeStyles((theme) => ({
       transform: 'scale(0.96)',
     },
     '& .MuiSvgIcon-root': {
-      fontSize: '1.1rem !important',
+      fontSize: '1.25rem !important',
     },
   },
   showMoreCaption: {
@@ -511,25 +530,25 @@ const ArtistListView = ({ width, ...rest }) => {
     <div className={classes.root}>
       <div className={classes.tableContainer}>
         <div className={classes.tableWrapper}>
-          <div
-            className={classes.headerRow}
-            style={{ gridTemplateColumns }}
-            role="row"
-          >
-            <div />
+          {!isMobile && (
             <div
-              className={`${classes.headerCell} ${
-                currentSort?.field === 'name' ? classes.headerCellActive : ''
-              }`}
-              onClick={handleSort('name')}
+              className={classes.headerRow}
+              style={{ gridTemplateColumns }}
+              role="row"
             >
-              <span>
-                {translate('resources.artist.fields.name', { _: 'Artist' })}
-              </span>
-              {renderSortIndicator('name')}
-            </div>
-            {!isMobile &&
-              activeColumns.map((col) => (
+              <div />
+              <div
+                className={`${classes.headerCell} ${
+                  currentSort?.field === 'name' ? classes.headerCellActive : ''
+                }`}
+                onClick={handleSort('name')}
+              >
+                <span>
+                  {translate('resources.artist.fields.name', { _: 'Artist' })}
+                </span>
+                {renderSortIndicator('name')}
+              </div>
+              {activeColumns.map((col) => (
                 <div
                   key={col.id}
                   className={`${classes.headerCell} ${classes.desktopOnly} ${
@@ -545,8 +564,9 @@ const ArtistListView = ({ width, ...rest }) => {
                   {renderSortIndicator(col.sortField)}
                 </div>
               ))}
-            <div />
-          </div>
+              <div />
+            </div>
+          )}
 
           <div>
             {artists.map((artist) => (
