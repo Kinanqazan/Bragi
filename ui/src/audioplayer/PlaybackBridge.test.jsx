@@ -13,6 +13,9 @@ const mockedResolveStreamUrl = vi.hoisted(() =>
 const mockedPrefetchDecisions = vi.hoisted(() =>
   vi.fn(() => Promise.resolve()),
 )
+const mockedStreamUrl = vi.hoisted(() =>
+  vi.fn((id) => `raw:${id}`),
+)
 const mockedCastState = vi.hoisted(() => ({
   initialized: false,
   connected: false,
@@ -23,7 +26,7 @@ const mockedCreateCastPlaybackTarget = vi.hoisted(() => vi.fn())
 vi.mock('../subsonic', () => ({
   default: {
     getCoverArtUrl: vi.fn(() => ''),
-    streamUrl: vi.fn((id) => `raw:${id}`),
+    streamUrl: mockedStreamUrl,
   },
 }))
 
@@ -127,9 +130,9 @@ describe('usePlaybackBridge', () => {
     })
     expect(screen.getByTestId('audio')).toHaveAttribute(
       'data-src',
-      'stream:first',
+      'raw:first',
     )
-    expect(mockedResolveStreamUrl).toHaveBeenCalledWith('first')
+    expect(mockedStreamUrl).toHaveBeenCalledWith('first', undefined)
 
     act(() => {
       store.dispatch(playTracks({ second: song('second') }))

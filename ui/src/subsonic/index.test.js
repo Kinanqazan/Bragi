@@ -161,6 +161,15 @@ describe('getCoverArtUrl', () => {
     })
     expect(url).toContain('al-album-123')
   })
+
+  it('uses coverArt directly when present and preserves content hash', () => {
+    const url = subsonic.getCoverArtUrl({
+      id: 'song-123',
+      coverArt: 'al-album-123_0123456789abcdef',
+    })
+    expect(url).toContain('id=al-album-123_0123456789abcdef')
+    expect(url).not.toContain('_=')
+  })
 })
 
 describe('getDiscCoverArtUrl', () => {

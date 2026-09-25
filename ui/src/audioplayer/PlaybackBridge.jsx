@@ -91,20 +91,19 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     const playbackEngine = createPlaybackEngine({
       audio: adapter,
       resolveStreamUrl: (track, position) => {
-        if (track.isRadio)
-          return track.streamUrl || subsonic.streamUrl(trackIdOf(track))
-        return position != null && position > 0
-          ? decisionService.resolveStreamUrl(trackIdOf(track), position)
-          : decisionService.resolveStreamUrl(trackIdOf(track))
+        if (track.isRadio && track.streamUrl) return track.streamUrl
+        const id = trackIdOf(track)
+        const offset =
+          position != null && position > 0 ? Math.floor(position) : undefined
+        return subsonic.streamUrl(id, offset ? { offset } : undefined)
       },
-      fallbackStreamUrl: (track, error, position) =>
-        track.streamUrl ||
-        subsonic.streamUrl(
-          trackIdOf(track),
-          position && position > 0
-            ? { offset: Math.floor(position) }
-            : undefined,
-        ),
+      fallbackStreamUrl: (track, error, position) => {
+        if (track.isRadio && track.streamUrl) return track.streamUrl
+        const id = trackIdOf(track)
+        const offset =
+          position != null && position > 0 ? Math.floor(position) : undefined
+        return subsonic.streamUrl(id, offset ? { offset } : undefined)
+      },
       reportPlayback: (event) => eventHandlerRef.current?.(event),
     })
 
@@ -467,27 +466,6 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
     if (!engine || !mode) return
     engine.setMode(mode)
   }, [engine, mode])
-
-  // Prefetch transcode decision and stream URL for upcoming tracks in queue
-  // so next-track transitions resolve instantly with 0ms network latency.
-  useEffect(() => {
-    if (!queue.length || snapshot.currentIndex < 0) return
-    const upcoming = []
-    const firstNext = getNextIndex(snapshot.currentIndex, queue.length, mode)
-    if (firstNext >= 0 && queue[firstNext]) upcoming.push(queue[firstNext])
-    if (firstNext >= 0 && queue.length > 1) {
-      const secondNext = getNextIndex(firstNext, queue.length, mode)
-      if (secondNext >= 0 && secondNext !== firstNext && queue[secondNext]) {
-        upcoming.push(queue[secondNext])
-      }
-    }
-    const nextTracks = (upcoming.length ? upcoming : queue.slice(snapshot.currentIndex + 1, snapshot.currentIndex + 3))
-      .filter((t) => t && !t.isRadio)
-    const nextIds = nextTracks.map(trackIdOf).filter(Boolean)
-    if (nextIds.length && typeof decisionService?.prefetchDecisions === 'function') {
-      decisionService.prefetchDecisions(nextIds).catch(() => undefined)
-    }
-  }, [queue, snapshot.currentIndex, mode])
 
   const setVolume = useCallback(
     (nextVolume) => {

@@ -85,6 +85,17 @@ const getAvatarUrl = (username, size) =>
   )
 
 const getCoverArtUrl = (record, size, square) => {
+  if (!record) return ''
+  if (record.coverArt) {
+    const isHashed = /_[a-fA-F0-9]{8,64}$/.test(record.coverArt)
+    const options = {
+      ...(!isHashed && record.updatedAt && { _: record.updatedAt }),
+      ...(size && { size }),
+      ...(square && { square }),
+    }
+    return baseUrl(url('getCoverArt', record.coverArt, options))
+  }
+
   const suffix = record.imageHash ? '_' + record.imageHash : ''
   const options = {
     // A hash-suffixed url is already pixel-versioned; the buster would defeat immutable caching.
