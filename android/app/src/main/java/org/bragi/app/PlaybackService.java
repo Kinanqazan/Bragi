@@ -20,7 +20,6 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import android.util.LruCache;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -29,7 +28,6 @@ import java.util.concurrent.Executors;
 
 public class PlaybackService extends Service {
     private static final String CHANNEL_ID = "bragi_playback_channel";
-    private static final LruCache<String, Bitmap> sBitmapCache = new LruCache<>(40);
     private static final int NOTIFICATION_ID = 1001;
     private static final long STOP_GRACE_PERIOD_MS = 20000L; // 20 seconds
 
@@ -295,15 +293,6 @@ public class PlaybackService extends Service {
             updateNotification();
             return;
         }
-
-        Bitmap cached = sBitmapCache.get(urlString);
-        if (cached != null) {
-            currentCoverBitmap = cached;
-            syncMediaSession();
-            updateNotification();
-            return;
-        }
-
         imageExecutor.execute(() -> {
             Bitmap bmp = null;
             try {
@@ -336,9 +325,6 @@ public class PlaybackService extends Service {
             } catch (Exception ignored) {}
 
             final Bitmap loadedBmp = bmp;
-            if (loadedBmp != null) {
-                sBitmapCache.put(urlString, loadedBmp);
-            }
             handler.post(() -> {
                 if (urlString.equals(currentArtworkUrl)) {
                     currentCoverBitmap = loadedBmp;

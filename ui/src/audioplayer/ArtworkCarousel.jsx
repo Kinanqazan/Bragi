@@ -2,19 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import MusicNoteIcon from '@material-ui/icons/MusicNote'
 import { isLoopingPlayMode } from './carouselPolicy'
 import { useTheme } from '@material-ui/core/styles'
-import { useImageUrl } from '../common/useImageUrl'
-
-const CarouselSlideImage = ({ cover, title }) => {
-  const { imgUrl } = useImageUrl(cover)
-  return (
-    <img
-      src={imgUrl || cover}
-      alt={title || ''}
-      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      draggable={false}
-    />
-  )
-}
 
 export const ArtworkCarousel = ({
   queue = [],
@@ -221,9 +208,11 @@ export const ArtworkCarousel = ({
           }}
         >
           {item?.cover ? (
-            <CarouselSlideImage
-              cover={item.cover}
-              title={item?.title || ''}
+            <img
+              src={item.cover}
+              alt={item?.title || ''}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              draggable={false}
             />
           ) : (
             <div

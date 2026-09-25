@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useImageUrl } from '../common/useImageUrl'
 
 const cache = new Map()
 const maxCacheSize = 40
@@ -98,26 +97,24 @@ const getArtworkColor = (url) => {
 }
 
 export const useArtworkColor = (url) => {
-  const { imgUrl } = useImageUrl(url)
-  const resolvedUrl = imgUrl || url
   const [color, setColor] = useState(null)
 
   useEffect(() => {
     let active = true
-    if (!resolvedUrl) {
+    if (!url) {
       setColor(null)
       return () => {
         active = false
       }
     }
 
-    getArtworkColor(resolvedUrl).then((nextColor) => {
+    getArtworkColor(url).then((nextColor) => {
       if (active) setColor(nextColor)
     })
     return () => {
       active = false
     }
-  }, [resolvedUrl])
+  }, [url])
 
   return color
 }
