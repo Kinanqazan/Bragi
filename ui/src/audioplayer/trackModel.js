@@ -28,14 +28,17 @@ const parseLyrics = (lyrics) => {
 export const toQueueTrack = (item = {}) => {
   const trackId = item.mediaFileId || item.trackId || item.id
   const isRadio = Boolean(item.isRadio)
+  const imageHash = item.imageHash || item.song?.imageHash || item.coverArt || item.song?.coverArt
   const cover =
     item.cover ||
     (!isRadio && trackId
       ? subsonic.getCoverArtUrl(
           {
             id: trackId,
-            updatedAt: item.updatedAt,
-            album: item.album,
+            imageHash,
+            updatedAt: item.updatedAt || item.song?.updatedAt,
+            album: item.album || item.song?.album,
+            albumArtist: item.albumArtist || item.song?.albumArtist,
           },
           300,
         )

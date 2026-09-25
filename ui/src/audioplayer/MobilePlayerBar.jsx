@@ -5,6 +5,7 @@ import PlayArrowRoundedIcon from '@material-ui/icons/PlayArrowRounded'
 import { makeStyles } from '@material-ui/core/styles'
 import AmbientBackdrop from './AmbientBackdrop'
 import { useImmediateControlPress } from './controlPress'
+import { useImageUrl } from '../common/useImageUrl'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -131,6 +132,8 @@ const MobilePlayerBar = ({
   )
   const duration = snapshot.duration || 0
   const progress = duration ? (snapshot.currentTime / duration) * 100 : 0
+  const { imgUrl } = useImageUrl(cover)
+  const displayCover = imgUrl || cover
 
   return (
     <aside
@@ -140,7 +143,7 @@ const MobilePlayerBar = ({
       style={customStyle}
       {...gestureHandlers}
     >
-      <AmbientBackdrop cover={cover} color={ambientColor} />
+      <AmbientBackdrop cover={displayCover} color={ambientColor} />
       <div className={classes.progressTrack} aria-hidden="true">
         <div className={classes.progress} style={{ width: `${progress}%` }} />
       </div>
@@ -153,8 +156,8 @@ const MobilePlayerBar = ({
         }}
         aria-label={`Open full-screen player${title ? ` for ${title}` : ''}`}
       >
-        {cover ? (
-          <img className={classes.cover} src={cover} alt="" />
+        {displayCover ? (
+          <img className={classes.cover} src={displayCover} alt="" />
         ) : (
           <span className={classes.emptyCover} />
         )}

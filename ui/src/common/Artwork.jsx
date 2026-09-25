@@ -31,7 +31,7 @@ const useStyles = makeStyles({
   },
   imgVisible: { opacity: 1 },
   // Already-decoded blobs appear at once: fading them in would re-animate on every remount.
-  imgInstant: { opacity: 1, transition: 'none' },
+  imgInstant: { opacity: '1 !important', transition: 'none !important' },
 })
 
 // Renders a cover through the shared useImageUrl blob cache, so it survives remounts without

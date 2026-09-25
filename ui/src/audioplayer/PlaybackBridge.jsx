@@ -473,16 +473,26 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
   useEffect(() => {
     if (!queue.length || snapshot.currentIndex < 0) return
     const upcoming = []
-    const firstNext = getNextIndex(snapshot.currentIndex, queue.length, mode)
-    if (firstNext >= 0 && queue[firstNext]) upcoming.push(queue[firstNext])
-    if (firstNext >= 0 && queue.length > 1) {
-      const secondNext = getNextIndex(firstNext, queue.length, mode)
-      if (secondNext >= 0 && secondNext !== firstNext && queue[secondNext]) {
-        upcoming.push(queue[secondNext])
+    let currentIdx = snapshot.currentIndex
+    for (let i = 0; i < 4 && queue.length > 1; i++) {
+      const nextIdx = getNextIndex(currentIdx, queue.length, mode)
+      if (
+        nextIdx >= 0 &&
+        nextIdx !== snapshot.currentIndex &&
+        queue[nextIdx] &&
+        !upcoming.includes(queue[nextIdx])
+      ) {
+        upcoming.push(queue[nextIdx])
+        currentIdx = nextIdx
+      } else {
+        break
       }
     }
-    const nextTracks = (upcoming.length ? upcoming : queue.slice(snapshot.currentIndex + 1, snapshot.currentIndex + 3))
-      .filter((t) => t && !t.isRadio)
+    const nextTracks = (
+      upcoming.length
+        ? upcoming
+        : queue.slice(snapshot.currentIndex + 1, snapshot.currentIndex + 5)
+    ).filter((t) => t && !t.isRadio)
     const nextIds = nextTracks.map(trackIdOf).filter(Boolean)
     if (nextIds.length && typeof decisionService?.prefetchDecisions === 'function') {
       decisionService.prefetchDecisions(nextIds).catch(() => undefined)

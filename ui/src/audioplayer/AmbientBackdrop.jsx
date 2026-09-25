@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTheme } from '@material-ui/core/styles'
 import { useArtworkColor } from './artworkColor'
+import { useImageUrl } from '../common/useImageUrl'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const parseRgb = (color) => {
@@ -68,7 +69,8 @@ const AmbientBackdropView = ({ color, topColor }) => {
 }
 
 const ExtractedAmbientBackdrop = ({ cover, topColor }) => {
-  const color = useArtworkColor(cover)
+  const { imgUrl } = useImageUrl(cover)
+  const color = useArtworkColor(imgUrl || cover)
   return <AmbientBackdropView color={color} topColor={topColor} />
 }
 
