@@ -1,6 +1,7 @@
 import {
   SET_NOTIFICATIONS_STATE,
   SET_OMITTED_FIELDS,
+  SET_SIDEBAR_EXTERNAL_LINK,
   SET_SIDEBAR_PLAYLISTS_FAVOURITES,
   SET_TOGGLEABLE_FIELDS,
 } from '../actions'
@@ -10,6 +11,7 @@ const initialState = {
   toggleableFields: {},
   omittedFields: {},
   sidebarPlaylistsOnlyFavourites: false,
+  sidebarExternalLink: { label: '', url: '' },
 }
 
 export const settingsReducer = (previousState = initialState, payload) => {
@@ -40,6 +42,11 @@ export const settingsReducer = (previousState = initialState, payload) => {
       return {
         ...previousState,
         sidebarPlaylistsOnlyFavourites: data,
+      }
+    case SET_SIDEBAR_EXTERNAL_LINK:
+      return {
+        ...previousState,
+        sidebarExternalLink: data,
       }
     default:
       return previousState

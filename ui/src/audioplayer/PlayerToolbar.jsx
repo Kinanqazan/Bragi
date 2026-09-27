@@ -61,6 +61,9 @@ const useStyles = makeStyles((theme) => ({
       transform: 'scale(0.94)',
     },
   },
+  loveActive: {
+    color: `${theme.palette.primary.main} !important`,
+  },
   cornerButton: {
     width: 38,
     height: 38,
@@ -182,8 +185,13 @@ export const PlayerLoveButton = ({ id, isRadio, className }) => {
       resource={'song'}
       size={isDesktop ? undefined : 'inherit'}
       disabled={loading || toggling || !effectiveId || isRadio}
-      className={clsx(buttonClass, 'nd-player-love-btn')}
+      className={clsx(
+        buttonClass,
+        'nd-player-love-btn',
+        songRecord?.starred && classes.loveActive,
+      )}
       aria-label="Toggle favorite"
+      aria-pressed={Boolean(songRecord?.starred)}
     />
   )
 }

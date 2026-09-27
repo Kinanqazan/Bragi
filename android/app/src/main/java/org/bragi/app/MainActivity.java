@@ -1407,6 +1407,24 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public void openExternalUrl(String url) {
+            try {
+                Uri uri = Uri.parse(url);
+                String scheme = uri.getScheme();
+                if (scheme == null ||
+                        TextUtils.isEmpty(uri.getHost()) ||
+                        !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                    return;
+                }
+                runOnUiThread(() -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    } catch (Exception ignored) {}
+                });
+            } catch (Exception ignored) {}
+        }
+
+        @JavascriptInterface
         public void requestCastSession() {
             runOnUiThread(() -> {
                 if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed()) || getSupportFragmentManager().isStateSaved()) return;

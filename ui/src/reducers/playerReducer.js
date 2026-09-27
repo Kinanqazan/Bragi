@@ -24,10 +24,11 @@ const tracksFromData = (data = {}) =>
 
 const reduceClearQueue = () => ({ ...initialState, clear: true })
 
-const reducePlayTracks = (state, { data, id }) => {
+const reducePlayTracks = (state, { data, id, ids }) => {
   let playIndex = 0
   const selectedId = id == null ? null : String(id)
-  const queue = Object.keys(data).map((key, index) => {
+  const orderedIds = ids || Object.keys(data)
+  const queue = orderedIds.map((key, index) => {
     if (selectedId !== null && key === selectedId) playIndex = index
     return toQueueTrack(data[key])
   })

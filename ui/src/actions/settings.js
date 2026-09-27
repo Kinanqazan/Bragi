@@ -3,6 +3,7 @@ export const SET_TOGGLEABLE_FIELDS = 'SET_TOGGLEABLE_FIELDS'
 export const SET_OMITTED_FIELDS = 'SET_OMITTED_FIELDS'
 export const SET_SIDEBAR_PLAYLISTS_FAVOURITES =
   'SET_SIDEBAR_PLAYLISTS_FAVOURITES'
+export const SET_SIDEBAR_EXTERNAL_LINK = 'SET_SIDEBAR_EXTERNAL_LINK'
 
 export const setNotificationsState = (enabled) => ({
   type: SET_NOTIFICATIONS_STATE,
@@ -22,4 +23,9 @@ export const setOmittedFields = (obj) => ({
 export const setSidebarPlaylistsOnlyFavourites = (enabled) => ({
   type: SET_SIDEBAR_PLAYLISTS_FAVOURITES,
   data: enabled,
+})
+
+export const setSidebarExternalLink = (link) => ({
+  type: SET_SIDEBAR_EXTERNAL_LINK,
+  data: link,
 })

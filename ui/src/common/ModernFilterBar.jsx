@@ -824,7 +824,7 @@ export const ModernFilterBar = ({
   const handleShuffleAll = useCallback(() => {
     dataProvider
       .getList('song', {
-        pagination: { page: 1, perPage: 500 },
+        pagination: { page: 1, perPage: -1 },
         sort: { field: 'random', order: 'ASC' },
         filter: { ...filterValues, missing: false },
       })

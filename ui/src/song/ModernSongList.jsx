@@ -33,6 +33,7 @@ import {
 } from '../common'
 import { playTracks } from '../actions'
 import config from '../config'
+import ListeningStats from '../statistics/ListeningStats'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -891,6 +892,7 @@ ModernTrackRows.propTypes = {
 export const ModernSongList = ({
   scrollable = true,
   showQuickActions = true,
+  showListeningStats = false,
 } = {}) => {
   const classes = useStyles()
   const dispatch = useDispatch()
@@ -1146,6 +1148,9 @@ export const ModernSongList = ({
             <div className={classes.empty}>
               <Typography color="textSecondary">No songs found</Typography>
             </div>
+          )}
+          {isMobile && showListeningStats && (
+            <ListeningStats showSongListDivider />
           )}
         </div>
       </div>

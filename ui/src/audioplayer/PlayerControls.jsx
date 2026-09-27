@@ -5,7 +5,7 @@ import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import SkipNextIcon from '@material-ui/icons/SkipNext'
 import SkipPreviousIcon from '@material-ui/icons/SkipPrevious'
 import QueueMusicIcon from '@material-ui/icons/QueueMusic'
-import LyricsIcon from '@material-ui/icons/LibraryMusic'
+import LyricsIcon from '@material-ui/icons/Subtitles'
 import { makeStyles } from '@material-ui/core/styles'
 import clsx from 'clsx'
 import { useImmediateControlPress } from './controlPress'
@@ -20,6 +20,9 @@ const useStyles = makeStyles((theme) => ({
       filter: 'brightness(1.1)',
     },
   },
+  secondaryBtnActive: {
+    color: `${theme.palette.primary.main} !important`,
+  },
 }))
 
 const PlayerControls = ({
@@ -27,6 +30,7 @@ const PlayerControls = ({
   commands,
   onQueue,
   onLyrics,
+  lyricsActive = false,
   favoriteButton,
   showCast = true,
   compact = false,
@@ -83,8 +87,11 @@ const PlayerControls = ({
         {onLyrics && (
           <IconButton
             onClick={onLyrics}
-            aria-label="Open lyrics"
-            className="nd-player-btn-secondary"
+            aria-label={lyricsActive ? 'Close lyrics' : 'Open lyrics'}
+            aria-pressed={lyricsActive}
+            className={clsx('nd-player-btn-secondary', {
+              [classes.secondaryBtnActive]: lyricsActive,
+            })}
           >
             <LyricsIcon />
           </IconButton>

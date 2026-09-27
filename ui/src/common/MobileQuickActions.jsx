@@ -106,10 +106,10 @@ const useStyles = makeStyles((theme) => {
       WebkitTapHighlightColor: 'transparent',
       transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
       backgroundColor: isDark
-        ? alpha(primaryColor, 0.16)
-        : alpha(primaryColor, 0.08),
+        ? alpha(primaryColor, 0.07)
+        : alpha(primaryColor, 0.04),
       color: primaryColor,
-      border: `1px solid ${alpha(primaryColor, isDark ? 0.28 : 0.2)}`,
+      border: `1px solid ${alpha(primaryColor, isDark ? 0.17 : 0.12)}`,
       position: 'relative',
       '&:active': {
         transform: 'scale(0.93)',
@@ -120,14 +120,10 @@ const useStyles = makeStyles((theme) => {
       },
     },
     actionBtnActive: {
-      backgroundColor: isDark
-        ? '#ffffff !important'
-        : `${primaryColor} !important`,
-      color: isDark ? '#0f0f14 !important' : `${primaryContrast} !important`,
-      borderColor: isDark ? '#ffffff !important' : `${primaryColor} !important`,
-      boxShadow: isDark
-        ? '0 3px 12px rgba(0, 0, 0, 0.35)'
-        : '0 3px 10px rgba(0, 0, 0, 0.15)',
+      backgroundColor: `${alpha(primaryColor, isDark ? 0.22 : 0.14)} !important`,
+      color: `${primaryColor} !important`,
+      borderColor: `${alpha(primaryColor, isDark ? 0.42 : 0.32)} !important`,
+      boxShadow: `0 2px 8px ${alpha(primaryColor, isDark ? 0.14 : 0.1)}`,
     },
     tagChip: {
       flexShrink: 0,
@@ -165,6 +161,13 @@ const useStyles = makeStyles((theme) => {
       boxShadow: isDark
         ? '0 2px 10px rgba(0, 0, 0, 0.35)'
         : '0 2px 8px rgba(0, 0, 0, 0.15)',
+    },
+    tagGroupDivider: {
+      width: 1,
+      height: 20,
+      flexShrink: 0,
+      margin: '0 2px',
+      backgroundColor: alpha(theme.palette.text.primary, 0.18),
     },
     filterIconChip: {
       padding: '0 10px',
@@ -390,7 +393,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
   const handleShuffleAll = useCallback(() => {
     dataProvider
       .getList('song', {
-        pagination: { page: 1, perPage: 500 },
+        pagination: { page: 1, perPage: -1 },
         sort: { field: 'random', order: 'ASC' },
         filter: { ...filterValues, missing: false },
       })
@@ -528,22 +531,31 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
           role="region"
           aria-label="Moods and genres tags"
         >
-          {tags.map((tag) => {
+          {tags.map((tag, index) => {
             const active = isTagActive(tag)
+            const startsGenreGroup =
+              tag.type === 'genre' && tags[index - 1]?.type === 'mood'
             return (
-              <div
-                key={tag.id}
-                className={clsx(
-                  classes.tagChip,
-                  active && classes.tagChipActive,
+              <React.Fragment key={tag.id}>
+                {startsGenreGroup && (
+                  <span
+                    className={classes.tagGroupDivider}
+                    aria-hidden="true"
+                  />
                 )}
-                onClick={() => handleTagClick(tag)}
-                role="button"
-                tabIndex={0}
-                aria-pressed={active}
-              >
-                <span>{tag.label}</span>
-              </div>
+                <div
+                  className={clsx(
+                    classes.tagChip,
+                    active && classes.tagChipActive,
+                  )}
+                  onClick={() => handleTagClick(tag)}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={active}
+                >
+                  <span>{tag.label}</span>
+                </div>
+              </React.Fragment>
             )
           })}
 

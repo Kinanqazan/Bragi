@@ -5,6 +5,10 @@ import {
   Divider,
   Typography,
   makeStyles,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Avatar,
   IconButton,
   Tooltip,
@@ -17,6 +21,7 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  TextField,
 } from '@material-ui/core'
 import { alpha } from '@material-ui/core/styles'
 import clsx from 'clsx'
@@ -32,6 +37,7 @@ import {
 import ViewListIcon from '@material-ui/icons/ViewList'
 import CategoryOutlinedIcon from '@material-ui/icons/CategoryOutlined'
 import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined'
+import EqualizerIcon from '@material-ui/icons/Equalizer'
 import AccountCircle from '@material-ui/icons/AccountCircle'
 import TuneIcon from '@material-ui/icons/Tune'
 import InfoOutlinedIcon from '@material-ui/icons/InfoOutlined'
@@ -39,6 +45,7 @@ import PersonIcon from '@material-ui/icons/Person'
 import SupervisorAccountIcon from '@material-ui/icons/SupervisorAccount'
 import ExitToAppIcon from '@material-ui/icons/ExitToApp'
 import RefreshIcon from '@material-ui/icons/Refresh'
+import LaunchIcon from '@material-ui/icons/Launch'
 import MenuOpenIcon from '@material-ui/icons/MenuOpen'
 import MenuIcon from '@material-ui/icons/Menu'
 import BragiLogo from '../icons/BragiLogo'
@@ -58,6 +65,23 @@ import { useScanElapsedTime } from './useScanElapsedTime'
 import { useInterval } from '../common'
 import { formatDuration, formatShortDuration } from '../utils'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
+import { setSidebarExternalLink } from '../actions'
+
+const EMPTY_SIDEBAR_LINK = { label: '', url: '' }
+
+const normalizeExternalUrl = (value) => {
+  try {
+    const trimmed = value.trim()
+    if (!/^https?:\/\//i.test(trimmed)) return ''
+    const url = new URL(trimmed)
+    return (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.hostname
+      ? url.toString()
+      : ''
+  } catch {
+    return ''
+  }
+}
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -294,6 +318,8 @@ const useStyles = makeStyles((theme) => {
     },
     bottomSectionClosed: {
       display: 'flex',
+      flexDirection: 'column',
+      gap: theme.spacing(0.5),
       justifyContent: 'center',
       alignItems: 'center',
       paddingTop: theme.spacing(1),
@@ -576,10 +602,21 @@ const Menu = ({ dense = false }) => {
   const { loaded, identity } = useGetIdentity()
   const { permissions } = usePermissions()
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [sidebarLinkDialogOpen, setSidebarLinkDialogOpen] = useState(false)
+  const [sidebarLinkLabel, setSidebarLinkLabel] = useState('')
+  const [sidebarLinkUrl, setSidebarLinkUrl] = useState('')
+  const [sidebarLinkErrors, setSidebarLinkErrors] = useState({})
   const [anchorEl, setAnchorEl] = useState(null)
   const menuOpen = Boolean(anchorEl)
   const classes = useStyles({ addPadding: queue.length > 0 })
   const resources = useSelector(getResources)
+  const savedSidebarLink = useSelector(
+    (state) => state.settings?.sidebarExternalLink || EMPTY_SIDEBAR_LINK,
+  )
+  const savedSidebarLinkUrl = normalizeExternalUrl(savedSidebarLink.url || '')
+  const hasSidebarLink = Boolean(
+    savedSidebarLink.label?.trim() && savedSidebarLinkUrl,
+  )
   const resourcesByName = new Map(
     resources.map((resource) => [resource.name, resource]),
   )
@@ -658,6 +695,55 @@ const Menu = ({ dense = false }) => {
   const handleReloadApp = () => {
     handleCloseMenu()
     window.location.reload()
+  }
+
+  const handleOpenSidebarLinkSettings = () => {
+    handleCloseMenu()
+    setSidebarLinkLabel(savedSidebarLink.label || '')
+    setSidebarLinkUrl(savedSidebarLink.url || '')
+    setSidebarLinkErrors({})
+    setSidebarLinkDialogOpen(true)
+  }
+
+  const handleSaveSidebarLink = () => {
+    const label = sidebarLinkLabel.trim()
+    const urlValue = sidebarLinkUrl.trim()
+    if (!label && !urlValue) {
+      dispatch(setSidebarExternalLink({ label: '', url: '' }))
+      setSidebarLinkDialogOpen(false)
+      return
+    }
+
+    const url = normalizeExternalUrl(urlValue)
+    const errors = {
+      label: label
+        ? ''
+        : translate('menu.sidebarShortcut.nameRequired', {
+            _: 'Enter a button name.',
+          }),
+      url: url
+        ? ''
+        : translate('menu.sidebarShortcut.urlRequired', {
+            _: 'Enter a valid http:// or https:// URL.',
+          }),
+    }
+    setSidebarLinkErrors(errors)
+    if (errors.label || errors.url) return
+
+    dispatch(setSidebarExternalLink({ label, url }))
+    setSidebarLinkDialogOpen(false)
+  }
+
+  const handleOpenSidebarLink = () => {
+    if (!savedSidebarLinkUrl) return
+    if (typeof window !== 'undefined' && window.BragiNative?.openExternalUrl) {
+      window.BragiNative.openExternalUrl(savedSidebarLinkUrl)
+    } else if (typeof window !== 'undefined' && window.BragiNative) {
+      window.location.assign(savedSidebarLinkUrl)
+    } else {
+      window.open(savedSidebarLinkUrl, '_blank', 'noopener,noreferrer')
+    }
+    if (isMobile) dispatch(toggleSidebar())
   }
 
   const lastScanType = (() => {
@@ -832,6 +918,15 @@ const Menu = ({ dense = false }) => {
               renderSongListMenuItemLink(type, songLists[type]),
             )}
             {renderResourceMenuItemLink(playlistResource)}
+            <MenuItemLink
+              to="/statistics"
+              activeClassName={classes.active}
+              className={classes.menuItem}
+              primaryText="Statistics"
+              leftIcon={<EqualizerIcon />}
+              sidebarIsOpen={open}
+              dense={dense}
+            />
           </>
         )}
       </div>
@@ -839,6 +934,20 @@ const Menu = ({ dense = false }) => {
       {/* Unified Bottom Profile, Activity & Settings Hub */}
       {open ? (
         <div className={classes.bottomSection}>
+          {hasSidebarLink && (
+            <Tooltip title={savedSidebarLink.label} placement="right">
+              <MenuItem
+                className={classes.menuItem}
+                onClick={handleOpenSidebarLink}
+                aria-label={savedSidebarLink.label}
+              >
+                <ListItemIcon className="RaMenuItemLink-icon">
+                  <LaunchIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={savedSidebarLink.label} />
+              </MenuItem>
+            </Tooltip>
+          )}
           <div
             className={classes.userCard}
             onClick={handleOpenMenu}
@@ -902,6 +1011,19 @@ const Menu = ({ dense = false }) => {
         </div>
       ) : (
         <div className={clsx(classes.bottomSection, classes.bottomSectionClosed)}>
+          {hasSidebarLink && (
+            <Tooltip title={savedSidebarLink.label} placement="right">
+              <MenuItem
+                className={classes.menuItem}
+                onClick={handleOpenSidebarLink}
+                aria-label={savedSidebarLink.label}
+              >
+                <ListItemIcon className="RaMenuItemLink-icon">
+                  <LaunchIcon fontSize="small" />
+                </ListItemIcon>
+              </MenuItem>
+            </Tooltip>
+          )}
           <Tooltip
             title={
               loaded && identity?.fullName
@@ -1086,6 +1208,21 @@ const Menu = ({ dense = false }) => {
             />
           </MenuItem>
 
+          <MenuItem
+            className={classes.popoverMenuItem}
+            onClick={handleOpenSidebarLinkSettings}
+          >
+            <ListItemIcon className={classes.popoverMenuIcon}>
+              <LaunchIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={translate('menu.configureSidebarLink', {
+                _: 'Configure Sidebar Link',
+              })}
+              classes={{ primary: classes.popoverMenuText }}
+            />
+          </MenuItem>
+
           {/* User Management Link */}
           {(() => {
             const userResource = resourcesByName.get('user')
@@ -1181,6 +1318,71 @@ const Menu = ({ dense = false }) => {
         open={aboutOpen}
         onClose={() => setAboutOpen(false)}
       />
+
+      <Dialog
+        open={sidebarLinkDialogOpen}
+        onClose={() => setSidebarLinkDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>
+          {translate('menu.configureSidebarLink', {
+            _: 'Configure Sidebar Link',
+          })}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label={translate('menu.sidebarShortcut.buttonName', {
+              _: 'Button name',
+            })}
+            value={sidebarLinkLabel}
+            onChange={(event) => {
+              setSidebarLinkLabel(event.target.value)
+              setSidebarLinkErrors((errors) => ({ ...errors, label: '' }))
+            }}
+            error={Boolean(sidebarLinkErrors.label)}
+            helperText={sidebarLinkErrors.label}
+            fullWidth
+          />
+          <TextField
+            margin="dense"
+            label={translate('menu.sidebarShortcut.url', { _: 'URL' })}
+            placeholder="http://192.168.1.25:8081"
+            value={sidebarLinkUrl}
+            onChange={(event) => {
+              setSidebarLinkUrl(event.target.value)
+              setSidebarLinkErrors((errors) => ({ ...errors, url: '' }))
+            }}
+            error={Boolean(sidebarLinkErrors.url)}
+            helperText={
+              sidebarLinkErrors.url ||
+              translate('menu.sidebarShortcut.urlHelp', {
+                _: 'Use a complete http:// or https:// URL.',
+              })
+            }
+            fullWidth
+          />
+          <Typography variant="caption" color="textSecondary">
+            {translate('menu.sidebarShortcut.clearHelp', {
+              _: 'Leave both fields empty to remove the shortcut.',
+            })}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSidebarLinkDialogOpen(false)}>
+            {translate('ra.action.cancel', { _: 'Cancel' })}
+          </Button>
+          <Button
+            onClick={handleSaveSidebarLink}
+            color="primary"
+            variant="contained"
+          >
+            {translate('ra.action.save', { _: 'Save' })}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

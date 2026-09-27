@@ -123,6 +123,7 @@ const DesktopPlayer = ({ bridge, queue, onClear }) => {
           commands={commands}
           onQueue={() => setQueueOpen(true)}
           onLyrics={() => setLyricsOpen((open) => !open)}
+          lyricsActive={lyricsOpen}
           favoriteButton={
             <PlayerLoveButton id={track.trackId} isRadio={track.isRadio} />
           }

@@ -217,7 +217,7 @@ const SongList = (props) => {
         title={<SongListTitle songListType={songListType} />}
         perPage={getStoredPerPage()}
       >
-        <ModernSongList />
+        <ModernSongList showListeningStats={songListType === ''} />
       </List>
       <ExpandInfoDialog content={<SongInfo />} />
     </>

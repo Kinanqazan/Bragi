@@ -67,10 +67,14 @@ export const shuffleTracks = (data, ids) => {
 
 export const playTracks = (data, ids, selectedId) => {
   const songs = filterSongs(data, ids)
+  const orderedIds = ids
+    ? ids.filter((id) => songs[id] != null).map(String)
+    : Object.keys(songs)
   return {
     type: PLAYER_PLAY_TRACKS,
-    id: selectedId == null ? Object.keys(songs)[0] : String(selectedId),
+    id: selectedId == null ? orderedIds[0] : String(selectedId),
     data: songs,
+    ids: orderedIds,
   }
 }
 

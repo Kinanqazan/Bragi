@@ -22,6 +22,10 @@ export default defineConfig(({ command, mode }) => {
   const serviceWorkerFilename = command === 'serve' ? 'sw-dev.js' : 'sw.js'
 
   return {
+    // Keep Vite's optimizer cache in the writable project temp folder instead
+    // of node_modules/.vite, where local Windows permission issues can prevent
+    // dependency updates and leave the browser with outdated optimize URLs.
+    cacheDir: '../tmp/vite-cache',
     plugins: [
       devTemplatePlugin(isStandalone),
       react(),

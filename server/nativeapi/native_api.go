@@ -85,6 +85,7 @@ func (api *Router) routes() http.Handler {
 		api.addQueueRoute(r)
 		api.addMissingFilesRoute(r)
 		api.addKeepAliveRoute(r)
+		r.Get("/listening-stats", getListeningStats(api.ds))
 		api.addInsightsRoute(r)
 
 		r.With(adminOnlyMiddleware).Group(func(r chi.Router) {

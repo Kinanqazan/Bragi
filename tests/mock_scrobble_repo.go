@@ -32,6 +32,14 @@ func (m *MockScrobbleRepo) CountAll(options ...model.QueryOptions) (int64, error
 	return int64(len(m.RecordedScrobbles)), nil
 }
 
+func (m *MockScrobbleRepo) GetListeningStats(time.Time) (*model.ListeningStats, error) {
+	return &model.ListeningStats{
+		TopTracks:         []model.ListeningTrack{},
+		TopArtists:        []model.ListeningArtist{},
+		UnplayedTrackList: []model.ListeningTrack{},
+	}, nil
+}
+
 func (m *MockScrobbleRepo) RecordScrobble(fileID string, submissionTime time.Time) error {
 	user, _ := request.UserFrom(m.ctx)
 	m.RecordedScrobbles = append(m.RecordedScrobbles, model.Scrobble{
