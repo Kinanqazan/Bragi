@@ -147,7 +147,7 @@ const ArtistShowLayout = (props) => {
             perPage={perPage}
             pagination={<Pagination />}
           >
-            <ModernSongList scrollable={false} />
+            <ModernSongList scrollable={false} showQuickActions={false} />
           </ReferenceManyField>
         )}
       </div>

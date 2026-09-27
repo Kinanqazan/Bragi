@@ -5,6 +5,13 @@
     <color name="colorAccent">#1976d2</color>
     <color name="backgroundColor">#1e1e1e</color>
     <color name="surfaceColor">#282828</color>
+    <color name="cast_picker_surface">#25272B</color>
+    <color name="cast_picker_outline">#26FFFFFF</color>
+    <color name="cast_picker_text_primary">#F5F7FA</color>
+    <color name="cast_picker_text_secondary">#AEB6C2</color>
+    <color name="cast_picker_accent">#90CAF9</color>
+    <color name="cast_picker_selected_surface">#303944</color>
+    <color name="cast_picker_selected_outline">#668EAF</color>
     <color name="statusBarColor">#303030</color>
     <color name="navigationBarColor">#303030</color>
 </resources>

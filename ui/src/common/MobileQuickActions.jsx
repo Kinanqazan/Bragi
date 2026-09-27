@@ -80,7 +80,7 @@ const useStyles = makeStyles((theme) => {
       userSelect: 'none',
       position: 'relative',
     },
-    // The Quick Actions Row: Fixed 4 icon buttons with generous spacing
+    // Accent-tinted quick actions stay distinct from neutral filter chips.
     quickActionsRow: {
       width: '100%',
       maxWidth: '100%',
@@ -106,12 +106,10 @@ const useStyles = makeStyles((theme) => {
       WebkitTapHighlightColor: 'transparent',
       transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
       backgroundColor: isDark
-        ? 'rgba(255, 255, 255, 0.08)'
-        : 'rgba(0, 0, 0, 0.04)',
-      color: theme.palette.text.primary,
-      border: isDark
-        ? '1px solid rgba(255, 255, 255, 0.08)'
-        : '1px solid rgba(0, 0, 0, 0.06)',
+        ? alpha(primaryColor, 0.16)
+        : alpha(primaryColor, 0.08),
+      color: primaryColor,
+      border: `1px solid ${alpha(primaryColor, isDark ? 0.28 : 0.2)}`,
       position: 'relative',
       '&:active': {
         transform: 'scale(0.93)',
@@ -130,19 +128,6 @@ const useStyles = makeStyles((theme) => {
       boxShadow: isDark
         ? '0 3px 12px rgba(0, 0, 0, 0.35)'
         : '0 3px 10px rgba(0, 0, 0, 0.15)',
-    },
-    shuffleActionBtn: {
-      backgroundColor: isDark
-        ? alpha(primaryColor, 0.16)
-        : alpha(primaryColor, 0.08),
-      color: primaryColor,
-      borderColor: alpha(primaryColor, isDark ? 0.28 : 0.2),
-      '&:hover': {
-        backgroundColor: isDark
-          ? alpha(primaryColor, 0.24)
-          : alpha(primaryColor, 0.14),
-        borderColor: alpha(primaryColor, isDark ? 0.42 : 0.32),
-      },
     },
     tagChip: {
       flexShrink: 0,
@@ -655,7 +640,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
 
         {/* Button 4: Shuffle */}
         <div
-          className={clsx(classes.actionBtn, classes.shuffleActionBtn)}
+          className={classes.actionBtn}
           onClick={handleShuffleAll}
           role="button"
           tabIndex={0}

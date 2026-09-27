@@ -63,6 +63,13 @@ const useStyles = makeStyles((theme) => {
       maxHeight: '100%',
       overflow: 'hidden',
     },
+    rootUnconstrained: {
+      flex: '0 0 auto',
+      minHeight: 'auto',
+      height: 'auto',
+      maxHeight: 'none',
+      overflow: 'visible',
+    },
     tableContainer: {
       width: '100%',
       maxWidth: '100%',
@@ -100,6 +107,9 @@ const useStyles = makeStyles((theme) => {
       },
     },
     tableContainerUnconstrained: {
+      flex: '0 0 auto !important',
+      minHeight: 'auto !important',
+      height: 'auto !important',
       maxHeight: 'none !important',
       overflowY: 'visible !important',
       overflowX: 'visible !important',
@@ -116,6 +126,11 @@ const useStyles = makeStyles((theme) => {
         boxSizing: 'border-box !important',
         paddingBottom: 0,
         paddingTop: 'var(--nd-mobile-top-offset, 82px)',
+      },
+    },
+    tableWrapperUnconstrained: {
+      [theme.breakpoints.down('sm')]: {
+        paddingTop: '0 !important',
       },
     },
     showMoreContainer: {
@@ -269,7 +284,6 @@ const useStyles = makeStyles((theme) => {
       gap: 16,
       minHeight: 38,
       padding: theme.spacing(0.5, 1.5, 0.5, 1),
-      borderBottom: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
       color: theme.palette.text.secondary,
       fontSize: '0.75rem',
       fontWeight: 700,
@@ -284,9 +298,14 @@ const useStyles = makeStyles((theme) => {
     headerCell: {
       display: 'inline-flex',
       alignItems: 'center',
+      justifySelf: 'start',
+      maxWidth: '100%',
       cursor: 'pointer',
       gap: 3,
       minWidth: 0,
+      padding: theme.spacing(0.25, 0.75),
+      borderRadius: 999,
+      backgroundColor: theme.palette.action.hover,
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
@@ -869,7 +888,10 @@ ModernTrackRows.propTypes = {
   gridTemplateColumns: PropTypes.string,
 }
 
-export const ModernSongList = ({ scrollable = true } = {}) => {
+export const ModernSongList = ({
+  scrollable = true,
+  showQuickActions = true,
+} = {}) => {
   const classes = useStyles()
   const dispatch = useDispatch()
   const translate = useTranslate()
@@ -980,7 +1002,11 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
   }
 
   return (
-    <div className={classes.root}>
+    <div
+      className={`${classes.root} ${
+        !scrollable ? classes.rootUnconstrained : ''
+      }`}
+    >
       {selectionMode && (
         <div className={classes.summary}>
           <Box display="flex" alignItems="center" gap={1}>
@@ -1014,8 +1040,12 @@ export const ModernSongList = ({ scrollable = true } = {}) => {
           !scrollable ? classes.tableContainerUnconstrained : ''
         }`}
       >
-        <div className={classes.tableWrapper}>
-          {isMobile && (
+        <div
+          className={`${classes.tableWrapper} ${
+            !scrollable ? classes.tableWrapperUnconstrained : ''
+          }`}
+        >
+          {isMobile && showQuickActions && (
             <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>
               <MobileQuickActions resource="song" />
             </div>

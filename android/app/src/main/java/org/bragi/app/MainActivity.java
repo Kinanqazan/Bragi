@@ -35,8 +35,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.mediarouter.app.MediaRouteButton;
-import androidx.mediarouter.app.MediaRouteChooserDialogFragment;
-import androidx.mediarouter.app.MediaRouteControllerDialogFragment;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
 import android.net.wifi.WifiManager;
@@ -142,6 +140,56 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
         return (isCastSessionConnected && currentCastSession != null && currentCastSession.isConnected()) ? currentCastSession : null;
+    }
+
+    boolean isCastConnectedForPicker() {
+        return getActiveCastSession() != null;
+    }
+
+    String getCastDeviceNameForPicker() {
+        CastSession session = getActiveCastSession();
+        MediaRouter.RouteInfo selectedRoute = mediaRouter == null
+                ? null
+                : mediaRouter.getSelectedRoute();
+        if (session != null && selectedRoute != null && !selectedRoute.isDefaultOrBluetooth()
+                && !TextUtils.isEmpty(selectedRoute.getName())) {
+            return selectedRoute.getName();
+        }
+        CastDevice device = session == null ? null : session.getCastDevice();
+        return device != null && !TextUtils.isEmpty(device.getFriendlyName())
+                ? device.getFriendlyName()
+                : currentCastDeviceName;
+    }
+
+    String getCastMediaTitleForPicker() {
+        CastSession session = getActiveCastSession();
+        RemoteMediaClient remoteMediaClient = session == null ? null : session.getRemoteMediaClient();
+        MediaInfo mediaInfo = remoteMediaClient == null ? null : remoteMediaClient.getMediaInfo();
+        MediaMetadata metadata = mediaInfo == null ? null : mediaInfo.getMetadata();
+        if (metadata == null) {
+            return "";
+        }
+        try {
+            String title = metadata.getString(MediaMetadata.KEY_TITLE);
+            return title == null ? "" : title.trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    String getCastRouteDescriptionForPicker() {
+        MediaRouter.RouteInfo selectedRoute = mediaRouter == null
+                ? null
+                : mediaRouter.getSelectedRoute();
+        CharSequence description = selectedRoute == null ? null : selectedRoute.getDescription();
+        return description == null ? "" : description.toString();
+    }
+
+    void endCastSessionFromPicker() {
+        CastContext ctx = ensureCastContext();
+        if (ctx != null && ctx.getSessionManager() != null) {
+            ctx.getSessionManager().endCurrentSession(true);
+        }
     }
 
     private void acquireMulticastLock() {
@@ -1369,13 +1417,10 @@ public class MainActivity extends AppCompatActivity {
                 CastContext ctx = ensureCastContext();
                 startMediaRouteDiscovery();
                 try {
-                    if (isCastConnected()) {
-                        MediaRouteControllerDialogFragment controllerDialog = new MediaRouteControllerDialogFragment();
-                        controllerDialog.show(getSupportFragmentManager(), "MediaRouteControllerDialogFragment");
-                    } else if (ctx != null) {
+                    if (ctx != null) {
                         MediaRouteSelector selector = ctx.getMergedSelector();
                         if (selector != null) {
-                            MediaRouteChooserDialogFragment chooserDialog = new MediaRouteChooserDialogFragment();
+                            BragiCastChooserDialogFragment chooserDialog = new BragiCastChooserDialogFragment();
                             chooserDialog.setRouteSelector(selector);
                             chooserDialog.show(getSupportFragmentManager(), "MediaRouteChooserDialogFragment");
                         } else if (mediaRouteButton != null) {

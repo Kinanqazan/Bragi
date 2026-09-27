@@ -4,9 +4,20 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="mediaRouteTheme">@style/BragiMediaRouterTheme</item>
         <item name="android:windowBackground">@color/backgroundColor</item>
         <item name="android:statusBarColor">@color/statusBarColor</item>
         <item name="android:navigationBarColor">@color/navigationBarColor</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="BragiMediaRouterTheme">
+        <item name="android:windowBackground">@drawable/cast_picker_surface</item>
+        <item name="android:colorBackground">@color/cast_picker_surface</item>
+        <item name="android:textColorPrimary">@color/cast_picker_text_primary</item>
+        <item name="android:textColorSecondary">@color/cast_picker_text_secondary</item>
+        <item name="android:colorAccent">@color/cast_picker_accent</item>
+        <item name="colorAccent">@color/cast_picker_accent</item>
+        <item name="android:backgroundDimAmount">0.56</item>
     </style>
 </resources>
