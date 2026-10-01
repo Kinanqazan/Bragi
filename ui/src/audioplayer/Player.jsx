@@ -20,6 +20,7 @@ import {
 } from './mediaSession'
 import { calculateGain } from '../utils/calculateReplayGain'
 import { desktopPlayerBreakpoint } from './playerLayout'
+import { formatLyrics } from './trackModel'
 
 const getTrackId = (track) => track?.trackId || track?.song?.id || track?.id
 const getTrackKey = (track) => track?.uuid || getTrackId(track) || null
@@ -36,6 +37,8 @@ export const Player = () => {
   const gainInfo = useSelector((state) => state.replayGain)
   const isDesktop = useMediaQuery(`(min-width:${desktopPlayerBreakpoint}px)`)
   const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [resolvedLyrics, setResolvedLyrics] = useState(null)
+  const [lyricsRevision, setLyricsRevision] = useState(0)
   const lastPositionRef = useRef(0)
   const latestSnapshotRef = useRef(null)
 
@@ -77,7 +80,46 @@ export const Player = () => {
   )
   const currentTrack = bridge.snapshot.currentTrack
   const currentKey = getTrackKey(currentTrack)
+  const currentTrackId = getTrackId(currentTrack)
   const isPlaying = bridge.snapshot.playing
+
+  useEffect(() => {
+    const handleLyricsRefresh = (event) => {
+      if (event.detail?.songId === currentTrackId) {
+        setLyricsRevision((revision) => revision + 1)
+      }
+    }
+    window.addEventListener('bragi:refresh-song-lyrics', handleLyricsRefresh)
+    return () => window.removeEventListener('bragi:refresh-song-lyrics', handleLyricsRefresh)
+  }, [currentTrackId])
+
+  useEffect(() => {
+    let active = true
+    const trackId = getTrackId(currentTrack)
+    setResolvedLyrics(null)
+    if (!trackId || currentTrack?.isRadio) return () => { active = false }
+
+    subsonic
+      .getLyricsBySongId(trackId)
+      .then((response) => {
+        if (!active) return
+        const lyrics = response?.json?.['subsonic-response']?.lyricsList?.structuredLyrics
+        setResolvedLyrics({
+          trackId,
+          lyric: formatLyrics(lyrics) || currentTrack?.lyric || '',
+        })
+      })
+      .catch(() => {
+        if (active) setResolvedLyrics({ trackId, lyric: currentTrack?.lyric || '' })
+      })
+
+    return () => { active = false }
+  }, [currentTrack, currentKey, lyricsRevision])
+
+  const currentLyrics =
+    resolvedLyrics && resolvedLyrics.trackId === getTrackId(currentTrack)
+      ? resolvedLyrics.lyric
+      : currentTrack?.lyric || ''
 
   useEffect(() => {
     if (!bridge.engine || !bridge.audioElement) return undefined
@@ -236,6 +278,7 @@ export const Player = () => {
         <DesktopPlayer
           bridge={bridge}
           queue={queue}
+          lyrics={currentLyrics}
           onClear={handleClear}
         />
       )}
@@ -243,6 +286,7 @@ export const Player = () => {
         <MobilePlayerSurface
           bridge={bridge}
           queue={queue}
+          lyrics={currentLyrics}
           expanded={mobileExpanded}
           onExpandedChange={setMobileExpanded}
           onClear={handleClear}

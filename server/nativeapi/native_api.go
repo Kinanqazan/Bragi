@@ -90,6 +90,11 @@ func (api *Router) routes() http.Handler {
 
 		r.With(adminOnlyMiddleware).Group(func(r chi.Router) {
 			r.Delete("/song/{id}/file", deleteMediaFile(api.maintenance))
+			r.Put("/song/{id}/metadata", updateMediaFileMetadata(api.maintenance))
+			r.Post("/song/{id}/metadata/refresh", refreshMediaFileMetadata(api.maintenance))
+			r.Get("/song/{id}/lyrics", getMediaFileLyrics(api.maintenance))
+			r.Put("/song/{id}/lyrics", saveMediaFileLyrics(api.maintenance))
+			r.Delete("/song/{id}/lyrics", deleteMediaFileLyrics(api.maintenance))
 			api.addInspectRoute(r)
 			api.addConfigRoute(r)
 			api.addUserLibraryRoute(r)

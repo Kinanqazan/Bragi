@@ -1,0 +1,924 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  Button,
+  CircularProgress,
+  IconButton,
+  Paper,
+  Tooltip,
+  Typography,
+} from '@material-ui/core'
+import { makeStyles } from '@material-ui/core/styles'
+import ArrowBackIcon from '@material-ui/icons/ArrowBack'
+import CloseIcon from '@material-ui/icons/Close'
+import CloudUploadIcon from '@material-ui/icons/CloudUpload'
+import DeleteOutlineIcon from '@material-ui/icons/DeleteOutline'
+import EditIcon from '@material-ui/icons/Edit'
+import PlayArrowIcon from '@material-ui/icons/PlayArrow'
+import SaveIcon from '@material-ui/icons/Save'
+import {
+  ShowContextProvider,
+  Title as RaTitle,
+  useShowContext,
+  useShowController,
+  useNotify,
+  usePermissions,
+  useRefresh,
+  useDataProvider,
+} from 'react-admin'
+import { useDispatch } from 'react-redux'
+import { Prompt, useHistory, useLocation } from 'react-router-dom'
+import { playTracks, updateTrackMetadata } from '../actions'
+import config from '../config'
+import { httpClient } from '../dataProvider'
+import { REST_URL } from '../consts'
+import {
+  ArtistLinkField,
+  Artwork,
+  DurationField,
+  LoveButton,
+  Title,
+  useScrollRestoration,
+} from '../common'
+
+const useStyles = makeStyles((theme) => ({
+  root: {
+    padding: theme.spacing(2),
+    [theme.breakpoints.down('xs')]: {
+      paddingTop: theme.spacing(4),
+      height: '100%',
+      minHeight: 0,
+      overflowY: 'auto',
+      overscrollBehaviorY: 'contain',
+      WebkitOverflowScrolling: 'touch',
+      touchAction: 'pan-y',
+      paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 56px) + 16px)',
+    },
+    [theme.breakpoints.up('sm')]: {
+      padding: theme.spacing(3),
+    },
+  },
+  backButton: {
+    marginBottom: theme.spacing(2),
+  },
+  content: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(220px, 300px) minmax(0, 1fr)',
+    gap: theme.spacing(3),
+    alignItems: 'start',
+    maxWidth: 1440,
+    [theme.breakpoints.down('sm')]: {
+      gridTemplateColumns: 'minmax(0, 260px) minmax(0, 1fr)',
+      gap: theme.spacing(2),
+    },
+    [theme.breakpoints.down('xs')]: {
+      position: 'relative',
+      gridTemplateColumns: 'minmax(0, 1fr)',
+      gap: theme.spacing(2),
+    },
+  },
+  artwork: {
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.shape.borderRadius,
+    background: theme.palette.action.hover,
+  },
+  coverFrame: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: '1 / 1',
+    maxWidth: 300,
+    overflow: 'hidden',
+    borderRadius: theme.shape.borderRadius,
+    [theme.breakpoints.down('xs')]: {
+      maxWidth: 220,
+      justifySelf: 'center',
+      marginTop: 'calc(8px + env(safe-area-inset-top, 0px))',
+    },
+  },
+  playOverlay: {
+    position: 'absolute',
+    right: theme.spacing(1.5),
+    bottom: theme.spacing(1.5),
+    zIndex: 2,
+  },
+  playButton: {
+    minHeight: 40,
+    borderRadius: 24,
+    boxShadow: theme.shadows[4],
+  },
+  playDuration: {
+    marginLeft: theme.spacing(0.5),
+    whiteSpace: 'nowrap',
+  },
+  details: {
+    minWidth: 0,
+  },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: theme.spacing(1),
+    [theme.breakpoints.down('xs')]: {
+      flexWrap: 'wrap',
+    },
+  },
+  title: {
+    flex: '1 1 auto',
+    minWidth: 0,
+    overflowWrap: 'anywhere',
+    fontSize: '1.375rem',
+  },
+  titleActions: {
+    display: 'flex',
+    alignItems: 'center',
+    flex: '0 0 auto',
+    gap: theme.spacing(0.5),
+    [theme.breakpoints.down('xs')]: {
+      position: 'absolute',
+      top: 'calc(8px + env(safe-area-inset-top, 0px))',
+      right: 'calc((100% - 220px) / 2 - 56px)',
+      zIndex: 3,
+      flexDirection: 'column',
+      gap: 0,
+      width: 48,
+      boxSizing: 'border-box',
+      padding: theme.spacing(0.25),
+      borderRadius: 24,
+      background: theme.palette.background.paper,
+      boxShadow: theme.shadows[2],
+      '& button': {
+        width: 40,
+        height: 40,
+        padding: theme.spacing(1),
+      },
+    },
+  },
+  artist: {
+    marginTop: theme.spacing(0.5),
+    fontSize: '1.15rem',
+  },
+  editActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    [theme.breakpoints.down('xs')]: {
+      width: 'auto',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 0,
+    },
+  },
+  section: {
+    marginTop: theme.spacing(3),
+  },
+  label: {
+    color: theme.palette.text.secondary,
+    marginRight: theme.spacing(1),
+  },
+  chipList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1),
+  },
+  chip: {
+    padding: theme.spacing(0.5, 1.25),
+    borderRadius: 16,
+    background: theme.palette.action.hover,
+  },
+  unavailable: {
+    padding: theme.spacing(3),
+  },
+  inlineInput: {
+    display: 'inline-block',
+    minWidth: 0,
+    maxWidth: '100%',
+    border: 0,
+    borderBottom: '1px solid transparent',
+    borderRadius: 0,
+    outline: 0,
+    padding: 0,
+    background: 'transparent',
+    color: 'inherit',
+    font: 'inherit',
+    '&:focus': {
+      borderBottomColor: theme.palette.primary.main,
+    },
+  },
+  titleInput: {
+    width: '100%',
+    overflowWrap: 'anywhere',
+  },
+  artistInput: {
+    width: '100%',
+    color: theme.palette.secondary.main,
+  },
+  editableChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    maxWidth: '100%',
+    padding: theme.spacing(0.5, 1),
+    borderRadius: 16,
+    background: theme.palette.action.hover,
+  },
+  removeChip: {
+    border: 0,
+    padding: 0,
+    background: 'transparent',
+    color: theme.palette.text.secondary,
+    font: 'inherit',
+    lineHeight: 1,
+    cursor: 'pointer',
+  },
+  addChip: {
+    border: `1px dashed ${theme.palette.divider}`,
+    padding: theme.spacing(0.5, 1.25),
+    borderRadius: 16,
+    background: 'transparent',
+    color: theme.palette.text.secondary,
+    font: 'inherit',
+    cursor: 'pointer',
+  },
+  refreshNotice: {
+    marginTop: theme.spacing(2),
+  },
+  lyricsInput: {
+    width: '100%',
+    boxSizing: 'border-box',
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+    background: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    font: 'inherit',
+    resize: 'vertical',
+  },
+  lyricsHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: theme.spacing(0.5),
+  },
+  lyricsActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.25),
+    '& .MuiButton-root': {
+      minWidth: 52,
+      height: 40,
+      padding: theme.spacing(0, 1),
+    },
+  },
+  lyricsFileInput: {
+    display: 'none',
+  },
+}))
+
+const genreValuesFromRecord = (record) =>
+  (record?.genres || [])
+    .map((genre) => (typeof genre === 'string' ? genre : genre.name))
+    .filter(Boolean)
+
+const metadataDraftFromRecord = (record) => ({
+  title: record.title || '',
+  artist: record.artist || '',
+  albumArtist: record.albumArtist || '',
+  genres: genreValuesFromRecord(record),
+  moods: [...(record.tags?.mood || [])],
+})
+
+const sameValues = (left, right) =>
+  left.length === right.length && left.every((value, index) => value === right[index])
+
+const EditableTagList = ({ kind, values, classes, onChange, onAdd, onRemove }) => (
+  <div className={classes.chipList}>
+    {values.map((value, index) => (
+      <div className={classes.editableChip} key={`${kind}-${index}`}>
+        <input
+          aria-label={`${kind} ${index + 1}`}
+          className={classes.inlineInput}
+          maxLength={4096}
+          style={{ width: `${Math.max(4, value.length + 1)}ch` }}
+          value={value}
+          onChange={(event) => onChange(index, event.target.value)}
+        />
+        <button
+          aria-label={`Remove ${kind.toLowerCase()} ${index + 1}`}
+          className={classes.removeChip}
+          onClick={() => onRemove(index)}
+          type="button"
+        >
+          ×
+        </button>
+      </div>
+    ))}
+    <button
+      aria-label={`Add ${kind.toLowerCase()}`}
+      className={classes.addChip}
+      onClick={onAdd}
+      type="button"
+    >
+      + Add
+    </button>
+  </div>
+)
+
+const SongShowLayout = (props) => {
+  const { record, loading, error } = useShowContext(props)
+  const classes = useStyles()
+  const dispatch = useDispatch()
+  const history = useHistory()
+  const location = useLocation()
+  const notify = useNotify()
+  const refresh = useRefresh()
+  const dataProvider = useDataProvider()
+  const { permissions } = usePermissions()
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [draft, setDraft] = useState({
+    title: '',
+    artist: '',
+    albumArtist: '',
+    genres: [],
+    moods: [],
+  })
+  const [localRecord, setLocalRecord] = useState(null)
+  const [refreshError, setRefreshError] = useState('')
+  const [lyricsFiles, setLyricsFiles] = useState({ txt: {}, lrc: {} })
+  const [lyricsExtension, setLyricsExtension] = useState('.txt')
+  const [lyricsDraft, setLyricsDraft] = useState('')
+  const [lyricsLoading, setLyricsLoading] = useState(false)
+  const [lyricsSaving, setLyricsSaving] = useState(false)
+  const [lyricsDeleting, setLyricsDeleting] = useState(false)
+  const [lyricsError, setLyricsError] = useState('')
+
+  useEffect(() => {
+    if (!record) return
+    setLocalRecord(record)
+    setDraft(metadataDraftFromRecord(record))
+  }, [record])
+
+  const displayRecord = localRecord || record
+  const canEdit = config.enableMediaFileMetadataEditing && permissions === 'admin'
+  const changedFields = useMemo(() => {
+    if (!displayRecord) return {}
+    const changes = Object.fromEntries(
+      ['title', 'artist', 'albumArtist']
+        .filter((field) => draft[field] !== (displayRecord[field] || ''))
+        .map((field) => [field, draft[field]]),
+    )
+    const currentGenres = genreValuesFromRecord(displayRecord)
+    const nextGenres = draft.genres.map((value) => value.trim()).filter(Boolean)
+    if (!sameValues(currentGenres, nextGenres)) changes.genres = nextGenres
+
+    const currentMoods = displayRecord.tags?.mood || []
+    const nextMoods = draft.moods.map((value) => value.trim()).filter(Boolean)
+    if (!sameValues(currentMoods, nextMoods)) changes.moods = nextMoods
+    return changes
+  }, [draft, displayRecord])
+  const hasUnsavedChanges = editing && Object.keys(changedFields).length > 0
+  const lyricsKey = lyricsExtension.slice(1)
+  const lyricsChanged = lyricsDraft !== (lyricsFiles[lyricsKey]?.content || '')
+  const hasAnyUnsavedChanges = hasUnsavedChanges || lyricsChanged
+
+  useEffect(() => {
+    if (!displayRecord || !canEdit) return undefined
+    let active = true
+    setLyricsLoading(true)
+    const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+    httpClient(`${REST_URL}/song/${id}/lyrics`)
+      .then(({ json }) => {
+        if (!active) return
+        const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+        const extension = files.lrc.exists ? '.lrc' : '.txt'
+        setLyricsFiles(files)
+        setLyricsExtension(extension)
+        setLyricsDraft(files[extension.slice(1)].content || '')
+        setLyricsError('')
+      })
+      .catch((error) => {
+        if (active) setLyricsError(error.message || 'Could not load lyrics.')
+      })
+      .finally(() => {
+        if (active) setLyricsLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [canEdit, displayRecord?.id, displayRecord?.mediaFileId])
+
+  useEffect(() => {
+    if (!hasAnyUnsavedChanges) return undefined
+    const handleBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasAnyUnsavedChanges])
+
+  useScrollRestoration(!!record?.id || !!error)
+
+  const handleBack = () => {
+    if (location.state?.returnTo && history.length > 1) {
+      history.goBack()
+      return
+    }
+    history.replace('/song')
+  }
+
+  const startEditing = () => {
+    setDraft(metadataDraftFromRecord(displayRecord))
+    setEditing(true)
+  }
+
+  const updateTagDraft = (field, index, value) => {
+    setDraft((current) => {
+      const values = [...current[field]]
+      values[index] = value
+      return { ...current, [field]: values }
+    })
+  }
+
+  const addTagDraft = (field) => {
+    setDraft((current) => ({ ...current, [field]: [...current[field], ''] }))
+  }
+
+  const removeTagDraft = (field, index) => {
+    setDraft((current) => ({
+      ...current,
+      [field]: current[field].filter((_, valueIndex) => valueIndex !== index),
+    }))
+  }
+
+  const handleSave = async () => {
+    if (!displayRecord || Object.keys(changedFields).length === 0) return
+    setSaving(true)
+    setRefreshError('')
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/metadata`, {
+        method: 'PUT',
+        body: JSON.stringify(changedFields),
+      })
+      const optimistic = { ...displayRecord, ...changedFields }
+      if (Object.hasOwn(changedFields, 'genres')) {
+        optimistic.genres = changedFields.genres.map((name) => ({ name }))
+      }
+      if (Object.hasOwn(changedFields, 'moods')) {
+        optimistic.tags = { ...displayRecord.tags, mood: changedFields.moods }
+      }
+      const updatedRecord = json.mediaFile || optimistic
+      setLocalRecord(updatedRecord)
+      dispatch(updateTrackMetadata(updatedRecord))
+      setEditing(false)
+      dataProvider.clearCache?.()
+      if (json.refreshRequired) {
+        setRefreshError(json.refreshError || 'The file was saved, but the library index has not refreshed yet.')
+      } else {
+        refresh()
+      }
+    } catch (saveError) {
+      notify(saveError.message || 'Could not save song metadata.', {
+        type: 'warning',
+        multiLine: true,
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    if (!displayRecord) return
+    setRefreshing(true)
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(
+        `${REST_URL}/song/${id}/metadata/refresh`,
+        { method: 'POST' },
+      )
+      setLocalRecord(json.mediaFile)
+      dispatch(updateTrackMetadata(json.mediaFile))
+      setDraft(metadataDraftFromRecord(json.mediaFile))
+      setRefreshError('')
+      dataProvider.clearCache?.()
+      refresh()
+    } catch (error) {
+      setRefreshError(error.message || 'The library refresh did not complete.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const handleLyricsImport = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith('.lrc') && !fileName.endsWith('.txt')) {
+      setLyricsError('Choose a .txt or .lrc lyrics file.')
+      event.target.value = ''
+      return
+    }
+    const extension = fileName.endsWith('.lrc') ? '.lrc' : '.txt'
+    try {
+      const content = await file.text()
+      setLyricsExtension(extension)
+      setLyricsDraft(content)
+      setLyricsError('')
+    } catch (error) {
+      setLyricsError(error.message || 'Could not read the selected lyrics file.')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const handleSaveLyrics = async () => {
+    if (!displayRecord || !lyricsChanged || lyricsSaving) return
+    setLyricsSaving(true)
+    setLyricsError('')
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/lyrics`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          extension: lyricsExtension,
+          content: lyricsDraft,
+          expectedVersion: lyricsFiles[lyricsKey]?.version || '',
+        }),
+      })
+      const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+      setLyricsFiles(files)
+      setLyricsDraft(files[lyricsKey].content || '')
+      setLyricsError('')
+      dataProvider.clearCache?.()
+      window.dispatchEvent(
+        new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: id } }),
+      )
+    } catch (error) {
+      setLyricsError(error.message || 'Could not save lyrics.')
+    } finally {
+      setLyricsSaving(false)
+    }
+  }
+
+  const handleCancelLyrics = () => {
+    setLyricsDraft(lyricsFiles[lyricsKey]?.content || '')
+    setLyricsError('')
+  }
+
+  const handleDeleteLyrics = async () => {
+    if (!displayRecord || lyricsDeleting || lyricsSaving) return
+    const confirmed = window.confirm(
+      'Delete the separate TXT and LRC lyrics files for this song? This discards unsaved lyrics edits; embedded lyrics, if available, can then show in the player.',
+    )
+    if (!confirmed) return
+    setLyricsDeleting(true)
+    setLyricsError('')
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/lyrics`, {
+        method: 'DELETE',
+        body: JSON.stringify({
+          txtVersion: lyricsFiles.txt?.version || '',
+          lrcVersion: lyricsFiles.lrc?.version || '',
+        }),
+      })
+      const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+      setLyricsFiles(files)
+      setLyricsExtension('.txt')
+      setLyricsDraft('')
+      setLyricsError('')
+      dataProvider.clearCache?.()
+      window.dispatchEvent(
+        new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: id } }),
+      )
+    } catch (error) {
+      setLyricsError(error.message || 'Could not delete separate lyrics.')
+    } finally {
+      setLyricsDeleting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className={classes.root}>
+        <CircularProgress size={24} aria-label="Loading song" />
+      </div>
+    )
+  }
+
+  if (error || !record) {
+    return (
+      <div className={classes.root}>
+        <Button
+          className={classes.backButton}
+          onClick={handleBack}
+          startIcon={<ArrowBackIcon />}
+        >
+          Back to songs
+        </Button>
+        <Paper className={classes.unavailable}>
+          <Typography role="status" variant="body1">
+            This song is unavailable or could not be loaded.
+          </Typography>
+        </Paper>
+      </div>
+    )
+  }
+
+  const moods = displayRecord.tags?.mood || []
+  const genres = genreValuesFromRecord(displayRecord)
+
+  return (
+    <div className={classes.root}>
+      <Prompt
+        when={hasAnyUnsavedChanges}
+        message="You have unsaved changes. Leave this page?"
+      />
+      <RaTitle title={<Title subTitle={displayRecord.title} />} />
+      <Button
+        className={classes.backButton}
+        onClick={handleBack}
+        startIcon={<ArrowBackIcon />}
+      >
+        Back
+      </Button>
+      <div className={classes.content}>
+        <div className={classes.coverFrame} data-testid="cover-frame">
+          <Artwork
+            record={displayRecord}
+            size={560}
+            square
+            className={classes.artwork}
+            title={displayRecord.title}
+          />
+          <div className={classes.playOverlay} role="group" aria-label="Song playback">
+            <Button
+              className={classes.playButton}
+              color="primary"
+              variant="contained"
+              startIcon={<PlayArrowIcon />}
+              disabled={displayRecord.missing}
+              onClick={() =>
+                dispatch(playTracks({ [displayRecord.id]: displayRecord }, [displayRecord.id]))
+              }
+            >
+              Play <span className={classes.playDuration}>
+                (<DurationField record={displayRecord} source="duration" />)
+              </span>
+            </Button>
+          </div>
+        </div>
+        <div className={classes.details} role="group" aria-label="Song metadata">
+          <div className={classes.titleRow}>
+            <Typography className={classes.title} variant="h6" component="h1">
+              {editing ? (
+                <input
+                  aria-label="Song title"
+                  className={`${classes.inlineInput} ${classes.titleInput}`}
+                  maxLength={4096}
+                  value={draft.title}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, title: event.target.value }))
+                  }
+                />
+              ) : (
+                displayRecord.title
+              )}
+            </Typography>
+            <div className={classes.titleActions} role="group" aria-label="Song actions">
+              <LoveButton
+                resource="song"
+                record={displayRecord}
+                aria-label="Toggle favorite"
+              />
+              {editing ? (
+                <div className={classes.editActions}>
+                  <Tooltip title={saving ? 'Saving changes' : 'Save changes'}>
+                    <span>
+                      <IconButton
+                        aria-label={saving ? 'Saving changes' : 'Save changes'}
+                        color="primary"
+                        disabled={saving || Object.keys(changedFields).length === 0}
+                        onClick={handleSave}
+                      >
+                        <SaveIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Cancel">
+                    <IconButton
+                      aria-label="Cancel"
+                      disabled={saving}
+                      onClick={() => {
+                        setDraft(metadataDraftFromRecord(displayRecord))
+                        setEditing(false)
+                      }}
+                      size="small"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </Tooltip>
+                </div>
+              ) : (
+                canEdit && (
+                  <Tooltip title="Edit metadata">
+                    <IconButton aria-label="Edit metadata" onClick={startEditing}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                )
+              )}
+            </div>
+          </div>
+          <Typography className={classes.artist} color="textSecondary" component="div">
+            {editing ? (
+              <input
+                aria-label="Artist"
+                className={`${classes.inlineInput} ${classes.artistInput}`}
+                maxLength={4096}
+                placeholder="Unknown artist"
+                value={draft.artist}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, artist: event.target.value }))
+                }
+              />
+            ) : displayRecord.artist ? (
+              <ArtistLinkField source="artist" record={displayRecord} limit={Infinity} />
+            ) : (
+              'Unknown artist'
+            )}
+          </Typography>
+          <div className={classes.section}>
+            <Typography component="div">
+              <span className={classes.label}>Album artist</span>
+              {editing ? (
+                <input
+                  aria-label="Album artist"
+                  className={classes.inlineInput}
+                  maxLength={4096}
+                  placeholder="Not set"
+                  style={{ width: `${Math.max(7, (draft.albumArtist || '').length + 1)}ch` }}
+                  value={draft.albumArtist}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, albumArtist: event.target.value }))
+                  }
+                />
+              ) : (
+                displayRecord.albumArtist || 'Not set'
+              )}
+            </Typography>
+          </div>
+          {refreshError && (
+            <Typography className={classes.refreshNotice} role="status" color="textSecondary">
+              The file was saved, but the library index still needs updating. {refreshError}{' '}
+              <Button size="small" disabled={refreshing} onClick={handleRefresh}>
+                {refreshing ? 'Refreshing…' : 'Retry library refresh'}
+              </Button>
+            </Typography>
+          )}
+          {!editing && genres.length > 0 && (
+            <div className={classes.section}>
+              <Typography variant="subtitle2">Genres</Typography>
+              <div className={classes.chipList}>
+                {genres.map((genre) => (
+                  <Typography className={classes.chip} key={genre}>
+                    {genre}
+                  </Typography>
+                ))}
+              </div>
+            </div>
+          )}
+          {editing && (
+            <div className={classes.section}>
+              <Typography variant="subtitle2">Genres</Typography>
+              <EditableTagList
+                kind="Genre"
+                values={draft.genres}
+                classes={classes}
+                onChange={(index, value) => updateTagDraft('genres', index, value)}
+                onAdd={() => addTagDraft('genres')}
+                onRemove={(index) => removeTagDraft('genres', index)}
+              />
+            </div>
+          )}
+          {!editing && moods.length > 0 && (
+            <div className={classes.section}>
+              <Typography variant="subtitle2">Moods</Typography>
+              <div className={classes.chipList}>
+                {moods.map((mood) => (
+                  <Typography className={classes.chip} key={mood}>
+                    {mood}
+                  </Typography>
+                ))}
+              </div>
+            </div>
+          )}
+          {editing && (
+            <div className={classes.section}>
+              <Typography variant="subtitle2">Moods</Typography>
+              <EditableTagList
+                kind="Mood"
+                values={draft.moods}
+                classes={classes}
+                onChange={(index, value) => updateTagDraft('moods', index, value)}
+                onAdd={() => addTagDraft('moods')}
+                onRemove={(index) => removeTagDraft('moods', index)}
+              />
+            </div>
+          )}
+          {canEdit && (
+            <section className={classes.section} aria-labelledby="song-lyrics-heading">
+              <div className={classes.lyricsHeader}>
+                <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
+                <div className={classes.lyricsActions}>
+                  <Tooltip title="Choose a TXT or LRC lyrics file">
+                    <IconButton aria-label="Choose lyrics file" component="label" size="small">
+                      <CloudUploadIcon />
+                      <input
+                        className={classes.lyricsFileInput}
+                        type="file"
+                        accept=".txt,.lrc"
+                        onChange={handleLyricsImport}
+                      />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Save lyrics">
+                    <span>
+                      <IconButton
+                        aria-label="Save lyrics"
+                        color="primary"
+                        disabled={!lyricsChanged || lyricsSaving || lyricsDeleting || lyricsLoading}
+                        onClick={handleSaveLyrics}
+                        size="small"
+                      >
+                        {lyricsSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Cancel lyrics">
+                    <span>
+                      <IconButton
+                        aria-label="Cancel lyrics"
+                        disabled={!lyricsChanged || lyricsSaving || lyricsDeleting}
+                        onClick={handleCancelLyrics}
+                        size="small"
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  {(lyricsFiles.txt.exists || lyricsFiles.lrc.exists) && (
+                    <Tooltip title="Delete separate lyrics">
+                      <span>
+                        <IconButton
+                          aria-label="Delete lyrics"
+                          color="secondary"
+                          disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
+                          onClick={handleDeleteLyrics}
+                          size="small"
+                        >
+                          {lyricsDeleting ? <CircularProgress size={18} /> : <DeleteOutlineIcon />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+              {lyricsLoading ? (
+                <CircularProgress size={20} aria-label="Loading lyrics" />
+              ) : (
+                <>
+                  <textarea
+                    aria-label="Lyrics text"
+                    className={classes.lyricsInput}
+                    rows={8}
+                    maxLength={1 << 20}
+                    value={lyricsDraft}
+                    onChange={(event) => setLyricsDraft(event.target.value)}
+                  />
+                  {lyricsError && <Typography role="alert" color="error">{lyricsError}</Typography>}
+                </>
+              )}
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const SongShow = (props) => {
+  const controllerProps = useShowController(props)
+  return (
+    <ShowContextProvider value={controllerProps}>
+      <SongShowLayout {...props} {...controllerProps} />
+    </ShowContextProvider>
+  )
+}
+
+export default SongShow

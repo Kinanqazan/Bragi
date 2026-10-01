@@ -1,4 +1,5 @@
 import React from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { cleanup, render, screen } from '@testing-library/react'
 import { ThemeProvider, createTheme } from '@material-ui/core/styles'
 import { describe, expect, it } from 'vitest'
@@ -83,15 +84,17 @@ const renderSurface = (
   }
 
   const surface = (isExpanded) => (
-    <ThemeProvider theme={createTheme()}>
-      <MobilePlayerSurface
-        bridge={bridge}
-        queue={[]}
-        expanded={isExpanded}
-        onExpandedChange={onExpandedChange}
-        onClear={onClear}
-      />
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider theme={createTheme()}>
+        <MobilePlayerSurface
+          bridge={bridge}
+          queue={[]}
+          expanded={isExpanded}
+          onExpandedChange={onExpandedChange}
+          onClear={onClear}
+        />
+      </ThemeProvider>
+    </MemoryRouter>
   )
   const view = render(surface(expanded))
 

@@ -2,10 +2,13 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 
 	"github.com/navidrome/navidrome/model/metadata"
 )
+
+var ErrLyricsSidecarConflict = errors.New("lyrics sidecar changed since it was loaded")
 
 type Storage interface {
 	FS() (MusicFS, error)
@@ -22,6 +25,20 @@ type MusicFS interface {
 // backends opt in explicitly.
 type MutableFS interface {
 	Remove(name string) error
+}
+
+// MetadataWritableFS is implemented by storage backends that can safely edit
+// metadata on a media file without replacing unrelated tags or audio data.
+type MetadataWritableFS interface {
+	WriteTags(name string, tags map[string][]string) error
+}
+
+// LyricsSidecarWritableFS provides safe, optimistic-concurrency writes for the
+// supported plain-text lyric sidecars.
+type LyricsSidecarWritableFS interface {
+	ReadLyricsSidecar(name string) (content []byte, version string, err error)
+	WriteLyricsSidecar(name string, content []byte, expectedVersion string) (newVersion string, err error)
+	DeleteLyricsSidecar(name string, expectedVersion string) error
 }
 
 // SymlinkResolverFS is an optional interface for MusicFS implementations backed by a real

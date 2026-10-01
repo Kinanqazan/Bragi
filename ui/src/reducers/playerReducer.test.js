@@ -7,6 +7,7 @@ import {
   playNext,
   playTracks,
   setTrack,
+  updateTrackMetadata,
 } from '../actions'
 
 const song = (id, title = id) => ({
@@ -53,6 +54,38 @@ describe('playerReducer', () => {
     expect(next.queue.map((track) => track.trackId)).toEqual(['a', 'b'])
     expect(next.queue).not.toBe(first.queue)
     expect(first.queue).toHaveLength(1)
+  })
+
+  it('updates matching queued and current song metadata without changing track identity', () => {
+    let state = playerReducer(
+      undefined,
+      playTracks({ a: song('a'), b: song('b') }),
+    )
+    state = playerReducer(
+      state,
+      currentPlaying({ ...state.queue[0], volume: 1 }),
+    )
+    const firstUuid = state.queue[0].uuid
+    const next = playerReducer(
+      state,
+      updateTrackMetadata({ id: 'a', title: 'Renamed', artist: 'New Artist' }),
+    )
+
+    expect(next.queue[0]).toMatchObject({
+      uuid: firstUuid,
+      trackId: 'a',
+      title: 'Renamed',
+      artist: 'New Artist',
+      song: { id: 'a', title: 'Renamed', artist: 'New Artist' },
+    })
+    expect(next.current).toMatchObject({
+      uuid: firstUuid,
+      title: 'Renamed',
+      artist: 'New Artist',
+      song: { id: 'a', title: 'Renamed', artist: 'New Artist' },
+    })
+    expect(next.queue[1]).toEqual(state.queue[1])
+    expect(next.playIndex).toBe(state.playIndex)
   })
 
   it('inserts Play Next after the current track', () => {

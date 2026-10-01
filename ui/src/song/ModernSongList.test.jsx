@@ -26,7 +26,11 @@ const renderRows = (props = {}) => {
   const onPlay = vi.fn()
   render(
     <ThemeProvider theme={createTheme()}>
-      <ModernTrackRows songs={[song]} onPlay={onPlay} {...props} />
+      <ModernTrackRows
+        songs={[song]}
+        onPlay={onPlay}
+        {...props}
+      />
     </ThemeProvider>,
   )
   return onPlay
@@ -45,13 +49,13 @@ describe('<ModernTrackRows />', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('selects a song with the mouse', () => {
+  it('plays a song when its row is clicked', () => {
     const onPlay = renderRows()
     fireEvent.click(screen.getByRole('button', { name: 'Play Playable song' }))
     expect(onPlay).toHaveBeenCalledWith(song)
   })
 
-  it.each(['Enter', ' '])('selects a song with the %s key', (key) => {
+  it.each(['Enter', ' '])('plays a song with the %s key', (key) => {
     const onPlay = renderRows()
     fireEvent.keyDown(
       screen.getByRole('button', { name: 'Play Playable song' }),
@@ -97,6 +101,7 @@ describe('<ModernTrackRows />', () => {
         <ModernTrackRows
           songs={[song]}
           onPlay={onPlay}
+          onOpen={vi.fn()}
           onStartSelection={onStartSelection}
         />
       </ThemeProvider>,
@@ -153,8 +158,9 @@ describe('<ModernTrackRows />', () => {
 
   it('marks the current song', () => {
     renderRows({ currentSongId: song.id })
-    expect(
-      screen.getByRole('button', { name: 'Play Playable song' }),
-    ).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: 'Play Playable song' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
   })
 })

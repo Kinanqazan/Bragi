@@ -4,6 +4,7 @@ import { TestContext } from 'ra-test'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { SongContextMenu } from './SongContextMenu'
 import subsonic from '../subsonic'
+import { useLocation } from 'react-router-dom'
 
 vi.mock('../dataProvider', () => ({
   httpClient: vi.fn(),
@@ -30,6 +31,11 @@ const getPlaylistsMock = vi.fn()
 const deleteMediaFileMock = vi.fn()
 const mockNotify = vi.fn()
 const mockRefresh = vi.fn()
+
+const CurrentPath = () => {
+  const location = useLocation()
+  return <span data-testid="current-path">{location.pathname}</span>
+}
 
 vi.mock('react-admin', async (importOriginal) => {
   const actual = await importOriginal()
@@ -85,6 +91,28 @@ describe('SongContextMenu', () => {
     await waitFor(() => screen.getByText('Pl 1'))
     fireEvent.click(screen.getByText('Pl 1'))
     expect(window.location.hash).toBe('#/playlist/pl1/show')
+  })
+
+  it('opens the song page from the three-dot menu', async () => {
+    render(
+      <TestContext>
+        <SongContextMenu
+          record={{ id: 'song1', mediaFileId: 'media-1', size: 1 }}
+          resource="song"
+        />
+        <CurrentPath />
+      </TestContext>,
+    )
+
+    fireEvent.click(screen.getAllByRole('button')[1])
+    const openSongPage = await screen.findByText(/openSongPage|Open song page/i)
+    fireEvent.click(openSongPage)
+
+    await waitFor(() =>
+      expect(screen.getByTestId('current-path')).toHaveTextContent(
+        '/song/media-1/show',
+      ),
+    )
   })
 
   it('stops event propagation when playlist submenu is closed', async () => {

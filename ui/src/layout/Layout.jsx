@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { Layout as RALayout } from 'react-admin'
 import { makeStyles } from '@material-ui/core/styles'
@@ -317,6 +317,25 @@ const Layout = (props) => {
       offset,
     )
   }, [hasQueue])
+
+  useLayoutEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      window.BragiNative?.setThemeAccentColor
+    ) {
+      const primaryColor = String(muiTheme.palette.primary.main)
+      const rgb = primaryColor.match(
+        /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i,
+      )
+      const nativeColor = rgb
+        ? `#${rgb
+            .slice(1, 4)
+            .map((channel) => Number(channel).toString(16).padStart(2, '0'))
+            .join('')}`
+        : primaryColor
+      window.BragiNative.setThemeAccentColor(nativeColor)
+    }
+  }, [muiTheme])
 
   return (
     <>

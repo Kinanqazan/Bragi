@@ -258,6 +258,17 @@ var _ = Describe("Song Endpoints", func() {
 		})
 	})
 
+	Describe("DELETE /song/{id}/lyrics routing", func() {
+		It("registers the DELETE method and applies authentication", func() {
+			req := createUnauthenticatedRequest(http.MethodDelete, "/song/song-1/lyrics", []byte(`{"txtVersion":"","lrcVersion":""}`))
+			router.ServeHTTP(w, req)
+
+			// A missing DELETE route returns 405 here; a registered route reaches
+			// authentication first and returns 401 without entering the handler.
+			Expect(w.Code).To(Equal(http.StatusUnauthorized))
+		})
+	})
+
 	Describe("Query parameters and filtering", func() {
 		Context("when using query parameters", func() {
 			It("handles pagination parameters", func() {

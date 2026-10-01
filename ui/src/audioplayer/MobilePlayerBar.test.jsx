@@ -1,4 +1,5 @@
 import React from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import MobilePlayerBar from './MobilePlayerBar'
@@ -81,5 +82,23 @@ describe('MobilePlayerBar', () => {
 
     expect(screen.getByText('My Cool Song')).toBeInTheDocument()
     expect(screen.getByText('Awesome Artist')).toBeInTheDocument()
+  })
+
+  it('opens the full-screen player from the mini-player title without linking to the song page', () => {
+    const onOpen = vi.fn()
+    render(
+      <MemoryRouter initialEntries={['/song?filter=recent']}>
+        <MobilePlayerBar
+          title="My Cool Song"
+          onOpen={onOpen}
+          snapshot={{ duration: 180, currentTime: 0, playing: false }}
+          commands={{ play: vi.fn(), pause: vi.fn() }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('link', { name: 'My Cool Song' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('My Cool Song'))
+    expect(onOpen).toHaveBeenCalledOnce()
   })
 })

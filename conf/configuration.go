@@ -56,6 +56,7 @@ type configOptions struct {
 	EnableTranscodingConfig         bool
 	EnableDownloads                 bool
 	EnableMediaFileDeletion         bool
+	EnableMediaFileMetadataEditing  bool
 	EnableExternalServices          bool
 	EnableM3UExternalAlbumArt       bool
 	EnableInsightsCollector         bool
@@ -967,6 +968,7 @@ func setViperDefaults() {
 	viper.SetDefault("smartPlaylistRefreshDelay", 5*time.Second)
 	viper.SetDefault("enabledownloads", true)
 	viper.SetDefault("enablemediafiledeletion", false)
+	viper.SetDefault("enablemediafilemetadataediting", false)
 	viper.SetDefault("enableexternalservices", true)
 	viper.SetDefault("enablem3uexternalalbumart", false)
 	viper.SetDefault("enablemediafilecoverart", true)

@@ -19,6 +19,7 @@ import {
   defaultRowsPerPageOptions,
   getStoredPerPage,
   useResourceRefresh,
+  useScrollRestoration,
   useSetToggleableFields,
 } from '../common'
 import ExpandInfoDialog from '../dialogs/ExpandInfoDialog'
@@ -133,6 +134,7 @@ const SongList = (props) => {
   const location = useLocation()
   const history = useHistory()
   const version = useVersion()
+  useScrollRestoration()
   useResourceRefresh('song')
 
   useSetToggleableFields('song', ALL_SONG_FIELDS, DEFAULT_OFF_SONG_FIELDS)

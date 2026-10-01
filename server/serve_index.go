@@ -94,6 +94,7 @@ func serveIndex(ds model.DataStore, fsys fs.FS, shareInfo *model.Share) http.Han
 			"pluginsEnabled":            conf.Server.Plugins.Enabled,
 			"extAuthLogoutURL":          conf.Server.ExtAuth.LogoutURL,
 		}
+		appConfig["enableMediaFileMetadataEditing"] = conf.Server.EnableMediaFileMetadataEditing
 		if strings.HasPrefix(conf.Server.UILoginBackgroundURL, "/") {
 			appConfig["loginBackgroundURL"] = path.Join(conf.Server.BasePath, conf.Server.UILoginBackgroundURL)
 		}

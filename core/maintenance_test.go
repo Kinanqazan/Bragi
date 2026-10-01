@@ -306,6 +306,31 @@ var _ = Describe("Maintenance", func() {
 	})
 })
 
+var _ = Describe("Media file metadata changes", func() {
+	It("trims multi-value genres and moods and preserves an empty list as a clear operation", func() {
+		genres := []string{" Rock ", "Alternative"}
+		moods := []string{"Dreamy", "  "}
+		changes := MediaFileMetadataChanges{Genres: &genres, Moods: &moods}
+
+		tags, err := changes.values()
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(tags).To(HaveKeyWithValue("GENRE", []string{"Rock", "Alternative"}))
+		Expect(tags).To(HaveKeyWithValue("MOOD", []string{"Dreamy"}))
+
+		clear := []string{}
+		tags, err = (MediaFileMetadataChanges{Genres: &clear}).values()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(tags).To(HaveKeyWithValue("GENRE", BeEmpty()))
+	})
+
+	It("rejects invalid values in a multi-value tag", func() {
+		moods := []string{"valid", "invalid\x00value"}
+		_, err := (MediaFileMetadataChanges{Moods: &moods}).values()
+		Expect(err).To(MatchError(model.ErrValidation))
+	})
+})
+
 // Test helper to create a mock DataStore with controllable behavior
 func createTestDataStore() *tests.MockDataStore {
 	ds := &tests.MockDataStore{}

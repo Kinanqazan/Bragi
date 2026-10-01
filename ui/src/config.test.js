@@ -19,6 +19,7 @@ describe('runtime server configuration', () => {
       getServerConfig: () =>
         JSON.stringify({
           enableMediaFileDeletion: true,
+          enableMediaFileMetadataEditing: true,
           baseURL: '/music',
         }),
     }
@@ -26,6 +27,7 @@ describe('runtime server configuration', () => {
     const { default: config } = await import('./config.js')
 
     expect(config.enableMediaFileDeletion).toBe(true)
+    expect(config.enableMediaFileMetadataEditing).toBe(true)
     // The native server origin still takes precedence for API requests.
     expect(config.baseURL).toBe('https://bragi.example')
   })

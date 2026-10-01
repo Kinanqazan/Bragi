@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { createPwaManifest } from './src/pwaManifest.js'
+import { devTemplatePlugin } from './devTemplatePlugin.js'
 
 const frontendPort = parseInt(process.env.PORT) || 4533
 const backendPort = parseInt(process.env.BACKEND_PORT) || frontendPort + 100
@@ -43,8 +44,13 @@ export default defineConfig(({ command, mode }) => {
             'offline.html',
             'manifest.webmanifest',
             'android-chrome-*.png',
-            'favicon*.svg',
+            'apple-touch-icon*.png',
+            'browserconfig.xml',
+            'bragi*.png',
+            'favicon*',
+            'mstile*.png',
             'bragi*.webp',
+            'safari-pinned-tab.svg',
             'assets/**/*.{js,css,woff,woff2,ttf,eot}',
           ],
           // index.html is rendered per-user by the server, so a precached copy
@@ -131,34 +137,3 @@ export default defineConfig(({ command, mode }) => {
     },
   }
 })
-
-// The Go server replaces these template actions when it serves the embedded
-// production UI. Vite serves the same source file directly in development, so
-// replace them with safe development values before the browser parses it.
-function devTemplatePlugin(isStandalone = false) {
-  // The dev script passes this through to both Go and Vite. Keep the
-  // frontend's runtime config aligned with the URL that Chromecast can reach.
-  const devAppConfig = JSON.stringify(
-    JSON.stringify({
-      castMediaBaseURL: process.env.ND_CASTMEDIABASEURL || '',
-    }),
-  )
-
-  return {
-    name: 'navidrome-dev-template',
-    apply: isStandalone ? undefined : 'serve',
-    enforce: 'pre',
-    transformIndexHtml(html) {
-      const transformedHtml = html
-        .replace(/\{\{\s*\.Version\s*\}\}/g, '1.0.0')
-        .replace(/\{\{\s*\.ShareURL\s*\}\}/g, '')
-        .replace(/\{\{\s*\.ShareDescription\s*\}\}/g, '')
-        .replace(/\{\{\s*\.ShareImageURL\s*\}\}/g, '')
-        // config.js expects these globals to contain JSON strings, matching
-        // html/template's JavaScript-context output in production.
-        .replace(/\{\{\s*\.AppConfig\s*\}\}/g, devAppConfig)
-        .replace(/\{\{\s*\.ShareInfo\s*\}\}/g, JSON.stringify('null'))
-      return transformedHtml
-    },
-  }
-}

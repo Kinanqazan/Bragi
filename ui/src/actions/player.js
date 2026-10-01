@@ -1,6 +1,7 @@
 export const PLAYER_ADD_TRACKS = 'PLAYER_ADD_TRACKS'
 export const PLAYER_PLAY_NEXT = 'PLAYER_PLAY_NEXT'
 export const PLAYER_SET_TRACK = 'PLAYER_SET_TRACK'
+export const PLAYER_UPDATE_TRACK_METADATA = 'PLAYER_UPDATE_TRACK_METADATA'
 export const PLAYER_CLEAR_QUEUE = 'PLAYER_CLEAR_QUEUE'
 export const PLAYER_PLAY_TRACKS = 'PLAYER_PLAY_TRACKS'
 export const PLAYER_CURRENT = 'PLAYER_CURRENT'
@@ -10,6 +11,11 @@ export const TRANSCODING_SET_PROFILE = 'TRANSCODING_SET_PROFILE'
 
 export const setTrack = (data) => ({
   type: PLAYER_SET_TRACK,
+  data,
+})
+
+export const updateTrackMetadata = (data) => ({
+  type: PLAYER_UPDATE_TRACK_METADATA,
   data,
 })
 

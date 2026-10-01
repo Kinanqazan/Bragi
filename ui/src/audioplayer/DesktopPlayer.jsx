@@ -77,7 +77,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }))
 
-const DesktopPlayer = ({ bridge, queue, onClear }) => {
+const DesktopPlayer = ({ bridge, queue, onClear, lyrics }) => {
   const classes = useStyles()
   const [queueOpen, setQueueOpen] = useState(false)
   const [lyricsOpen, setLyricsOpen] = useState(false)
@@ -99,7 +99,7 @@ const DesktopPlayer = ({ bridge, queue, onClear }) => {
         {lyricsOpen ? (
           <LyricsCanvas
             currentTime={snapshot.currentTime}
-            lyric={track.lyric || track.song?.lyrics || ''}
+            lyric={lyrics || track.lyric || track.song?.lyrics || ''}
             cover={track.cover}
             onClose={() => setLyricsOpen(false)}
             onSeek={commands.seek}

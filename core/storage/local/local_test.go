@@ -15,6 +15,7 @@ import (
 	"github.com/navidrome/navidrome/model/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.senan.xyz/taglib"
 )
 
 var _ = Describe("LocalStorage", func() {
@@ -505,6 +506,155 @@ var _ = Describe("LocalStorage", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(storage).To(BeAssignableToTypeOf(&localStorage{}))
 		})
+	})
+})
+
+var _ = Describe("metadata writes", func() {
+	It("updates only named fields using a verified hidden sibling copy", func() {
+		dir, err := os.MkdirTemp("", "bragi-metadata-write-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+
+		original, err := os.ReadFile("tests/fixtures/test.mp3")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(dir, "song.mp3"), original, 0o600)).To(Succeed())
+		Expect(taglib.WriteTags(filepath.Join(dir, "song.mp3"), map[string][]string{
+			"TITLE": {"Old title"}, "ARTIST": {"Old artist"}, "ALBUM": {"Keep album"}, "COMMENT": {"Keep comment"},
+			"GENRE": {"Old genre"}, "MOOD": {"Old mood"},
+		}, taglib.Clear)).To(Succeed())
+
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := &localStorage{u: u}
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer, ok := musicFS.(storage.MetadataWritableFS)
+		Expect(ok).To(BeTrue())
+
+		Expect(writer.WriteTags("song.mp3", map[string][]string{
+			"TITLE": {"New title"}, "ARTIST": {"New artist"},
+			"GENRE": {"Rock", "Alternative"}, "MOOD": {"Dreamy", "Calm"},
+		})).To(Succeed())
+
+		written, err := taglib.OpenReadOnly(filepath.Join(dir, "song.mp3"), taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		defer written.Close()
+		tags := written.AllTags().Tags
+		Expect(tags["TITLE"]).To(Equal([]string{"New title"}))
+		Expect(tags["ARTIST"]).To(Equal([]string{"New artist"}))
+		Expect(tags["ALBUM"]).To(Equal([]string{"Keep album"}))
+		Expect(tags["COMMENT"]).To(Equal([]string{"Keep comment"}))
+		Expect(tags["GENRE"]).To(Equal([]string{"Rock", "Alternative"}))
+		Expect(tags["MOOD"]).To(Equal([]string{"Dreamy", "Calm"}))
+
+		entries, err := os.ReadDir(dir)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+		Expect(entries[0].Name()).To(Equal("song.mp3"))
+	})
+
+	It("leaves the original file untouched when the edited copy fails verification", func() {
+		dir, err := os.MkdirTemp("", "bragi-metadata-failure-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		original := []byte("not a media file")
+		Expect(os.WriteFile(filepath.Join(dir, "song.mp3"), original, 0o600)).To(Succeed())
+
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := &localStorage{u: u}
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer := musicFS.(storage.MetadataWritableFS)
+		// TagLib's C API truncates strings at NUL. The post-write verification
+		// must reject that mismatch without replacing the original.
+		Expect(writer.WriteTags("song.mp3", map[string][]string{"TITLE": {"Changed\x00truncated"}})).To(HaveOccurred())
+
+		actual, err := os.ReadFile(filepath.Join(dir, "song.mp3"))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(actual).To(Equal(original))
+		entries, err := os.ReadDir(dir)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+	})
+})
+
+var _ = Describe("lyrics sidecars", func() {
+	It("writes a sidecar atomically and rejects a stale version", func() {
+		dir, err := os.MkdirTemp("", "bragi-lyrics-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := &localStorage{u: u}
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer := musicFS.(storage.LyricsSidecarWritableFS)
+
+		version, err := writer.WriteLyricsSidecar("song.txt", []byte("First line\n"), "")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(version).ToNot(BeEmpty())
+		content, readVersion, err := writer.ReadLyricsSidecar("song.txt")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(content)).To(Equal("First line\n"))
+		Expect(readVersion).To(Equal(version))
+
+		_, err = writer.WriteLyricsSidecar("song.txt", []byte("Stale write"), "wrong-version")
+		Expect(err).To(MatchError(storage.ErrLyricsSidecarConflict))
+		newVersion, err := writer.WriteLyricsSidecar("song.txt", []byte("Updated line"), version)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(newVersion).ToNot(Equal(version))
+		content, _, err = writer.ReadLyricsSidecar("song.txt")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(content)).To(Equal("Updated line"))
+
+		entries, err := os.ReadDir(dir)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(entries).To(HaveLen(1))
+		Expect(entries[0].Name()).To(Equal("song.txt"))
+	})
+
+	It("rejects paths outside the supported sidecar name and text formats", func() {
+		dir, err := os.MkdirTemp("", "bragi-lyrics-invalid-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := &localStorage{u: u}
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer := musicFS.(storage.LyricsSidecarWritableFS)
+
+		_, err = writer.WriteLyricsSidecar("../outside.txt", []byte("lyrics"), "")
+		Expect(err).To(HaveOccurred())
+		_, err = writer.WriteLyricsSidecar("song.mp3", []byte("lyrics"), "")
+		Expect(err).To(HaveOccurred())
+		_, err = writer.WriteLyricsSidecar("song.lrc", []byte{0xff}, "")
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("deletes a sidecar only when its loaded version still matches", func() {
+		dir, err := os.MkdirTemp("", "bragi-lyrics-delete-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := &localStorage{u: u}
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer := musicFS.(storage.LyricsSidecarWritableFS)
+		version, err := writer.WriteLyricsSidecar("song.lrc", []byte("[00:01.00]line"), "")
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(writer.DeleteLyricsSidecar("song.lrc", "stale-version")).To(MatchError(storage.ErrLyricsSidecarConflict))
+		_, currentVersion, err := writer.ReadLyricsSidecar("song.lrc")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(currentVersion).To(Equal(version))
+
+		Expect(writer.DeleteLyricsSidecar("song.lrc", version)).To(Succeed())
+		_, currentVersion, err = writer.ReadLyricsSidecar("song.lrc")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(currentVersion).To(BeEmpty())
 	})
 })
 

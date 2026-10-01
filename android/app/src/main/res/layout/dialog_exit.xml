@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/exit_dialog_surface"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Leave Bragi?"
+        android:textColor="@color/exit_dialog_text_primary"
+        android:textSize="21sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/exit_dialog_change_server"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="16dp"
+        android:gravity="start|center_vertical"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:text="Change server"
+        android:textAllCaps="false"
+        android:textColor="@color/exit_dialog_accent"
+        android:textSize="15sp"
+        app:cornerRadius="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exit_dialog_cancel"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/exit_dialog_text_primary"
+            android:textSize="14sp"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/exit_dialog_outline" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/exit_dialog_exit"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Exit"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            app:backgroundTint="@color/exit_dialog_accent"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+</LinearLayout>

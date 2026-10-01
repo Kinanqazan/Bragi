@@ -12,6 +12,11 @@
     <color name="cast_picker_accent">#90CAF9</color>
     <color name="cast_picker_selected_surface">#303944</color>
     <color name="cast_picker_selected_outline">#668EAF</color>
+    <color name="exit_dialog_surface">#25272B</color>
+    <color name="exit_dialog_text_primary">#F5F7FA</color>
+    <color name="exit_dialog_text_secondary">#AEB6C2</color>
+    <color name="exit_dialog_accent">#90CAF9</color>
+    <color name="exit_dialog_outline">#3DFFFFFF</color>
     <color name="statusBarColor">#303030</color>
     <color name="navigationBarColor">#303030</color>
 </resources>

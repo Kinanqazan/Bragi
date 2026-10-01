@@ -759,8 +759,8 @@ export const ModernTrackRows = ({
   )
 
   const defaultGrid = selectionMode
-    ? '36px 56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 76px'
-    : '56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 76px'
+    ? '36px 56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
+    : '56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
 
   const computedGrid = gridTemplateColumns || defaultGrid
 
@@ -793,6 +793,7 @@ export const ModernTrackRows = ({
         onPointerCancel={cancelLongPress}
         onPointerLeave={cancelLongPress}
         onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             if (selectionMode) {
@@ -869,6 +870,7 @@ export const ModernTrackRows = ({
           onPointerDown={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
           onTouchStart={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
           <SongContextMenu record={song} resource="song" showLove={false} />
         </Box>
@@ -954,7 +956,7 @@ export const ModernSongList = ({
       '56px',
       'minmax(140px, 1.4fr)',
       ...activeColumns.map((col) => col.width),
-      '76px',
+      '44px',
     ].filter(Boolean)
     return cols.join(' ')
   }, [isMobile, selectionMode, activeColumns])

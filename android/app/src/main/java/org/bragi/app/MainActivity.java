@@ -3,7 +3,10 @@ package org.bragi.app;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Bundle;
@@ -34,6 +37,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.ColorUtils;
 import androidx.mediarouter.app.MediaRouteButton;
 import androidx.mediarouter.media.MediaRouteSelector;
 import androidx.mediarouter.media.MediaRouter;
@@ -73,12 +77,16 @@ import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.google.android.gms.common.images.WebImage;
+import com.google.android.material.button.MaterialButton;
 
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "bragi_prefs";
     private static final String KEY_SERVER_URL = "server_url";
     private static final String KEY_DEV_MODE = "dev_mode_enabled";
+    private static final String KEY_THEME_ACCENT_COLOR = "theme_accent_color";
     private static final String APP_LOCAL_URL = "https://appassets.androidplatform.net/assets/index.html";
+
+    private volatile int exitDialogAccentColor = Color.parseColor("#90CAF9");
 
     private WebView webView;
     private View serverConnectLayout;
@@ -574,6 +582,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        exitDialogAccentColor = prefs.getInt(KEY_THEME_ACCENT_COLOR, exitDialogAccentColor);
         currentCastMediaBaseUrl = prefs.getString("cast_media_base_url", "");
 
         webView = findViewById(R.id.webview);
@@ -1256,13 +1265,43 @@ public class MainActivity extends AppCompatActivity {
         if (webView.getVisibility() == View.VISIBLE && webView.canGoBack()) {
             webView.goBack();
         } else if (webView.getVisibility() == View.VISIBLE) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Bragi")
-                    .setMessage("What would you like to do?")
-                    .setPositiveButton("Exit", (dialog, which) -> finish())
-                    .setNeutralButton("Change Server", (dialog, which) -> showServerPicker())
-                    .setNegativeButton("Cancel", null)
-                    .show();
+            View dialogView = getLayoutInflater().inflate(R.layout.dialog_exit, null);
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                    .setView(dialogView)
+                    .create();
+
+            dialogView.findViewById(R.id.exit_dialog_exit).setOnClickListener(view -> {
+                dialog.dismiss();
+                finish();
+            });
+            dialogView.findViewById(R.id.exit_dialog_cancel).setOnClickListener(view -> dialog.dismiss());
+            dialogView.findViewById(R.id.exit_dialog_change_server).setOnClickListener(view -> {
+                dialog.dismiss();
+                showServerPicker();
+            });
+
+            int accentColor = exitDialogAccentColor;
+            MaterialButton exitButton = dialogView.findViewById(R.id.exit_dialog_exit);
+            MaterialButton changeServerButton = dialogView.findViewById(R.id.exit_dialog_change_server);
+            MaterialButton cancelButton = dialogView.findViewById(R.id.exit_dialog_cancel);
+            exitButton.setBackgroundTintList(ColorStateList.valueOf(accentColor));
+            exitButton.setTextColor(ColorUtils.calculateLuminance(accentColor) > 0.5
+                    ? Color.BLACK
+                    : Color.WHITE);
+            changeServerButton.setTextColor(accentColor);
+            cancelButton.setStrokeColor(ColorStateList.valueOf(Color.argb(
+                    110,
+                    Color.red(accentColor),
+                    Color.green(accentColor),
+                    Color.blue(accentColor))));
+
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setLayout(
+                        (int) (getResources().getDisplayMetrics().widthPixels * 0.84f),
+                        android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+            }
+            dialog.show();
         } else {
             super.onBackPressed();
         }
@@ -1292,6 +1331,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class WebAppInterface {
+        @JavascriptInterface
+        public void setThemeAccentColor(String color) {
+            if (color == null) return;
+            try {
+                int parsedColor = Color.parseColor(color);
+                exitDialogAccentColor = parsedColor;
+                if (prefs != null) {
+                    prefs.edit().putInt(KEY_THEME_ACCENT_COLOR, parsedColor).apply();
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Ignore values that Android cannot parse as a color.
+            }
+        }
+
         @JavascriptInterface
         public String getServerUrl() {
             return currentServerUrl != null ? currentServerUrl.replaceAll("/+$", "") : "";

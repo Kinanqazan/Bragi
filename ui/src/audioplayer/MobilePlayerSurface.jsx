@@ -183,6 +183,7 @@ const MobilePlayerSurface = ({
   expanded,
   onExpandedChange,
   onClear,
+  lyrics: resolvedLyrics,
 }) => {
   const classes = useStyles()
   const theme = useTheme()
@@ -206,7 +207,7 @@ const MobilePlayerSurface = ({
   const setThemeColorActive = useThemeColorOverride(topColor, expanded)
   const title = track.title || track.name || track.song?.title
   const artist = track.artist || track.singer || track.song?.artist
-  const lyric = track.lyric || track.song?.lyrics || ''
+  const lyric = resolvedLyrics || track.lyric || track.song?.lyrics || ''
   const initialProgress = expanded ? 1 : 0
 
   const clearSettleTimer = () => {

@@ -4,9 +4,8 @@ import os from 'os';
 import path from 'path';
 
 const rootDir = path.resolve('.');
-// Keep a transparent source outside ui/public. Public WebP files are icon
-// outputs and therefore have an opaque background after generation.
-const markSource = path.join(rootDir, 'scripts', 'assets', 'bragi-mark-source.webp');
+const iconSource = path.join(rootDir, 'ui', 'public', 'new icon.webp');
+const dynamicLogoMask = path.join(rootDir, 'ui', 'public', 'bragi-logo-mask.png');
 const ffmpeg = path.join(
   rootDir,
   'tmp',
@@ -15,13 +14,18 @@ const ffmpeg = path.join(
   'bin',
   'ffmpeg.exe',
 );
-const blue = '0x3B82F6';
+const brandBackground = '#5B805F';
+const faviconColor = '#66B76D';
+const androidLauncherOnly = process.argv.includes('--android-launcher-only');
 
-if (!fs.existsSync(markSource)) throw new Error(`Transparent logo source not found: ${markSource}`);
+if (!fs.existsSync(iconSource)) throw new Error(`New app icon not found: ${iconSource}`);
 if (!fs.existsSync(ffmpeg)) throw new Error(`FFmpeg not found: ${ffmpeg}`);
 
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bragi-icon-generation-'));
 const masterPng = path.join(workDir, 'app-icon.png');
+const androidLauncherMasterPng = path.join(workDir, 'android-launcher-icon.png');
+const faviconMasterPng = path.join(workDir, 'browser-tab-icon.png');
+const faviconIcoTemp = path.join(workDir, 'favicon.ico');
 
 function runFfmpeg(args) {
   execFileSync(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', ...args], {
@@ -30,17 +34,17 @@ function runFfmpeg(args) {
   });
 }
 
-function renderPng(relativeOutput, width, height = width) {
+function renderPng(relativeOutput, width, height = width, source = masterPng) {
   const output = path.join(rootDir, relativeOutput);
   const side = Math.min(width, height);
   const filter =
     width === height
       ? `scale=${width}:${height}:flags=lanczos`
-      : `scale=${side}:${side}:flags=lanczos,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${blue}`;
+      : `scale=${side}:${side}:flags=lanczos,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${brandBackground}`;
 
   runFfmpeg([
     '-i',
-    masterPng,
+    source,
     '-vf',
     filter,
     '-frames:v',
@@ -50,23 +54,69 @@ function renderPng(relativeOutput, width, height = width) {
 }
 
 try {
-  const recolorAndCenterMark =
-    `[0:v]format=rgba,` +
-    'colorchannelmixer=rr=0:rg=0:rb=0:ra=1:gr=0:gg=0:gb=0:ga=1:br=0:bg=0:bb=0:ba=1,' +
-    'scale=400:400:flags=lanczos[mark];' +
-    `color=c=${blue}:s=512x512:r=25:d=1[background];` +
-    '[background][mark]overlay=(W-w)/2:(H-h)/2:shortest=1,format=rgba,' +
-    "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(255*(112.5-sqrt(pow(max(abs(X-255.5)-144,0),2)+pow(max(abs(Y-255.5)-144,0),2))),0,255)'[icon]";
+  const roundedIconFilter =
+    'scale=512:512:flags=lanczos,format=rgba,geq=' +
+    "r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
+    "a='clip(255*(112.5-sqrt(pow(max(abs(X-255.5)-144,0),2)+pow(max(abs(Y-255.5)-144,0),2))),0,255)'";
   runFfmpeg([
     '-i',
-    markSource,
+    iconSource,
+    '-vf',
+    roundedIconFilter,
+    '-frames:v',
+    '1',
+    masterPng,
+  ]);
+
+  const themeableMaskFilter =
+    "format=gray,lut=y='clip((val-130)*3.2,0,255)',format=rgba," +
+    "geq=r='255':g='255':b='255':a='r(X,Y)'";
+  runFfmpeg([
+    '-i',
+    iconSource,
+    '-vf',
+    themeableMaskFilter,
+    '-frames:v',
+    '1',
+    dynamicLogoMask,
+  ]);
+
+  const androidLauncherFilter =
+    '[0:v]format=rgba[background];' +
+    '[1:v]scale=390:390:flags=lanczos,format=rgba[foreground];' +
+    '[background][foreground]overlay=(W-w)/2:(H-h)/2:shortest=1,format=rgba,geq=' +
+    "r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':" +
+    "a='clip(255*(112.5-sqrt(pow(max(abs(X-255.5)-144,0),2)+pow(max(abs(Y-255.5)-144,0),2))),0,255)'[icon]";
+  runFfmpeg([
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${brandBackground}:s=512x512:r=1:d=1`,
+    '-i',
+    dynamicLogoMask,
     '-filter_complex',
-    recolorAndCenterMark,
+    androidLauncherFilter,
     '-map',
     '[icon]',
     '-frames:v',
     '1',
-    masterPng,
+    androidLauncherMasterPng,
+  ]);
+
+  const faviconFilter =
+    '[0:v]alphaextract,scale=512:512:flags=lanczos[alpha];' +
+    `color=c=${faviconColor}:s=512x512:r=1:d=1,format=rgba[foreground];` +
+    '[foreground][alpha]alphamerge[icon]';
+  runFfmpeg([
+    '-i',
+    dynamicLogoMask,
+    '-filter_complex',
+    faviconFilter,
+    '-map',
+    '[icon]',
+    '-frames:v',
+    '1',
+    faviconMasterPng,
   ]);
 
   for (const [density, size] of Object.entries({
@@ -78,13 +128,21 @@ try {
   })) {
     const dir = path.join(rootDir, 'android', 'app', 'src', 'main', 'res', density);
     fs.mkdirSync(dir, { recursive: true });
-    renderPng(path.join('android', 'app', 'src', 'main', 'res', density, 'ic_launcher.png'), size);
+    renderPng(
+      path.join('android', 'app', 'src', 'main', 'res', density, 'ic_launcher.png'),
+      size,
+      size,
+      androidLauncherMasterPng,
+    );
     renderPng(
       path.join('android', 'app', 'src', 'main', 'res', density, 'ic_launcher_round.png'),
       size,
+      size,
+      androidLauncherMasterPng,
     );
   }
 
+  if (!androidLauncherOnly) {
   renderPng(path.join('android', 'store_icon.png'), 512);
   renderPng(path.join('ui', 'public', 'android-chrome-192x192.png'), 192);
   renderPng(path.join('ui', 'public', 'android-chrome-512x512.png'), 512);
@@ -92,8 +150,8 @@ try {
   for (const size of [60, 76, 120, 152, 180]) {
     renderPng(path.join('ui', 'public', `apple-touch-icon-${size}x${size}.png`), size);
   }
-  renderPng(path.join('ui', 'public', 'favicon-16x16.png'), 16);
-  renderPng(path.join('ui', 'public', 'favicon-32x32.png'), 32);
+  renderPng(path.join('ui', 'public', 'favicon-16x16.png'), 16, 16, faviconMasterPng);
+  renderPng(path.join('ui', 'public', 'favicon-32x32.png'), 32, 32, faviconMasterPng);
   for (const size of [70, 144, 150, 310]) {
     renderPng(path.join('ui', 'public', `mstile-${size}x${size}.png`), size);
   }
@@ -101,7 +159,7 @@ try {
 
   runFfmpeg([
     '-i',
-    masterPng,
+    faviconMasterPng,
     '-vf',
     'format=rgba,scale=256:256:flags=lanczos',
     '-frames:v',
@@ -110,8 +168,9 @@ try {
     'png',
     '-f',
     'ico',
-    path.join(rootDir, 'ui', 'public', 'favicon.ico'),
+    faviconIcoTemp,
   ]);
+  fs.copyFileSync(faviconIcoTemp, path.join(rootDir, 'ui', 'public', 'favicon.ico'));
 
   for (const filename of ['bragi.webp', 'bragi_new.webp']) {
     runFfmpeg([
@@ -127,7 +186,36 @@ try {
     ]);
   }
 
-  console.log('Generated browser, PWA, Windows, Apple, Android, and store icons.');
+  const faviconData = fs.readFileSync(faviconMasterPng).toString('base64');
+  fs.writeFileSync(
+    path.join(rootDir, 'ui', 'public', 'favicon.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
+      '<image href="data:image/png;base64,' + faviconData + '" width="512" height="512" /></svg>\n',
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(rootDir, 'ui', 'public', 'safari-pinned-tab.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">' +
+      '<image href="/bragi-logo-mask.png" width="1024" height="1024" /></svg>\n',
+    'utf8',
+  );
+  fs.writeFileSync(
+    path.join(rootDir, 'ui', 'public', 'browserconfig.xml'),
+    '<?xml version="1.0" encoding="utf-8"?>\n' +
+      '<browserconfig><msapplication><tile>' +
+      '<square150x150logo src="/mstile-150x150.png"/>' +
+      '<TileColor>' + brandBackground + '</TileColor>' +
+      '</tile></msapplication></browserconfig>\n',
+    'utf8',
+  );
+
+  }
+
+  console.log(
+    androidLauncherOnly
+      ? `Generated Android launcher icons from ${iconSource}.`
+      : `Generated browser, PWA, Windows, Apple, Android, and store icons from ${iconSource}.`,
+  );
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
 }

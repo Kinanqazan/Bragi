@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 const fixtures = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const fixtures = vi.hoisted(() => ({
     player: { queue: [{ trackId: 'song-a' }] },
     settings: { notifications: false },
     replayGain: {},
+    lyricsResponse: { json: {} },
   },
 }))
 
@@ -41,8 +42,9 @@ vi.mock('./PlaybackBridge', () => ({
 }))
 
 vi.mock('./MobilePlayerSurface', () => ({
-  default: ({ expanded, onExpandedChange }) => (
+  default: ({ expanded, onExpandedChange, lyrics }) => (
     <div data-testid="mobile-surface" data-expanded={String(expanded)}>
+      <span data-testid="resolved-lyrics">{lyrics}</span>
       <button type="button" onClick={() => onExpandedChange(true)}>
         Expand
       </button>
@@ -63,10 +65,12 @@ vi.mock('../subsonic', () => ({
   default: {
     reportPlayback: vi.fn(),
     reportPlaybackKeepalive: vi.fn(),
+    getLyricsBySongId: vi.fn(() => Promise.resolve(fixtures.lyricsResponse)),
   },
 }))
 
 import Player from './Player'
+import subsonic from '../subsonic'
 
 const makeBridge = (snapshot) => ({
   audioRef: vi.fn(),
@@ -77,6 +81,79 @@ const makeBridge = (snapshot) => ({
 })
 
 describe('Player mobile surface state', () => {
+  it('loads resolved lyrics for the current track and passes them to the player', async () => {
+    fixtures.lyricsResponse = {
+      json: {
+        'subsonic-response': {
+          lyricsList: {
+            structuredLyrics: [
+              { kind: 'main', synced: false, line: [{ value: 'Resolved lyric' }] },
+            ],
+          },
+        },
+      },
+    }
+    fixtures.bridge = makeBridge({
+      currentTrack: { trackId: 'song-lyrics', title: 'Lyrics song' },
+      error: null,
+      playing: true,
+      currentTime: 0,
+      duration: 100,
+      volume: 1,
+    })
+
+    render(<Player />)
+
+    await waitFor(() =>
+      expect(screen.getByTestId('resolved-lyrics')).toHaveTextContent(
+        'Resolved lyric',
+      ),
+    )
+  })
+
+  it('reloads lyrics for the current song after the song page saves a sidecar', async () => {
+    fixtures.lyricsResponse = {
+      json: {
+        'subsonic-response': {
+          lyricsList: {
+            structuredLyrics: [{ kind: 'main', synced: false, line: [{ value: 'Before save' }] }],
+          },
+        },
+      },
+    }
+    fixtures.bridge = makeBridge({
+      currentTrack: { trackId: 'song-refresh', title: 'Lyrics song' },
+      error: null,
+      playing: true,
+      currentTime: 0,
+      duration: 100,
+      volume: 1,
+    })
+    render(<Player />)
+    await waitFor(() =>
+      expect(screen.getByTestId('resolved-lyrics')).toHaveTextContent('Before save'),
+    )
+    const callsBeforeSave = subsonic.getLyricsBySongId.mock.calls.length
+    fixtures.lyricsResponse = {
+      json: {
+        'subsonic-response': {
+          lyricsList: {
+            structuredLyrics: [{ kind: 'main', synced: false, line: [{ value: 'After save' }] }],
+          },
+        },
+      },
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: 'song-refresh' } }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('resolved-lyrics')).toHaveTextContent('After save'),
+    )
+    expect(subsonic.getLyricsBySongId.mock.calls.length).toBeGreaterThan(callsBeforeSave)
+  })
+
   it('keeps the fullscreen player expanded while the next song loads', () => {
     fixtures.bridge = makeBridge({
       currentTrack: { trackId: 'song-a', title: 'Song A' },

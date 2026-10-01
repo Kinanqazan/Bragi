@@ -76,3 +76,23 @@ func (*mediaDeletionMaintenanceMock) DeleteMissingFiles(context.Context, []strin
 func (*mediaDeletionMaintenanceMock) DeleteAllMissingFiles(context.Context) error {
 	return nil
 }
+
+func (*mediaDeletionMaintenanceMock) UpdateMediaFileMetadata(context.Context, string, core.MediaFileMetadataChanges) (*core.MediaFileMetadataResult, error) {
+	return nil, nil
+}
+
+func (*mediaDeletionMaintenanceMock) RefreshMediaFileMetadata(context.Context, string) (*model.MediaFile, error) {
+	return nil, nil
+}
+
+func (*mediaDeletionMaintenanceMock) LoadMediaFileLyrics(context.Context, string) (*core.MediaFileLyrics, error) {
+	return nil, nil
+}
+
+func (*mediaDeletionMaintenanceMock) SaveMediaFileLyrics(context.Context, string, string, string, string) (*core.MediaFileLyrics, error) {
+	return nil, nil
+}
+
+func (*mediaDeletionMaintenanceMock) DeleteMediaFileLyrics(context.Context, string, string, string) (*core.MediaFileLyrics, error) {
+	return nil, nil
+}

@@ -86,6 +86,32 @@ var _ = Describe("Configuration", func() {
 		})
 	})
 
+	Describe("media file metadata editing", func() {
+		It("is disabled by default", func() {
+			conf.Load(true)
+			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeFalse())
+		})
+
+		It("can be explicitly enabled", func() {
+			viper.Set("enablemediafilemetadataediting", true)
+			conf.Load(true)
+			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeTrue())
+		})
+	})
+
+	Describe("media file metadata editing", func() {
+		It("is disabled by default", func() {
+			conf.Load(true)
+			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeFalse())
+		})
+
+		It("can be explicitly enabled", func() {
+			viper.Set("enablemediafilemetadataediting", true)
+			conf.Load(true)
+			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeTrue())
+		})
+	})
+
 	Describe("Cast media base URL", func() {
 		It("is empty by default", func() {
 			conf.Load(true)

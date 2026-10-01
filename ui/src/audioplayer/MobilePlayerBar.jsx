@@ -65,8 +65,11 @@ const useStyles = makeStyles((theme) => ({
     display: 'block',
     overflow: 'hidden',
     fontWeight: 700,
+    color: 'inherit',
+    textDecoration: 'none',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    '&:hover': { textDecoration: 'underline' },
   },
   artist: {
     display: 'block',
@@ -144,12 +147,20 @@ const MobilePlayerBar = ({
       <div className={classes.progressTrack} aria-hidden="true">
         <div className={classes.progress} style={{ width: `${progress}%` }} />
       </div>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         className={classes.openButton}
         onClick={(event) => {
           event.currentTarget?.blur()
           onOpen?.()
+        }}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onOpen?.()
+          }
         }}
         aria-label={`Open full-screen player${title ? ` for ${title}` : ''}`}
       >
@@ -162,7 +173,7 @@ const MobilePlayerBar = ({
           <span className={classes.title}>{title || 'Now playing'}</span>
           {artist && <span className={classes.artist}>{artist}</span>}
         </span>
-      </button>
+      </div>
       <IconButton
         className={classes.playButton}
         {...playbackPress}

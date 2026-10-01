@@ -4,9 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"path"
 	"slices"
+	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/navidrome/navidrome/conf"
@@ -18,8 +22,12 @@ import (
 )
 
 var (
-	ErrMediaFileDeletionDisabled    = errors.New("media file deletion is disabled")
-	ErrMediaFileDeletionUnsupported = errors.New("media file deletion is not supported by this storage")
+	ErrMediaFileDeletionDisabled        = errors.New("media file deletion is disabled")
+	ErrMediaFileDeletionUnsupported     = errors.New("media file deletion is not supported by this storage")
+	ErrMediaFileMetadataEditingDisabled = errors.New("media file metadata editing is disabled")
+	ErrMediaFileMetadataUnsupported     = errors.New("media file metadata editing is not supported by this storage or format")
+	ErrMediaFileMetadataConflict        = errors.New("media file changed since the library last scanned it")
+	ErrMediaFileLyricsConflict          = storage.ErrLyricsSidecarConflict
 )
 
 type Maintenance interface {
@@ -29,6 +37,87 @@ type Maintenance interface {
 	DeleteMissingFiles(ctx context.Context, ids []string) error
 	// DeleteAllMissingFiles deletes all files marked as missing
 	DeleteAllMissingFiles(ctx context.Context) error
+	UpdateMediaFileMetadata(ctx context.Context, id string, changes MediaFileMetadataChanges) (*MediaFileMetadataResult, error)
+	RefreshMediaFileMetadata(ctx context.Context, id string) (*model.MediaFile, error)
+	LoadMediaFileLyrics(ctx context.Context, id string) (*MediaFileLyrics, error)
+	SaveMediaFileLyrics(ctx context.Context, id, extension, content, expectedVersion string) (*MediaFileLyrics, error)
+	DeleteMediaFileLyrics(ctx context.Context, id, expectedTxtVersion, expectedLrcVersion string) (*MediaFileLyrics, error)
+}
+
+type LyricsSidecar struct {
+	Content string `json:"content"`
+	Version string `json:"version"`
+	Exists  bool   `json:"exists"`
+}
+
+type MediaFileLyrics struct {
+	Txt LyricsSidecar `json:"txt"`
+	Lrc LyricsSidecar `json:"lrc"`
+}
+
+type MediaFileMetadataChanges struct {
+	Title       *string   `json:"title"`
+	Artist      *string   `json:"artist"`
+	AlbumArtist *string   `json:"albumArtist"`
+	Genres      *[]string `json:"genres"`
+	Moods       *[]string `json:"moods"`
+}
+
+type MediaFileMetadataResult struct {
+	MediaFile       *model.MediaFile `json:"mediaFile,omitempty"`
+	Saved           bool             `json:"saved"`
+	RefreshRequired bool             `json:"refreshRequired"`
+	RefreshError    string           `json:"refreshError,omitempty"`
+}
+
+func (c MediaFileMetadataChanges) values() (map[string][]string, error) {
+	tags := make(map[string][]string, 5)
+	for key, value := range map[string]*string{
+		"TITLE": c.Title, "ARTIST": c.Artist, "ALBUMARTIST": c.AlbumArtist,
+	} {
+		if value == nil {
+			continue
+		}
+		clean := strings.TrimSpace(*value)
+		if len(clean) > 4096 || strings.ContainsRune(clean, '\x00') {
+			return nil, fmt.Errorf("%w: %s is invalid or too long", model.ErrValidation, key)
+		}
+		if clean == "" {
+			tags[key] = []string{}
+		} else {
+			tags[key] = []string{clean}
+		}
+	}
+	for _, field := range []struct {
+		name   string
+		tag    string
+		values *[]string
+	}{
+		{name: "genres", tag: "GENRE", values: c.Genres},
+		{name: "moods", tag: "MOOD", values: c.Moods},
+	} {
+		if field.values == nil {
+			continue
+		}
+		if len(*field.values) > 100 {
+			return nil, fmt.Errorf("%w: too many %s values", model.ErrValidation, field.name)
+		}
+		values := make([]string, 0, len(*field.values))
+		for _, value := range *field.values {
+			clean := strings.TrimSpace(value)
+			if len(clean) > 4096 || strings.ContainsRune(clean, '\x00') {
+				return nil, fmt.Errorf("%w: %s contains an invalid or too-long value", model.ErrValidation, field.name)
+			}
+			if clean != "" {
+				values = append(values, clean)
+			}
+		}
+		tags[field.tag] = values
+	}
+	if len(tags) == 0 {
+		return nil, fmt.Errorf("%w: no metadata fields provided", model.ErrValidation)
+	}
+	return tags, nil
 }
 
 func (s *maintenanceService) DeleteMediaFile(ctx context.Context, id string) error {
@@ -39,6 +128,8 @@ func (s *maintenanceService) DeleteMediaFile(ctx context.Context, id string) err
 	if !conf.Server.EnableMediaFileDeletion {
 		return ErrMediaFileDeletionDisabled
 	}
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
 
 	mf, err := s.ds.MediaFile(ctx).Get(id)
 	if err != nil {
@@ -71,14 +162,261 @@ func (s *maintenanceService) DeleteMediaFile(ctx context.Context, id string) err
 }
 
 type maintenanceService struct {
-	ds model.DataStore
-	wg sync.WaitGroup
+	ds         model.DataStore
+	scanner    model.Scanner
+	metadataMu sync.Mutex
+	wg         sync.WaitGroup
 }
 
-func NewMaintenance(ds model.DataStore) Maintenance {
-	return &maintenanceService{
-		ds: ds,
+func NewMaintenance(ds model.DataStore, scanners ...model.Scanner) Maintenance {
+	var scan model.Scanner
+	if len(scanners) > 0 {
+		scan = scanners[0]
 	}
+	return &maintenanceService{
+		ds:      ds,
+		scanner: scan,
+	}
+}
+
+func (s *maintenanceService) UpdateMediaFileMetadata(ctx context.Context, id string, changes MediaFileMetadataChanges) (*MediaFileMetadataResult, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	tags, err := changes.values()
+	if err != nil {
+		return nil, err
+	}
+
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	fileInfo, err := fs.Stat(musicFS, mf.Path)
+	if err != nil {
+		return nil, fmt.Errorf("checking media file: %w", err)
+	}
+	if mf.Size != fileInfo.Size() || !mf.UpdatedAt.IsZero() && absDuration(mf.UpdatedAt.Sub(fileInfo.ModTime())) > time.Second {
+		return nil, ErrMediaFileMetadataConflict
+	}
+	writable, ok := musicFS.(storage.MetadataWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	if err := writable.WriteTags(mf.Path, tags); err != nil {
+		log.Error(ctx, "[DEBUG-meta-save-20261001] Metadata file write failed", "songID", mf.ID, "path", mf.Path, err)
+		return nil, fmt.Errorf("writing media metadata: %w", err)
+	}
+
+	result := &MediaFileMetadataResult{Saved: true}
+	updated, scanErr := s.refreshMetadataFolder(ctx, mf)
+	if scanErr != nil {
+		result.RefreshRequired = true
+		result.RefreshError = scanErr.Error()
+		return result, nil
+	}
+	result.MediaFile = updated
+	return result, nil
+}
+
+func absDuration(value time.Duration) time.Duration {
+	if value < 0 {
+		return -value
+	}
+	return value
+}
+
+func (s *maintenanceService) RefreshMediaFileMetadata(ctx context.Context, id string) (*model.MediaFile, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing {
+		return nil, model.ErrNotFound
+	}
+	return s.refreshMetadataFolder(ctx, mf)
+}
+
+func (s *maintenanceService) LoadMediaFileLyrics(ctx context.Context, id string) (*MediaFileLyrics, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	writable, ok := musicFS.(storage.LyricsSidecarWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	base := strings.TrimSuffix(mf.Path, path.Ext(mf.Path))
+	lyrics := &MediaFileLyrics{}
+	for _, entry := range []struct {
+		extension string
+		target    *LyricsSidecar
+	}{{".txt", &lyrics.Txt}, {".lrc", &lyrics.Lrc}} {
+		content, version, err := writable.ReadLyricsSidecar(base + entry.extension)
+		if err != nil {
+			return nil, fmt.Errorf("reading lyrics sidecar: %w", err)
+		}
+		entry.target.Content = string(content)
+		entry.target.Version = version
+		entry.target.Exists = version != ""
+	}
+	return lyrics, nil
+}
+
+func (s *maintenanceService) SaveMediaFileLyrics(ctx context.Context, id, extension, content, expectedVersion string) (*MediaFileLyrics, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	if extension != ".txt" && extension != ".lrc" || len(content) > 1<<20 || !utf8.ValidString(content) || strings.ContainsRune(content, '\x00') {
+		return nil, fmt.Errorf("%w: lyrics must be valid UTF-8 text and at most 1 MiB", model.ErrValidation)
+	}
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	writable, ok := musicFS.(storage.LyricsSidecarWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	base := strings.TrimSuffix(mf.Path, path.Ext(mf.Path))
+	if _, err := writable.WriteLyricsSidecar(base+extension, []byte(content), expectedVersion); err != nil {
+		return nil, fmt.Errorf("writing lyrics sidecar: %w", err)
+	}
+	return s.LoadMediaFileLyrics(ctx, id)
+}
+
+func (s *maintenanceService) DeleteMediaFileLyrics(ctx context.Context, id, expectedTxtVersion, expectedLrcVersion string) (*MediaFileLyrics, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	writable, ok := musicFS.(storage.LyricsSidecarWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	base := strings.TrimSuffix(mf.Path, path.Ext(mf.Path))
+	// Preflight both versions before removing either file, so stale editor state
+	// cannot silently delete lyrics that changed on disk.
+	for _, entry := range []struct {
+		extension string
+		version   string
+	}{{".txt", expectedTxtVersion}, {".lrc", expectedLrcVersion}} {
+		_, currentVersion, err := writable.ReadLyricsSidecar(base + entry.extension)
+		if err != nil {
+			return nil, fmt.Errorf("checking lyrics sidecar before deletion: %w", err)
+		}
+		if currentVersion != entry.version {
+			return nil, ErrMediaFileLyricsConflict
+		}
+	}
+	// Remove LRC first because it takes priority over TXT in the default resolver.
+	for _, entry := range []struct {
+		extension string
+		version   string
+	}{{".lrc", expectedLrcVersion}, {".txt", expectedTxtVersion}} {
+		if err := writable.DeleteLyricsSidecar(base+entry.extension, entry.version); err != nil {
+			return nil, fmt.Errorf("deleting lyrics sidecar: %w", err)
+		}
+	}
+	return s.LoadMediaFileLyrics(ctx, id)
+}
+
+func (s *maintenanceService) refreshMetadataFolder(ctx context.Context, mf *model.MediaFile) (*model.MediaFile, error) {
+	if s.scanner == nil {
+		return nil, errors.New("scanner is unavailable")
+	}
+	folder := path.Dir(mf.Path)
+	if folder == "." {
+		folder = ""
+	}
+	if _, err := s.scanner.ScanFolders(ctx, false, []model.ScanTarget{{LibraryID: mf.LibraryID, FolderPath: folder}}); err != nil {
+		return nil, fmt.Errorf("refreshing library metadata: %w", err)
+	}
+	updated, err := s.ds.MediaFile(ctx).Get(mf.ID)
+	if err != nil {
+		return nil, fmt.Errorf("loading refreshed song: %w", err)
+	}
+	return updated, nil
 }
 
 func (s *maintenanceService) DeleteMissingFiles(ctx context.Context, ids []string) error {

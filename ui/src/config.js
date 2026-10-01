@@ -12,6 +12,7 @@ const defaultConfig = {
   enableTranscodingConfig: true,
   enableDownloads: true,
   enableMediaFileDeletion: false,
+  enableMediaFileMetadataEditing: false,
   enableFavourites: true,
   losslessFormats: 'FLAC,WAV,ALAC,DSF',
   welcomeMessage: '',

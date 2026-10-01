@@ -154,6 +154,9 @@ const getGenres = () => {
   })
 }
 
+const getLyricsBySongId = (id) =>
+  httpClient(url('getLyricsBySongId', id, { enhanced: true }))
+
 const streamUrl = (id, options) => {
   return baseUrl(
     url('stream', id, {
@@ -183,4 +186,5 @@ export default {
   getTopSongs,
   getSimilarSongs2,
   getGenres,
+  getLyricsBySongId,
 }

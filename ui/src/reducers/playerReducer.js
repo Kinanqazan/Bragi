@@ -6,6 +6,7 @@ import {
   PLAYER_PLAY_TRACKS,
   PLAYER_SET_MODE,
   PLAYER_SET_TRACK,
+  PLAYER_UPDATE_TRACK_METADATA,
   PLAYER_SET_VOLUME,
 } from '../actions'
 import config from '../config'
@@ -50,6 +51,34 @@ const reduceSetTrack = (state, { data }) => ({
   autoPlay: true,
   current: {},
 })
+
+const reduceUpdateTrackMetadata = (state, { data = {} }) => {
+  const id = String(data.mediaFileId || data.id || '')
+  if (!id) return state
+
+  const matches = (track) =>
+    track &&
+    (String(track.trackId || '') === id || String(track.song?.id || '') === id)
+  const update = (track) => {
+    if (!matches(track)) return track
+    const song = { ...track.song, ...data }
+    return {
+      ...track,
+      title: data.title ?? track.title,
+      name: data.title ?? track.name,
+      artist: data.artist ?? track.artist,
+      singer: data.artist ?? track.singer,
+      albumArtist: data.albumArtist ?? track.albumArtist,
+      song,
+    }
+  }
+  const queue = state.queue.map(update)
+  const current = update(state.current)
+  if (queue.every((track, index) => track === state.queue[index]) && current === state.current) {
+    return state
+  }
+  return { ...state, queue, current }
+}
 
 const reduceAddTracks = (state, { data }) => ({
   ...state,
@@ -116,6 +145,8 @@ export const playerReducer = (previousState = initialState, payload) => {
       return reducePlayTracks(previousState, payload)
     case PLAYER_SET_TRACK:
       return reduceSetTrack(previousState, payload)
+    case PLAYER_UPDATE_TRACK_METADATA:
+      return reduceUpdateTrackMetadata(previousState, payload)
     case PLAYER_ADD_TRACKS:
       return reduceAddTracks(previousState, payload)
     case PLAYER_PLAY_NEXT:

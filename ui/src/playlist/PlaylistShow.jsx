@@ -16,6 +16,7 @@ import {
   canChangeTracks,
   getStoredPerPage,
   useResourceRefresh,
+  useScrollRestoration,
 } from '../common'
 
 const useStyles = makeStyles(
@@ -34,6 +35,7 @@ const PlaylistShowLayout = (props) => {
   const { record } = context
   const classes = useStyles()
   useResourceRefresh('playlistTrack', 'song')
+  useScrollRestoration(!!record?.id)
 
   return (
     <>

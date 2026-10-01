@@ -42,12 +42,12 @@ if (-not (Test-Path $env:GOCACHE)) {
 
 if (Test-Path (Join-Path $portableZigBin 'zig.exe')) {
     $env:CGO_ENABLED = '1'
-    $env:CC = 'zig cc'
-    $env:CXX = 'zig c++'
+    $env:CC = "$(Join-Path $portableZigBin 'zig.exe') cc"
+    $env:CXX = "$(Join-Path $portableZigBin 'zig.exe') c++"
     # Zig otherwise writes its cache under the user profile. Keep all build
     # state in this writable project-local tmp directory for repeatable runs.
-    $env:ZIG_LOCAL_CACHE_DIR = Join-Path $projectRoot 'tmp\zig-cache'
-    $env:ZIG_GLOBAL_CACHE_DIR = Join-Path $projectRoot 'tmp\zig-global-cache'
+    $env:ZIG_LOCAL_CACHE_DIR = Join-Path $projectRoot 'tmp\zig-dev-cache'
+    $env:ZIG_GLOBAL_CACHE_DIR = Join-Path $projectRoot 'tmp\zig-dev-global-cache'
     foreach ($zigCachePath in @($env:ZIG_LOCAL_CACHE_DIR, $env:ZIG_GLOBAL_CACHE_DIR)) {
         if (-not (Test-Path $zigCachePath)) {
             New-Item -ItemType Directory -Path $zigCachePath -Force | Out-Null
@@ -251,6 +251,7 @@ $env:ND_MUSICFOLDER = Join-Path $projectRoot 'tests\fixtures\test_songs files'
 $env:ND_DATAFOLDER = Join-Path $projectRoot 'tmp\navidrome-data'
 $env:ND_PORT = "$BackendPort"
 $env:ND_DEVACTIVITYPANEL = 'true'
+$env:ND_ENABLEMEDIAFILEMETADATAEDITING = 'true'
 $env:PORT = "$Port"
 $env:BACKEND_PORT = "$BackendPort"
 
@@ -275,10 +276,11 @@ if (-not (Test-Path $env:ND_DATAFOLDER)) {
 }
 
 $tmpPath = Join-Path $projectRoot 'tmp'
-$viteStdoutLog = Join-Path $tmpPath 'vite-dev.stdout.log'
-$viteStderrLog = Join-Path $tmpPath 'vite-dev.stderr.log'
-$backendStdoutLog = Join-Path $tmpPath 'navidrome-dev.stdout.log'
-$backendStderrLog = Join-Path $tmpPath 'navidrome-dev.stderr.log'
+$devLogSuffix = Get-Date -Format 'yyyyMMdd-HHmmss'
+$viteStdoutLog = Join-Path $tmpPath "vite-dev.$devLogSuffix.stdout.log"
+$viteStderrLog = Join-Path $tmpPath "vite-dev.$devLogSuffix.stderr.log"
+$backendStdoutLog = Join-Path $tmpPath "navidrome-dev.$devLogSuffix.stdout.log"
+$backendStderrLog = Join-Path $tmpPath "navidrome-dev.$devLogSuffix.stderr.log"
 
 Write-Host '=================================================' -ForegroundColor Cyan
 Write-Host '  Starting Navidrome live single-origin test server' -ForegroundColor Cyan
@@ -293,6 +295,7 @@ if (-not [string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
     Write-Host '  Cast media URL: not set (the receiver cannot use localhost)' -ForegroundColor DarkYellow
 }
 Write-Host "  Go backend (internal): http://127.0.0.1:$BackendPort" -ForegroundColor DarkGray
+Write-Host '  Song metadata editing: enabled for admin users in this dev server' -ForegroundColor DarkGray
 Write-Host '  UI edits are live via Vite HMR; restart this script only for Go changes.' -ForegroundColor Green
 Write-Host '=================================================' -ForegroundColor Cyan
 
@@ -315,7 +318,7 @@ try {
 
     Write-Host "[2/2] Starting Vite UI on port $Port..." -ForegroundColor Yellow
     $viteProcess = Start-Process -FilePath $npmExecutable `
-        -ArgumentList @('run', 'start', '--', '--host', '0.0.0.0', '--port', "$Port") `
+        -ArgumentList @('run', 'start', '--', '--configLoader', 'runner', '--host', '0.0.0.0', '--port', "$Port") `
         -WorkingDirectory (Join-Path $projectRoot 'ui') `
         -WindowStyle Hidden `
         -RedirectStandardOutput $viteStdoutLog `

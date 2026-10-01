@@ -49,6 +49,10 @@
 - Administrators can permanently delete individual songs directly from the web context menu (`ND_ENABLEMEDIAFILEDELETION="true"`).
 - Protected by strict server-side safeguards: administrator-only checks, path traversal/symlink escape prevention, and automated cleanup of related database records.
 
+### 11. 🏷️ Song Metadata Editing (Admin Safeguard)
+- Administrators can edit a song's title, artist, and album artist on its song page (`ND_ENABLEMEDIAFILEMETADATAEDITING="true"`).
+- Changes are written to the selected song's embedded tags; filenames and folders stay unchanged. This setting is off by default.
+
 ---
 
 ## 🚀 Quick Start with Docker Compose
@@ -62,6 +66,7 @@ services:
     container_name: bragi
     environment:
       ND_ENABLEMEDIAFILEDELETION: "true" # Optional: enable admin file deletion
+      ND_ENABLEMEDIAFILEMETADATAEDITING: "true" # Optional: enable admin song metadata editing
     volumes:
       - /path/to/data:/data
       - /path/to/music:/music:rw

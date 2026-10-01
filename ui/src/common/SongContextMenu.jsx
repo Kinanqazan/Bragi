@@ -25,6 +25,8 @@ import config from '../config'
 import { playSimilar } from './playbackActions.js'
 import { formatBytes } from '../utils'
 import { useRedirect } from 'react-admin'
+import { useHistory, useLocation } from 'react-router-dom'
+import { openSong } from '../song/songNavigation'
 
 const useStyles = makeStyles((theme) => ({
   noWrap: {
@@ -94,9 +96,18 @@ export const SongContextMenu = ({
   const [deleting, setDeleting] = useState(false)
   const { permissions } = usePermissions()
   const redirect = useRedirect()
+  const history = useHistory()
+  const location = useLocation()
   const refresh = useRefresh()
 
   const options = {
+    openSongPage: {
+      enabled: !record.missing,
+      label: translate('resources.song.actions.openSongPage', {
+        _: 'Open song page',
+      }),
+      action: (record) => openSong(history, location, record),
+    },
     instantMix: {
       enabled: config.enableExternalServices,
       label: translate('resources.song.actions.instantMix'),

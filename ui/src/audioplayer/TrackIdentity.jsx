@@ -1,7 +1,8 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { makeStyles } from '@material-ui/core/styles'
 import { ArtistLinkField } from '../common'
+import { songShowPath } from '../song/songNavigation'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,19 +46,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }))
 
-const TrackIdentity = ({ track, mobile = false }) => {
+const TrackIdentity = ({ track }) => {
   const classes = useStyles()
+  const location = useLocation()
   const song = track?.song || track
   if (!song?.title && !track?.title && !track?.name) return null
 
   const title = song.title || track.title || track.name || 'Nothing playing'
   const subtitle = song.tags?.subtitle
   const artist = song.artist || track.artist || track.singer
-  const linkTo = song.playlistId
-    ? `/playlist/${song.playlistId}/show`
-    : song.albumId
-      ? `/album/${song.albumId}/show`
-      : null
+  const linkTo = songShowPath(song)
 
   const titleNode = (
     <div className={classes.title}>
@@ -74,8 +72,14 @@ const TrackIdentity = ({ track, mobile = false }) => {
 
   return (
     <div className={classes.root}>
-      {linkTo && !mobile ? (
-        <Link className={classes.titleLink} to={linkTo}>
+      {linkTo ? (
+        <Link
+          className={classes.titleLink}
+          to={{
+            pathname: linkTo,
+            state: { returnTo: `${location.pathname}${location.search}` },
+          }}
+        >
           {titleNode}
         </Link>
       ) : (

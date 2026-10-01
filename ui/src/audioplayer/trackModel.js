@@ -3,23 +3,26 @@ import subsonic from '../subsonic'
 
 const pad = (value) => String(value).padStart(2, '0')
 
-const parseLyrics = (lyrics) => {
+export const formatLyrics = (lyrics) => {
   if (!lyrics) return ''
   try {
     const structured = typeof lyrics === 'string' ? JSON.parse(lyrics) : lyrics
-    let lyricText = ''
-    for (const structuredLyric of structured || []) {
-      if (!structuredLyric.synced) continue
-      for (const line of structuredLyric.line || []) {
-        const centiseconds = Math.floor((line.start || 0) / 10)
+    const lyric = (structured || []).find((entry) => entry.kind === 'main') ||
+      (structured || [])[0]
+    if (!lyric) return ''
+
+    return (lyric.line || [])
+      .map((line) => {
+        const value = line.value || ''
+        if (!lyric.synced || !Number.isFinite(Number(line.start))) return value
+        const centiseconds = Math.floor(Number(line.start) / 10)
         const milliseconds = centiseconds % 100
         const totalSeconds = Math.floor(centiseconds / 100)
         const seconds = totalSeconds % 60
         const minutes = Math.floor(totalSeconds / 60)
-        lyricText += `[${pad(minutes)}:${pad(seconds)}.${pad(milliseconds)}] ${line.value || ''}\n`
-      }
-    }
-    return lyricText
+        return `[${pad(minutes)}:${pad(seconds)}.${pad(milliseconds)}] ${value}`
+      })
+      .join('\n')
   } catch {
     return ''
   }
@@ -56,7 +59,7 @@ export const toQueueTrack = (item = {}) => {
     album: item.album || item.song?.album || '',
     duration: item.duration || item.song?.duration || 0,
     cover,
-    lyric: item.lyric || parseLyrics(item.lyrics || item.song?.lyrics),
+    lyric: item.lyric || formatLyrics(item.lyrics || item.song?.lyrics),
     lyrics: item.lyrics || item.song?.lyrics || '',
     isRadio,
     // Only radio sources are already known. Normal tracks are resolved by the
