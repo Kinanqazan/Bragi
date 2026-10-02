@@ -16,7 +16,9 @@ type Artist struct {
 	ID string `structs:"id" json:"id"`
 
 	// Data based on tags
-	Name            string `structs:"name" json:"name"`
+	Name string `structs:"name" json:"name"`
+	// NameOverride is a user-defined display name that is preserved when tags are rescanned.
+	NameOverride    string `structs:"name_override" json:"-"`
 	SortArtistName  string `structs:"sort_artist_name" json:"sortArtistName,omitempty"`
 	OrderArtistName string `structs:"order_artist_name" json:"orderArtistName,omitempty"`
 	MbzArtistID     string `structs:"mbz_artist_id" json:"mbzArtistId,omitempty"`

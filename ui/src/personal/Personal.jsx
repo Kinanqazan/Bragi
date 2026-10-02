@@ -27,7 +27,7 @@ const Personal = () => {
   const classes = useStyles()
 
   return (
-    <Card className={classes.root}>
+    <Card className={`${classes.root} phone-page-scroll`}>
       <Title title={'Bragi - ' + translate('menu.personal.name')} />
       <SimpleForm toolbar={null} variant={'outlined'}>
         <SelectTheme />

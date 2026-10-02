@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import config from '../config'
 
 let nextBragiLogoId = 0
 
@@ -16,10 +17,22 @@ const BragiLogo = ({
     maskId.current = 'bragi-logo-mask-' + nextBragiLogoId++
   }
 
-  const maskSource =
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/assets/')
-      ? '/assets/bragi-logo-mask.png'
-      : '/bragi-logo-mask.png'
+  const maskSource = (() => {
+    if (typeof window === 'undefined') return '/bragi-logo-mask.png'
+
+    // The Android WebView serves its bundled UI from /assets/index.html.
+    if (window.location.pathname.startsWith('/assets/')) {
+      return '/assets/bragi-logo-mask.png'
+    }
+
+    // Vite serves public files from the origin root during development. The
+    // production server serves them below its UI mount (/app), including any
+    // configured BasePath.
+    if (import.meta.env.DEV) return '/bragi-logo-mask.png'
+
+    const basePath = (config.baseURL || '').replace(/\/+$/, '')
+    return `${basePath}/app/bragi-logo-mask.png`
+  })()
 
   return (
     <svg

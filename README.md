@@ -52,6 +52,7 @@
 ### 11. 🏷️ Song Metadata Editing (Admin Safeguard)
 - Administrators can edit a song's title, artist, and album artist on its song page (`ND_ENABLEMEDIAFILEMETADATAEDITING="true"`).
 - Changes are written to the selected song's embedded tags; filenames and folders stay unchanged. This setting is off by default.
+- Administrators can also set a display-name override on an artist page. It is stored in Bragi and does not rewrite song tags.
 
 ---
 

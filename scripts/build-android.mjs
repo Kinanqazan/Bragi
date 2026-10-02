@@ -29,7 +29,10 @@ const assetsDir = path.join(androidDir, 'app', 'src', 'main', 'assets');
 
 // 1. Build web UI for standalone offline embedding
 console.log('=== Step 1: Building Standalone Web UI Bundle ===');
-execSync('npm run build:standalone', {
+execSync('npm run build:standalone -- --configLoader runner', {
+  // Loading the Vite config through the runner avoids Windows EPERM errors
+  // when Vite tries to write a temporary bundled config under node_modules.
+  // The runner loader is supported by the project's Vite version.
   cwd: uiDir,
   env: process.env,
   stdio: 'inherit'

@@ -40,6 +40,10 @@ type dbSimilarArtist struct {
 }
 
 func (a *dbArtist) PostScan() error {
+	if a.NameOverride != "" {
+		a.Name = a.NameOverride
+		a.OrderArtistName = str.SanitizeFieldForSortingNoArticle(a.NameOverride)
+	}
 	a.Artist.Stats = make(map[model.Role]model.ArtistStats)
 
 	if a.LibraryStatsJSON != "" {
@@ -137,7 +141,7 @@ func NewArtistRepository(ctx context.Context, db dbx.Builder) model.ArtistReposi
 	r.tableName = "artist" // To be used by the idFilter below
 	r.registerModel(&model.Artist{}, map[string]filterFunc{
 		"id":         idFilter(r.tableName),
-		"name":       fullTextFilter(r.tableName, "mbz_artist_id"),
+		"name":       artistNameFilter(r.tableName),
 		"starred":    annotationBoolFilter("starred"),
 		"has_rating": annotationBoolFilter("rating"),
 		"role":       roleFilter,
@@ -145,7 +149,7 @@ func NewArtistRepository(ctx context.Context, db dbx.Builder) model.ArtistReposi
 		"library_id": artistLibraryIdFilter,
 	})
 	r.setSortMappings(map[string]string{ //nolint:gosec
-		"name":        "order_artist_name",
+		"name":        "coalesce(nullif(artist.name_override,''),artist.order_artist_name)",
 		"starred_at":  "starred, starred_at",
 		"rated_at":    "rating, rated_at",
 		"song_count":  "stats->>'total'->>'m'",
@@ -158,6 +162,17 @@ func NewArtistRepository(ctx context.Context, db dbx.Builder) model.ArtistReposi
 		"maincredit_size":        "sum(stats->>'maincredit'->>'s')",
 	})
 	return r
+}
+
+func artistNameFilter(tableName string) func(string, any) Sqlizer {
+	fullText := fullTextFilter(tableName, "mbz_artist_id")
+	return func(field string, value any) Sqlizer {
+		name := strings.ToLower(value.(string))
+		return Or{
+			fullText(field, value),
+			Like{tableName + ".name_override": "%" + name + "%"},
+		}
+	}
 }
 
 func roleFilter(_ string, role any) Sqlizer {
@@ -296,7 +311,7 @@ func (r *artistRepository) GetCursor(options ...model.QueryOptions) (model.Artis
 
 func (r *artistRepository) getIndexKey(a model.Artist) string {
 	source := a.OrderArtistName
-	if conf.Server.PreferSortTags {
+	if a.NameOverride == "" && conf.Server.PreferSortTags {
 		source = cmp.Or(a.SortArtistName, a.OrderArtistName)
 	}
 	name := strings.ToLower(source)

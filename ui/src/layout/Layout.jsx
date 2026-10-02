@@ -45,15 +45,16 @@ const useStyles = makeStyles((theme) => ({
             },
             ...(props.scrollablePhoneCard
               ? {
-                  '&& #main-content > .MuiCard-root': {
-                    flex: '1 1 auto !important',
-                    height: '100% !important',
-                    maxHeight: '100% !important',
+                  '&& #main-content .phone-page-scroll': {
+                    flex: '1 1 0 !important',
+                    height: '0 !important',
+                    maxHeight: 'none !important',
                     minHeight: '0 !important',
                     overflowX: 'hidden !important',
                     overflowY: 'auto !important',
                     WebkitOverflowScrolling: 'touch',
                     overscrollBehaviorY: 'contain',
+                    touchAction: 'pan-y',
                   },
                 }
               : {}),

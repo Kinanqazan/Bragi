@@ -7,6 +7,7 @@ import { LoveButton, RatingField, ImageUploadOverlay, ImageViewerDialog } from '
 import subsonic from '../subsonic'
 import { SafeHTML } from '../common/SafeHTML'
 import { Artwork } from '../common/Artwork'
+import ArtistNameEditor from './ArtistNameEditor'
 
 const useStyles = makeStyles(
   (theme) => ({
@@ -78,7 +79,7 @@ const useStyles = makeStyles(
   { name: 'NDMobileArtistDetails' },
 )
 
-const MobileArtistDetails = ({ biography, record }) => {
+const MobileArtistDetails = ({ biography, record, onNameSaved }) => {
   const img = subsonic.getCoverArtUrl(record, 800)
   const [expanded, setExpanded] = useState(false)
   const classes = useStyles({ img, expanded })
@@ -109,6 +110,7 @@ const MobileArtistDetails = ({ biography, record }) => {
               className={classes.artistName}
             >
               {title}
+              <ArtistNameEditor record={record} onSaved={onNameSaved} />
               <LoveButton
                 className={classes.loveButton}
                 record={record}

@@ -2,13 +2,16 @@ package nativeapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deluan/rest"
 	"github.com/go-chi/chi/v5"
+	"github.com/navidrome/navidrome/conf"
 	"github.com/navidrome/navidrome/consts"
 	"github.com/navidrome/navidrome/model"
 	"github.com/navidrome/navidrome/server"
@@ -23,10 +26,57 @@ func (api *Router) addArtistRoute(r chi.Router) {
 		r.Route("/{id}", func(r chi.Router) {
 			r.Use(server.URLParamsMiddleware)
 			r.Get("/", rest.Get(constructor))
+			r.With(adminOnlyMiddleware).Put("/name", api.renameArtistName())
 			r.Post("/image", api.uploadArtistImage())
 			r.Delete("/image", api.deleteArtistImage())
 		})
 	})
+}
+
+func (api *Router) renameArtistName() http.HandlerFunc {
+	type renameRequest struct {
+		Name string `json:"name"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !conf.Server.EnableMediaFileMetadataEditing {
+			http.Error(w, "artist name editing is disabled", http.StatusForbidden)
+			return
+		}
+		var input renameRequest
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			http.Error(w, "invalid artist name: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := decoder.Decode(new(any)); err != io.EOF {
+			http.Error(w, "invalid artist name: expected a single JSON object", http.StatusBadRequest)
+			return
+		}
+		name := strings.TrimSpace(input.Name)
+		if name == "" || len(name) > 255 || strings.ContainsRune(name, '\x00') {
+			http.Error(w, "artist name must contain 1 to 255 bytes", http.StatusBadRequest)
+			return
+		}
+
+		artist, err := api.ds.Artist(r.Context()).Get(chi.URLParam(r, "id"))
+		if err != nil {
+			if errors.Is(err, model.ErrNotFound) {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "could not load artist", http.StatusInternalServerError)
+			return
+		}
+		artist.NameOverride = name
+		artist.UpdatedAt = new(time.Now())
+		if err := api.ds.Artist(r.Context()).Put(artist, "name_override", "updated_at"); err != nil {
+			http.Error(w, "could not save artist name", http.StatusInternalServerError)
+			return
+		}
+		artist.Name = name
+		writeJSON(w, http.StatusOK, artist)
+	}
 }
 
 func (api *Router) uploadArtistImage() http.HandlerFunc {

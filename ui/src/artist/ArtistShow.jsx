@@ -87,7 +87,7 @@ const useStyles = makeStyles(
   },
 )
 
-const ArtistDetails = (props) => {
+const ArtistDetails = ({ onNameSaved, ...props }) => {
   const record = useRecordContext(props)
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up('sm'), {
     noSsr: true,
@@ -120,6 +120,7 @@ const ArtistDetails = (props) => {
       artistInfo={artistInfo}
       record={record}
       biography={biography}
+      onNameSaved={onNameSaved}
     />
   )
 }
@@ -127,30 +128,37 @@ const ArtistDetails = (props) => {
 const ArtistShowLayout = (props) => {
   const showContext = useShowContext(props)
   const record = useRecordContext()
+  const [displayName, setDisplayName] = useState('')
   const classes = useStyles()
   useResourceRefresh('artist', 'song')
   useScrollRestoration(!!record?.id)
 
   const perPage = getStoredPerPage()
 
+  useEffect(() => {
+    setDisplayName(record?.name || '')
+  }, [record?.id, record?.name])
+
+  const displayRecord = record ? { ...record, name: displayName || record.name } : null
+
   return (
     <>
-      {record && <RaTitle title={<Title subTitle={record.name} />} />}
+      {displayRecord && <RaTitle title={<Title subTitle={displayRecord.name} />} />}
       <div className={classes.container}>
-        {record && <ArtistDetails />}
-        {record && (
+        {displayRecord && <ArtistDetails record={displayRecord} onNameSaved={setDisplayName} />}
+        {displayRecord && (
           <div className={classes.actionsContainer}>
-            <ArtistActions record={record} className={classes.actions} />
+            <ArtistActions record={displayRecord} className={classes.actions} />
           </div>
         )}
-        {record && (
+        {displayRecord && (
           <ReferenceManyField
             {...showContext}
             addLabel={false}
             reference="song"
             target="artist_id"
             sort={{ field: 'album', order: 'ASC' }}
-            filter={{ artist_id: record?.id }}
+            filter={{ artist_id: displayRecord.id }}
             perPage={perPage}
             pagination={<Pagination />}
           >

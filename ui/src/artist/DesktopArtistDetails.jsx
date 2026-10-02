@@ -11,6 +11,7 @@ import AlbumInfo from '../album/AlbumInfo'
 import subsonic from '../subsonic'
 import { SafeHTML } from '../common/SafeHTML'
 import { Artwork } from '../common/Artwork'
+import ArtistNameEditor from './ArtistNameEditor'
 
 const useStyles = makeStyles(
   (theme) => ({
@@ -81,7 +82,7 @@ const useStyles = makeStyles(
   { name: 'NDDesktopArtistDetails' },
 )
 
-const DesktopArtistDetails = ({ artistInfo, record, biography }) => {
+const DesktopArtistDetails = ({ artistInfo, record, biography, onNameSaved }) => {
   const [expanded, setExpanded] = useState(false)
   const classes = useStyles()
   const title = record.name
@@ -111,6 +112,7 @@ const DesktopArtistDetails = ({ artistInfo, record, biography }) => {
               className={classes.artistName}
             >
               {title}
+              <ArtistNameEditor record={record} onSaved={onNameSaved} />
               <LoveButton
                 className={classes.loveButton}
                 record={record}

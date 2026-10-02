@@ -232,7 +232,7 @@ const About = () => {
   }, [])
 
   return (
-    <Card className={classes.root}>
+    <Card className={`${classes.root} phone-page-scroll`}>
       <Title title={`Bragi - ${translate('menu.about', { _: 'About' })}`} />
       <Paper className={classes.panel} elevation={0}>
         <div className={classes.contentPanel}>
