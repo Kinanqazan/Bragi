@@ -97,23 +97,30 @@ const ArtistDetails = (props) => {
   const biography = artistInfo?.biography || record.biography
 
   useEffect(() => {
+    let active = true
     subsonic
       .getArtistInfo(record.id)
       .then((resp) => resp.json['subsonic-response'])
       .then((data) => {
-        if (data.status === 'ok') {
+        if (active && data.status === 'ok') {
           setArtistInfo(data.artistInfo)
         }
       })
       .catch((e) => {
+        if (!active) return
         // eslint-disable-next-line no-console
         console.error('error on artist page', e)
       })
+    return () => { active = false }
   }, [record.id])
 
   const Component = isDesktop ? DesktopArtistDetails : MobileArtistDetails
   return (
-    <Component artistInfo={artistInfo} record={record} biography={biography} />
+    <Component
+      artistInfo={artistInfo}
+      record={record}
+      biography={biography}
+    />
   )
 }
 

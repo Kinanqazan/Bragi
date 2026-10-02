@@ -285,6 +285,7 @@ const useStyles = makeStyles((theme) => {
       gap: 16,
       minHeight: 38,
       padding: theme.spacing(0.5, 1.5, 0.5, 1),
+      borderBottom: `1px solid ${theme.palette.divider}`,
       color: theme.palette.text.secondary,
       fontSize: '0.75rem',
       fontWeight: 700,
@@ -304,9 +305,7 @@ const useStyles = makeStyles((theme) => {
       cursor: 'pointer',
       gap: 3,
       minWidth: 0,
-      padding: theme.spacing(0.25, 0.75),
-      borderRadius: 999,
-      backgroundColor: theme.palette.action.hover,
+      padding: theme.spacing(0.25, 0),
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
@@ -438,7 +437,7 @@ const useStyles = makeStyles((theme) => {
   }
 })
 
-const firstFacet = (song) => song.tags?.mood?.[0] || song.genre || ''
+const firstMood = (song) => song.tags?.mood?.[0] || ''
 
 export const LONG_PRESS_DELAY = 500
 const LONG_PRESS_MOVE_TOLERANCE = 8
@@ -599,11 +598,11 @@ const renderColumnCell = (song, colId, classes) => {
         </Typography>
       )
     case 'mood': {
-      const facet = firstFacet(song)
+      const mood = firstMood(song)
       return (
         <div className={classes.desktopOnly}>
-          {facet ? (
-            <Chip className={classes.facetChip} label={facet} size="small" />
+          {mood ? (
+            <Chip className={classes.facetChip} label={mood} size="small" />
           ) : null}
         </div>
       )
@@ -821,7 +820,7 @@ export const ModernTrackRows = ({
           className={classes.artwork}
           record={song}
           size={84}
-          square
+          fit="cover"
           title={song.title}
         />
         <div className={classes.titleCell}>

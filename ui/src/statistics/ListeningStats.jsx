@@ -111,7 +111,7 @@ const useStyles = makeStyles((theme) => ({
   metricValue: {
     display: 'block',
     overflow: 'hidden',
-    fontSize: 'clamp(1.2rem, 4vw, 1.7rem)',
+    fontSize: 'clamp(1.05rem, 3.5vw, 1.5rem)',
     lineHeight: 1.1,
     fontWeight: 800,
     letterSpacing: '-0.045em',
@@ -164,10 +164,10 @@ const useStyles = makeStyles((theme) => ({
   },
   trackCard: {
     display: 'flex',
-    flex: '0 0 142px',
+    flex: '0 0 120px',
     flexDirection: 'column',
     alignItems: 'stretch',
-    width: 142,
+    width: 120,
     minWidth: 0,
     padding: 0,
     color: theme.palette.text.primary,
@@ -183,8 +183,8 @@ const useStyles = makeStyles((theme) => ({
       borderRadius: 12,
     },
     [theme.breakpoints.down('xs')]: {
-      flexBasis: 130,
-      width: 130,
+      flexBasis: 108,
+      width: 108,
     },
   },
   trackArtwork: {
@@ -399,7 +399,7 @@ export const ListeningStats = ({
                   album: track.album || 'Unknown album',
                 }}
                 size={config.uiCoverArtSize || 300}
-                square
+                fit="cover"
                 className={classes.artworkImage}
                 title={track.title}
               />

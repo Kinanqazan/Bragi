@@ -307,6 +307,17 @@ var _ = Describe("Maintenance", func() {
 })
 
 var _ = Describe("Media file metadata changes", func() {
+	It("updates plural artist tags without dropping other displayed credits", func() {
+		artist := "New Artist • Guest Artist"
+		albumArtist := "New Album Artist • Guest Album Artist"
+
+		tags, err := (MediaFileMetadataChanges{Artist: &artist, AlbumArtist: &albumArtist}).values()
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(tags).To(HaveKeyWithValue("ARTISTS", []string{"New Artist", "Guest Artist"}))
+		Expect(tags).To(HaveKeyWithValue("ALBUMARTISTS", []string{"New Album Artist", "Guest Album Artist"}))
+	})
+
 	It("trims multi-value genres and moods and preserves an empty list as a clear operation", func() {
 		genres := []string{" Rock ", "Alternative"}
 		moods := []string{"Dreamy", "  "}

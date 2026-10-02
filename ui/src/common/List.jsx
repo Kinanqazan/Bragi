@@ -23,6 +23,14 @@ const useStyles = makeStyles((theme) => ({
       maxHeight: '100% !important',
       overflow: 'hidden !important',
     },
+    '&.scrollablePhoneList': {
+      '@media (max-width: 959.95px)': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        overflow: 'visible !important',
+      },
+    },
   },
   content: {
     [theme.breakpoints.down('sm')]: {
@@ -42,6 +50,14 @@ const useStyles = makeStyles((theme) => ({
       maxHeight: '100% !important',
       overflow: 'hidden !important',
     },
+    '&.scrollablePhoneList': {
+      '@media (max-width: 959.95px)': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        overflow: 'visible !important',
+      },
+    },
   },
   main: {
     [theme.breakpoints.down('sm')]: {
@@ -58,6 +74,14 @@ const useStyles = makeStyles((theme) => ({
       maxHeight: '100% !important',
       overflow: 'hidden !important',
     },
+    '&.scrollablePhoneList': {
+      '@media (max-width: 959.95px)': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        overflow: 'visible !important',
+      },
+    },
   },
   actions: {
     [theme.breakpoints.down('sm')]: {
@@ -67,9 +91,16 @@ const useStyles = makeStyles((theme) => ({
 }))
 
 export const List = (props) => {
-  const { resource, classes: classesProp, filters, ...rest } = props
+  const {
+    resource,
+    classes: classesProp,
+    filters,
+    scrollablePhone = false,
+    ...rest
+  } = props
   const classes = useStyles()
   const isMobile = useMediaQuery('(max-width:959.95px)')
+  const phoneScrollClass = scrollablePhone ? ' scrollablePhoneList' : ''
 
   return (
     <RAList
@@ -84,9 +115,9 @@ export const List = (props) => {
       pagination={<Pagination />}
       filters={isMobile ? undefined : filters}
       classes={{
-        root: classes.root,
-        content: classes.content,
-        main: classes.main,
+        root: `${classes.root}${phoneScrollClass}`,
+        content: `${classes.content}${phoneScrollClass}`,
+        main: `${classes.main}${phoneScrollClass}`,
         actions: classes.actions,
         ...classesProp,
       }}

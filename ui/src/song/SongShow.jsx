@@ -199,7 +199,9 @@ const useStyles = makeStyles((theme) => ({
     outline: 0,
     padding: 0,
     background: 'transparent',
-    color: 'inherit',
+    color: theme.palette.text.primary,
+    WebkitTextFillColor: theme.palette.text.primary,
+    opacity: 1,
     font: 'inherit',
     '&:focus': {
       borderBottomColor: theme.palette.primary.main,
@@ -211,7 +213,6 @@ const useStyles = makeStyles((theme) => ({
   },
   artistInput: {
     width: '100%',
-    color: theme.palette.secondary.main,
   },
   editableChip: {
     display: 'inline-flex',
@@ -245,6 +246,8 @@ const useStyles = makeStyles((theme) => ({
   },
   lyricsInput: {
     width: '100%',
+    maxWidth: 480,
+    height: 440,
     boxSizing: 'border-box',
     marginTop: theme.spacing(1),
     padding: theme.spacing(1.5),
@@ -293,13 +296,14 @@ const metadataDraftFromRecord = (record) => ({
 const sameValues = (left, right) =>
   left.length === right.length && left.every((value, index) => value === right[index])
 
-const EditableTagList = ({ kind, values, classes, onChange, onAdd, onRemove }) => (
+const EditableTagList = ({ kind, values, classes, onChange, onAdd, onRemove, suggestionsId }) => (
   <div className={classes.chipList}>
     {values.map((value, index) => (
       <div className={classes.editableChip} key={`${kind}-${index}`}>
         <input
           aria-label={`${kind} ${index + 1}`}
           className={classes.inlineInput}
+          list={suggestionsId}
           maxLength={4096}
           style={{ width: `${Math.max(4, value.length + 1)}ch` }}
           value={value}
@@ -339,6 +343,7 @@ const SongShowLayout = (props) => {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [metadataSuggestions, setMetadataSuggestions] = useState({ artists: [], genres: [], moods: [] })
   const [draft, setDraft] = useState({
     title: '',
     artist: '',
@@ -434,6 +439,35 @@ const SongShowLayout = (props) => {
   const startEditing = () => {
     setDraft(metadataDraftFromRecord(displayRecord))
     setEditing(true)
+    Promise.all([
+      dataProvider.getList('artist', {
+        pagination: { page: 1, perPage: 1000 },
+        sort: { field: 'name', order: 'ASC' },
+        filter: { missing: false },
+      }),
+      dataProvider.getList('genre', {
+        pagination: { page: 1, perPage: 1000 },
+        sort: { field: 'name', order: 'ASC' },
+        filter: {},
+      }),
+      dataProvider.getList('tag', {
+        pagination: { page: 1, perPage: 1000 },
+        sort: { field: 'name', order: 'ASC' },
+        filter: { missing: false },
+      }),
+    ]).then(([artists, genres, tags]) => {
+      const names = (items) => [...new Set((items?.data || []).map((item) => item.name).filter(Boolean))]
+      setMetadataSuggestions({
+        artists: names(artists),
+        genres: names(genres),
+        moods: [...new Set((tags?.data || [])
+          .filter((tag) => tag.tagName === 'mood')
+          .map((tag) => tag.tagValue)
+          .filter(Boolean))],
+      })
+    }).catch(() => {
+      // Suggestions are optional; metadata editing remains available if a facet list fails.
+    })
   }
 
   const updateTagDraft = (field, index, value) => {
@@ -735,11 +769,25 @@ const SongShowLayout = (props) => {
               )}
             </div>
           </div>
+          {editing && (
+            <>
+              <datalist id="artist-suggestions">
+                {metadataSuggestions.artists.map((name) => <option key={name} value={name} />)}
+              </datalist>
+              <datalist id="genre-suggestions">
+                {metadataSuggestions.genres.map((name) => <option key={name} value={name} />)}
+              </datalist>
+              <datalist id="mood-suggestions">
+                {metadataSuggestions.moods.map((name) => <option key={name} value={name} />)}
+              </datalist>
+            </>
+          )}
           <Typography className={classes.artist} color="textSecondary" component="div">
             {editing ? (
               <input
                 aria-label="Artist"
                 className={`${classes.inlineInput} ${classes.artistInput}`}
+                list="artist-suggestions"
                 maxLength={4096}
                 placeholder="Unknown artist"
                 value={draft.artist}
@@ -760,6 +808,7 @@ const SongShowLayout = (props) => {
                 <input
                   aria-label="Album artist"
                   className={classes.inlineInput}
+                  list="artist-suggestions"
                   maxLength={4096}
                   placeholder="Not set"
                   style={{ width: `${Math.max(7, (draft.albumArtist || '').length + 1)}ch` }}
@@ -803,6 +852,7 @@ const SongShowLayout = (props) => {
                 onChange={(index, value) => updateTagDraft('genres', index, value)}
                 onAdd={() => addTagDraft('genres')}
                 onRemove={(index) => removeTagDraft('genres', index)}
+                suggestionsId="genre-suggestions"
               />
             </div>
           )}
@@ -828,6 +878,7 @@ const SongShowLayout = (props) => {
                 onChange={(index, value) => updateTagDraft('moods', index, value)}
                 onAdd={() => addTagDraft('moods')}
                 onRemove={(index) => removeTagDraft('moods', index)}
+                suggestionsId="mood-suggestions"
               />
             </div>
           )}

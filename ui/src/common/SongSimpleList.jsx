@@ -123,7 +123,7 @@ export const SongSimpleList = ({
                   <Artwork
                     record={data[id]}
                     size={config.uiCoverArtSize || 100}
-                    square={true}
+                    fit="cover"
                     className={classes.artwork}
                     title={data[id].title}
                   />

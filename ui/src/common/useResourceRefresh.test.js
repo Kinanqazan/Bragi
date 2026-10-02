@@ -274,5 +274,24 @@ describe('useResourceRefresh', () => {
       expect(getMany).toHaveBeenCalledTimes(1)
       expect(getMany).toHaveBeenCalledWith('song', { ids: ['sg-1', 'sg-2'] })
     })
+
+    it('does not refetch an artist ID when only song resources are watched during a rename', () => {
+      mockStore({
+        refresh: {
+          lastReceived: lastTime,
+          resources: { artist: ['old-artist'], song: ['sg-1'] },
+        },
+        loaded: {
+          artist: { data: { 'old-artist': { id: 'old-artist' } } },
+          song: { data: { 'sg-1': { id: 'sg-1' } } },
+        },
+      })
+
+      useResourceRefresh('song')
+
+      expect(refresh).not.toHaveBeenCalled()
+      expect(getMany).toHaveBeenCalledTimes(1)
+      expect(getMany).toHaveBeenCalledWith('song', { ids: ['sg-1'] })
+    })
   })
 })

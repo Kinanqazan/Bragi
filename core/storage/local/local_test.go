@@ -520,6 +520,7 @@ var _ = Describe("metadata writes", func() {
 		Expect(os.WriteFile(filepath.Join(dir, "song.mp3"), original, 0o600)).To(Succeed())
 		Expect(taglib.WriteTags(filepath.Join(dir, "song.mp3"), map[string][]string{
 			"TITLE": {"Old title"}, "ARTIST": {"Old artist"}, "ALBUM": {"Keep album"}, "COMMENT": {"Keep comment"},
+			"ARTISTS": {"Old artist"}, "ALBUMARTISTS": {"Old artist"},
 			"GENRE": {"Old genre"}, "MOOD": {"Old mood"},
 		}, taglib.Clear)).To(Succeed())
 
@@ -533,6 +534,7 @@ var _ = Describe("metadata writes", func() {
 
 		Expect(writer.WriteTags("song.mp3", map[string][]string{
 			"TITLE": {"New title"}, "ARTIST": {"New artist"},
+			"ARTISTS": {"New artist"}, "ALBUMARTISTS": {},
 			"GENRE": {"Rock", "Alternative"}, "MOOD": {"Dreamy", "Calm"},
 		})).To(Succeed())
 
@@ -542,6 +544,8 @@ var _ = Describe("metadata writes", func() {
 		tags := written.AllTags().Tags
 		Expect(tags["TITLE"]).To(Equal([]string{"New title"}))
 		Expect(tags["ARTIST"]).To(Equal([]string{"New artist"}))
+		Expect(tags["ARTISTS"]).To(Equal([]string{"New artist"}))
+		Expect(tags["ALBUMARTISTS"]).To(BeEmpty())
 		Expect(tags["ALBUM"]).To(Equal([]string{"Keep album"}))
 		Expect(tags["COMMENT"]).To(Equal([]string{"Keep comment"}))
 		Expect(tags["GENRE"]).To(Equal([]string{"Rock", "Alternative"}))

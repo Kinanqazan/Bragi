@@ -303,9 +303,12 @@ $viteProcess = $null
 $backendProcess = $null
 
 try {
-    # Use npm.cmd so PowerShell execution-policy settings cannot block npm.ps1.
-    $npmExecutable = (Get-Command npm.cmd -ErrorAction Stop).Source
+    $nodeExecutable = (Get-Command node.exe -ErrorAction Stop).Source
     $goExecutable = (Get-Command go.exe -ErrorAction Stop).Source
+    $viteCli = Join-Path $projectRoot 'ui\node_modules\vite\bin\vite.js'
+    if (-not (Test-Path $viteCli)) {
+        throw "Vite CLI was not found at $viteCli. Install the UI dependencies before starting the dev server."
+    }
 
     Write-Host "`n[1/2] Starting Go backend on port $BackendPort..." -ForegroundColor Yellow
     $backendProcess = Start-Process -FilePath $goExecutable `
@@ -317,8 +320,8 @@ try {
         -PassThru
 
     Write-Host "[2/2] Starting Vite UI on port $Port..." -ForegroundColor Yellow
-    $viteProcess = Start-Process -FilePath $npmExecutable `
-        -ArgumentList @('run', 'start', '--', '--configLoader', 'runner', '--host', '0.0.0.0', '--port', "$Port") `
+    $viteProcess = Start-Process -FilePath $nodeExecutable `
+        -ArgumentList @($viteCli, '--configLoader', 'runner', '--host', '0.0.0.0', '--port', "$Port") `
         -WorkingDirectory (Join-Path $projectRoot 'ui') `
         -WindowStyle Hidden `
         -RedirectStandardOutput $viteStdoutLog `

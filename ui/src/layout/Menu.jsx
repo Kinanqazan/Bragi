@@ -5,10 +5,6 @@ import {
   Divider,
   Typography,
   makeStyles,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Avatar,
   IconButton,
   Tooltip,
@@ -21,7 +17,6 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
-  TextField,
 } from '@material-ui/core'
 import { alpha } from '@material-ui/core/styles'
 import clsx from 'clsx'
@@ -55,17 +50,12 @@ import { BiError, BiMessageError } from 'react-icons/bi'
 import { humanize, pluralize } from 'inflection'
 import songLists from '../song/songLists'
 import LibrarySelector from '../common/LibrarySelector'
-import { AboutDialog } from '../dialogs'
 import subsonic from '../subsonic'
 import authProvider from '../authProvider'
 import config from '../config'
 import { startEventStream } from '../eventStream'
 import { useInitialScanStatus } from './useInitialScanStatus'
-import { useScanElapsedTime } from './useScanElapsedTime'
-import { useInterval } from '../common'
-import { formatDuration, formatShortDuration } from '../utils'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
-import { setSidebarExternalLink } from '../actions'
 
 const EMPTY_SIDEBAR_LINK = { label: '', url: '' }
 
@@ -163,7 +153,7 @@ const useStyles = makeStyles((theme) => {
     brandLogo: {
       width: 28,
       height: 28,
-      color: theme.palette.primary.main,
+      color: theme.brandColor || theme.palette.primary.main,
       filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
       [theme.breakpoints.down('sm')]: {
         width: 30,
@@ -173,7 +163,7 @@ const useStyles = makeStyles((theme) => {
     brandLogoSmall: {
       width: 28,
       height: 28,
-      color: theme.palette.primary.main,
+      color: theme.brandColor || theme.palette.primary.main,
       transition: 'transform 0.2s ease',
       '&:hover': {
         transform: 'scale(1.08)',
@@ -467,49 +457,9 @@ const useStyles = makeStyles((theme) => {
         : 'rgba(0, 0, 0, 0.03)',
       border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
     },
-    activityHeader: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: theme.spacing(1),
-    },
-    activityTitle: {
-      fontSize: '0.72rem',
-      fontWeight: 700,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      color: theme.palette.text.secondary,
-      opacity: 0.8,
-    },
-    activityStats: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4,
-    },
-    activityStatRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontSize: '0.78rem',
-    },
-    activityStatLabel: {
-      color: theme.palette.text.secondary,
-    },
-    activityStatValue: {
-      fontWeight: 500,
-      color: theme.palette.text.primary,
-    },
-    activityErrorBox: {
-      marginTop: 6,
-      padding: '4px 8px',
-      borderRadius: 6,
-      backgroundColor: alpha(theme.palette.error.main, 0.12),
-      border: `1px solid ${alpha(theme.palette.error.main, 0.25)}`,
-    },
     activityActions: {
       display: 'flex',
       gap: theme.spacing(1),
-      marginTop: theme.spacing(1.25),
     },
     actionButton: {
       flex: 1,
@@ -575,20 +525,6 @@ const settingsResources = (resource) =>
   resource.options &&
   resource.options.subMenu === 'settings'
 
-const getUptime = (start) =>
-  start && start.startTime
-    ? formatDuration((Date.now() - start.startTime) / 1000)
-    : '-'
-
-const Uptime = () => {
-  const start = useSelector((state) => state.activity?.serverStart)
-  const [uptime, setUptime] = useState(() => getUptime(start))
-  useInterval(() => {
-    setUptime(getUptime(start))
-  }, 1000)
-  return <span>{uptime}</span>
-}
-
 const Menu = ({ dense = false }) => {
   const dispatch = useDispatch()
   const history = useHistory()
@@ -601,11 +537,6 @@ const Menu = ({ dense = false }) => {
   const serverStart = useSelector((state) => state.activity?.serverStart || {})
   const { loaded, identity } = useGetIdentity()
   const { permissions } = usePermissions()
-  const [aboutOpen, setAboutOpen] = useState(false)
-  const [sidebarLinkDialogOpen, setSidebarLinkDialogOpen] = useState(false)
-  const [sidebarLinkLabel, setSidebarLinkLabel] = useState('')
-  const [sidebarLinkUrl, setSidebarLinkUrl] = useState('')
-  const [sidebarLinkErrors, setSidebarLinkErrors] = useState({})
   const [anchorEl, setAnchorEl] = useState(null)
   const menuOpen = Boolean(anchorEl)
   const classes = useStyles({ addPadding: queue.length > 0 })
@@ -622,11 +553,6 @@ const Menu = ({ dense = false }) => {
   )
 
   useInitialScanStatus()
-  const elapsed = useScanElapsedTime(
-    scanStatus.scanning,
-    scanStatus.elapsedTime,
-  )
-
   useEffect(() => {
     if (config.devActivityPanel) {
       authProvider
@@ -643,8 +569,7 @@ const Menu = ({ dense = false }) => {
     }
   }, [serverStart, notify])
 
-  const up = Boolean(serverStart?.startTime)
-  const serverDown = !up
+  const serverDown = !serverStart?.startTime
   const hasWarning = Boolean(scanStatus?.error)
 
   const songResource = resourcesByName.get('song')
@@ -678,11 +603,6 @@ const Menu = ({ dense = false }) => {
     }
   }
 
-  const handleOpenAbout = () => {
-    handleCloseMenu()
-    setAboutOpen(true)
-  }
-
   const handleLogout = () => {
     handleCloseMenu()
     authProvider.logout().then((redirectTo) => {
@@ -697,43 +617,6 @@ const Menu = ({ dense = false }) => {
     window.location.reload()
   }
 
-  const handleOpenSidebarLinkSettings = () => {
-    handleCloseMenu()
-    setSidebarLinkLabel(savedSidebarLink.label || '')
-    setSidebarLinkUrl(savedSidebarLink.url || '')
-    setSidebarLinkErrors({})
-    setSidebarLinkDialogOpen(true)
-  }
-
-  const handleSaveSidebarLink = () => {
-    const label = sidebarLinkLabel.trim()
-    const urlValue = sidebarLinkUrl.trim()
-    if (!label && !urlValue) {
-      dispatch(setSidebarExternalLink({ label: '', url: '' }))
-      setSidebarLinkDialogOpen(false)
-      return
-    }
-
-    const url = normalizeExternalUrl(urlValue)
-    const errors = {
-      label: label
-        ? ''
-        : translate('menu.sidebarShortcut.nameRequired', {
-            _: 'Enter a button name.',
-          }),
-      url: url
-        ? ''
-        : translate('menu.sidebarShortcut.urlRequired', {
-            _: 'Enter a valid http:// or https:// URL.',
-          }),
-    }
-    setSidebarLinkErrors(errors)
-    if (errors.label || errors.url) return
-
-    dispatch(setSidebarExternalLink({ label, url }))
-    setSidebarLinkDialogOpen(false)
-  }
-
   const handleOpenSidebarLink = () => {
     if (!savedSidebarLinkUrl) return
     if (typeof window !== 'undefined' && window.BragiNative?.openExternalUrl) {
@@ -745,20 +628,6 @@ const Menu = ({ dense = false }) => {
     }
     if (isMobile) dispatch(toggleSidebar())
   }
-
-  const lastScanType = (() => {
-    switch (scanStatus.scanType) {
-      case 'full':
-        return translate('activity.fullScan', { _: 'Full scan' })
-      case 'quick':
-        return translate('activity.quickScan', { _: 'Quick scan' })
-      case 'full-selective':
-      case 'quick-selective':
-        return translate('activity.selectiveScan', { _: 'Selective scan' })
-      default:
-        return ''
-    }
-  })()
 
   const renderResourceMenuItemLink = (
     resource,
@@ -1096,74 +965,9 @@ const Menu = ({ dense = false }) => {
           </div>
         </div>
 
-        {/* System & Scan Status Widget */}
+        {/* Scan Actions */}
         {(config.devActivityPanel || permissions === 'admin') && (
           <div className={classes.popoverActivitySection}>
-            <div className={classes.activityHeader}>
-              <Typography className={classes.activityTitle}>
-                {translate('activity.title', { _: 'Server & Sync Status' })}
-              </Typography>
-              {scanStatus.scanning && (
-                <Box display="flex" alignItems="center" gap="4px">
-                  <CircularProgress size={12} color="primary" />
-                  <Typography variant="caption" color="primary">
-                    Scanning...
-                  </Typography>
-                </Box>
-              )}
-            </div>
-
-            <div className={classes.activityStats}>
-              <div className={classes.activityStatRow}>
-                <span className={classes.activityStatLabel}>
-                  {translate('activity.serverUptime', { _: 'Server Uptime' })}:
-                </span>
-                <span className={clsx(classes.activityStatValue, serverDown && classes.errorText)}>
-                  {up ? <Uptime /> : translate('activity.serverDown', { _: 'Server Down' })}
-                </span>
-              </div>
-
-              <div className={classes.activityStatRow}>
-                <span className={classes.activityStatLabel}>
-                  {translate('activity.totalScanned', { _: 'Total Scanned' })}:
-                </span>
-                <span className={classes.activityStatValue}>
-                  {scanStatus.folderCount || '-'}
-                </span>
-              </div>
-
-              {lastScanType ? (
-                <div className={classes.activityStatRow}>
-                  <span className={classes.activityStatLabel}>
-                    {translate('activity.scanType', { _: 'Scan Type' })}:
-                  </span>
-                  <span className={classes.activityStatValue}>
-                    {lastScanType}
-                  </span>
-                </div>
-              ) : null}
-
-              {(scanStatus.scanning || elapsed > 0) && (
-                <div className={classes.activityStatRow}>
-                  <span className={classes.activityStatLabel}>
-                    {translate('activity.elapsedTime', { _: 'Elapsed Time' })}:
-                  </span>
-                  <span className={classes.activityStatValue}>
-                    {formatShortDuration(elapsed)}
-                  </span>
-                </div>
-              )}
-
-              {scanStatus.error && (
-                <div className={classes.activityErrorBox}>
-                  <Typography variant="caption" className={classes.errorText}>
-                    {translate('activity.status', { _: 'Status' })}: {scanStatus.error}
-                  </Typography>
-                </div>
-              )}
-            </div>
-
-            {/* Scan Action Buttons */}
             <div className={classes.activityActions}>
               <Button
                 size="small"
@@ -1204,21 +1008,6 @@ const Menu = ({ dense = false }) => {
             </ListItemIcon>
             <ListItemText
               primary={translate('menu.personal.name', { _: 'Personal Settings' })}
-              classes={{ primary: classes.popoverMenuText }}
-            />
-          </MenuItem>
-
-          <MenuItem
-            className={classes.popoverMenuItem}
-            onClick={handleOpenSidebarLinkSettings}
-          >
-            <ListItemIcon className={classes.popoverMenuIcon}>
-              <LaunchIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary={translate('menu.configureSidebarLink', {
-                _: 'Configure Sidebar Link',
-              })}
               classes={{ primary: classes.popoverMenuText }}
             />
           </MenuItem>
@@ -1282,7 +1071,7 @@ const Menu = ({ dense = false }) => {
 
           <MenuItem
             className={classes.popoverMenuItem}
-            onClick={handleOpenAbout}
+            onClick={() => handleNavigate('/about')}
           >
             <ListItemIcon className={classes.popoverMenuIcon}>
               <InfoOutlinedIcon fontSize="small" />
@@ -1314,75 +1103,6 @@ const Menu = ({ dense = false }) => {
         </MenuList>
       </Popover>
 
-      <AboutDialog
-        open={aboutOpen}
-        onClose={() => setAboutOpen(false)}
-      />
-
-      <Dialog
-        open={sidebarLinkDialogOpen}
-        onClose={() => setSidebarLinkDialogOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>
-          {translate('menu.configureSidebarLink', {
-            _: 'Configure Sidebar Link',
-          })}
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label={translate('menu.sidebarShortcut.buttonName', {
-              _: 'Button name',
-            })}
-            value={sidebarLinkLabel}
-            onChange={(event) => {
-              setSidebarLinkLabel(event.target.value)
-              setSidebarLinkErrors((errors) => ({ ...errors, label: '' }))
-            }}
-            error={Boolean(sidebarLinkErrors.label)}
-            helperText={sidebarLinkErrors.label}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label={translate('menu.sidebarShortcut.url', { _: 'URL' })}
-            placeholder="http://192.168.1.25:8081"
-            value={sidebarLinkUrl}
-            onChange={(event) => {
-              setSidebarLinkUrl(event.target.value)
-              setSidebarLinkErrors((errors) => ({ ...errors, url: '' }))
-            }}
-            error={Boolean(sidebarLinkErrors.url)}
-            helperText={
-              sidebarLinkErrors.url ||
-              translate('menu.sidebarShortcut.urlHelp', {
-                _: 'Use a complete http:// or https:// URL.',
-              })
-            }
-            fullWidth
-          />
-          <Typography variant="caption" color="textSecondary">
-            {translate('menu.sidebarShortcut.clearHelp', {
-              _: 'Leave both fields empty to remove the shortcut.',
-            })}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSidebarLinkDialogOpen(false)}>
-            {translate('ra.action.cancel', { _: 'Cancel' })}
-          </Button>
-          <Button
-            onClick={handleSaveSidebarLink}
-            color="primary"
-            variant="contained"
-          >
-            {translate('ra.action.save', { _: 'Save' })}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   )
 }

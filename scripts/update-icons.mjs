@@ -172,10 +172,13 @@ try {
   ]);
   fs.copyFileSync(faviconIcoTemp, path.join(rootDir, 'ui', 'public', 'favicon.ico'));
 
+  // These standalone logo files are used by external dashboards and service
+  // catalogs, where the green mark needs to sit directly on the page. Keep
+  // the green-background app icon in the Android/PWA assets above.
   for (const filename of ['bragi.webp', 'bragi_new.webp']) {
     runFfmpeg([
       '-i',
-      masterPng,
+      faviconMasterPng,
       '-frames:v',
       '1',
       '-c:v',

@@ -55,10 +55,6 @@ vi.mock('./UserMenu', () => ({
 vi.mock('../dialogs/Dialogs', () => ({
   Dialogs: () => <div />,
 }))
-vi.mock('../dialogs', () => ({
-  AboutDialog: () => <div />,
-}))
-
 describe('<AppBar />', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -138,7 +134,7 @@ describe('<AppBar />', () => {
     })
   })
 
-  it('hides mobile search pill on user and settings pages like personal, user, and player', () => {
+  it('hides mobile search pill on personal and user pages', () => {
     useMediaQuery.mockReturnValue(true) // isMobile = true
     const { unmount } = render(
       <Provider store={store}>
@@ -160,14 +156,6 @@ describe('<AppBar />', () => {
     expect(screen.queryByPlaceholderText('Search your music')).toBeNull()
     unmountUser()
 
-    render(
-      <Provider store={store}>
-        <MemoryRouter initialEntries={['/player']}>
-          <AppBar />
-        </MemoryRouter>
-      </Provider>,
-    )
-    expect(screen.queryByPlaceholderText('Search your music')).toBeNull()
   })
 
   it('restores the fixed header when navigating after it was hidden by scrolling', () => {

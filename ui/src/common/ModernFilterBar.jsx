@@ -54,6 +54,10 @@ export const modernFilterStyles = (theme) => {
   const primaryColor = theme.palette.primary?.main || '#2196f3'
   const primaryContrast = theme.palette.primary?.contrastText || '#ffffff'
   const shadowColor = theme.palette.common?.black || '#000000'
+  const toolbarActionBackground = alpha(primaryColor, isDark ? 0.16 : 0.1)
+  const toolbarActionBorder = alpha(primaryColor, isDark ? 0.38 : 0.3)
+  const toolbarActionHoverBackground = alpha(primaryColor, isDark ? 0.24 : 0.17)
+  const toolbarActionHoverBorder = alpha(primaryColor, isDark ? 0.58 : 0.48)
 
   return {
     toolbarRoot: {
@@ -261,6 +265,13 @@ export const modernFilterStyles = (theme) => {
         borderRadius: 8,
       },
     },
+    facetGroupDivider: {
+      width: 2,
+      height: 20,
+      flexShrink: 0,
+      margin: '0 2px',
+      backgroundColor: alpha(theme.palette.text.primary, 0.18),
+    },
     facetChip: {
       flex: '0 0 auto',
       height: 30,
@@ -304,6 +315,20 @@ export const modernFilterStyles = (theme) => {
       maxHeight: 36,
       gap: theme.spacing(1),
       boxSizing: 'border-box',
+    },
+    songToolbarActions: {
+      '& .MuiIconButton-root, & .MuiButton-root': {
+        backgroundColor: `${toolbarActionBackground} !important`,
+        border: `1px solid ${toolbarActionBorder} !important`,
+        color: `${primaryColor} !important`,
+      },
+      '& .MuiIconButton-root svg, & .MuiButton-root svg': {
+        color: `${primaryColor} !important`,
+      },
+      '& .MuiIconButton-root:hover, & .MuiButton-root:hover': {
+        backgroundColor: `${toolbarActionHoverBackground} !important`,
+        borderColor: `${toolbarActionHoverBorder} !important`,
+      },
     },
     searchInput: {
       width: '130px !important',
@@ -540,6 +565,21 @@ export const modernFilterStyles = (theme) => {
         },
         '& svg': {
           fontSize: '1.1rem !important',
+        },
+      },
+      '& .shuffleAllButton': {
+        width: '36px !important',
+        minWidth: '36px !important',
+        height: '36px !important',
+        minHeight: '36px !important',
+        maxHeight: '36px !important',
+        borderRadius: '18px !important',
+        boxSizing: 'border-box !important',
+        margin: '0 !important',
+        padding: '0 !important',
+        '& svg': {
+          display: 'block',
+          fontSize: '1.2rem !important',
         },
       },
     },
@@ -888,30 +928,43 @@ export const ModernFilterBar = ({
               role="region"
               aria-label="Genres and moods"
             >
-              {facetTags.map((tag) => {
+              {facetTags.map((tag, index) => {
                 const active = isFacetTagActive(tag)
                 return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    className={clsx(
-                      classes.facetChip,
-                      active && classes.facetChipActive,
-                    )}
-                    onClick={() => handleFacetTagClick(tag)}
-                    aria-label={tag.label}
-                    aria-pressed={active}
-                    title={tag.label}
-                  >
-                    {tag.label}
-                  </button>
+                  <React.Fragment key={tag.id}>
+                    {tag.type === 'genre' &&
+                      facetTags[index - 1]?.type === 'mood' && (
+                        <span
+                          className={classes.facetGroupDivider}
+                          aria-hidden="true"
+                        />
+                      )}
+                    <button
+                      type="button"
+                      className={clsx(
+                        classes.facetChip,
+                        active && classes.facetChipActive,
+                      )}
+                      onClick={() => handleFacetTagClick(tag)}
+                      aria-label={tag.label}
+                      aria-pressed={active}
+                      title={tag.label}
+                    >
+                      {tag.label}
+                    </button>
+                  </React.Fragment>
                 )
               })}
             </div>
           )}
         </div>
 
-        <div className={classes.toolbarActions}>
+        <div
+          className={clsx(
+            classes.toolbarActions,
+            resource === 'song' && classes.songToolbarActions,
+          )}
+        >
           {config.enableFavourites && (
             <IconButton
               className={clsx(

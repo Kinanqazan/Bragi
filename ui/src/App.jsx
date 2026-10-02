@@ -9,7 +9,6 @@ import {
 import dataProvider from './dataProvider'
 import authProvider from './authProvider'
 import { Layout, Login, Logout } from './layout'
-import player from './player'
 import song from './song'
 import album from './album'
 import artist from './artist'
@@ -109,11 +108,6 @@ const Admin = (props) => {
           name="playlist"
           {...playlist}
           options={{ subMenu: 'playlist' }}
-        />,
-        <Resource
-          name="player"
-          {...player}
-          options={{ subMenu: 'settings' }}
         />,
         permissions === 'admin' ? (
           <Resource

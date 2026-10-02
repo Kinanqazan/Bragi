@@ -52,10 +52,6 @@ vi.mock('../common/LibrarySelector', () => ({
   default: () => <div data-testid="library-selector" />,
 }))
 
-vi.mock('../dialogs', () => ({
-  AboutDialog: ({ open }) => (open ? <div data-testid="about-dialog" /> : null),
-}))
-
 vi.mock('../subsonic', () => ({
   default: {
     startScan: vi.fn(),

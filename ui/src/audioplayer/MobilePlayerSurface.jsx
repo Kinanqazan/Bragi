@@ -301,6 +301,11 @@ const MobilePlayerSurface = ({
     settleTimer.current = window.setTimeout(finishSettle, duration + 60)
   }
 
+  const collapseToMiniPlayer = () => {
+    setThemeColorActive(false)
+    settleTo(0, 0, true)
+  }
+
   const cancelSettle = () => {
     clearSettleTimer()
     settle.current = null
@@ -513,7 +518,11 @@ const MobilePlayerSurface = ({
         />
         <div className={classes.topSection}>
           <div className={classes.headerInfo}>
-            <TrackIdentity track={track} mobile />
+            <TrackIdentity
+              track={track}
+              mobile
+              onTitleClick={collapseToMiniPlayer}
+            />
           </div>
           <div className={classes.artworkSlot}>
             <div className={classes.artwork}>

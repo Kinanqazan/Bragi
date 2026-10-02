@@ -53,7 +53,7 @@ const useStyles = makeStyles(
     logo: {
       width: 112,
       height: 112,
-      color: theme.palette.primary.main || '#2196f3',
+      color: theme.brandColor || theme.palette.primary.main || '#2196f3',
       filter: 'drop-shadow(0 6px 20px rgba(33, 150, 243, 0.35))',
       [theme.breakpoints.down('xs')]: {
         width: 96,

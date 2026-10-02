@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo } from 'react'
 import { useSelector } from 'react-redux'
+import { useLocation } from 'react-router-dom'
 import { Layout as RALayout } from 'react-admin'
 import { makeStyles } from '@material-ui/core/styles'
 import {
@@ -26,6 +27,58 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden',
     '@media (max-width: 959.95px)': {
       backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+      ...(props.scrollablePhoneSurface
+        ? {
+            '&& #main-content': {
+              overflowX: 'hidden !important',
+              overflowY: props.scrollablePhoneLibrary
+                ? 'auto !important'
+                : 'hidden !important',
+              ...(props.scrollablePhoneLibrary
+                ? {
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehaviorY: 'contain',
+                    paddingBottom:
+                      'calc(var(--nd-mobile-bottom-offset, 56px) + 16px) !important',
+                  }
+                : {}),
+            },
+            ...(props.scrollablePhoneCard
+              ? {
+                  '&& #main-content > .MuiCard-root': {
+                    flex: '1 1 auto !important',
+                    height: '100% !important',
+                    maxHeight: '100% !important',
+                    minHeight: '0 !important',
+                    overflowX: 'hidden !important',
+                    overflowY: 'auto !important',
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehaviorY: 'contain',
+                  },
+                }
+              : {}),
+            ...(props.scrollablePhoneLibrary
+              ? {
+                  '&& #main-content > div': {
+                    flex: '0 0 auto !important',
+                    height: 'auto !important',
+                    maxHeight: 'none !important',
+                    minHeight: 'min-content !important',
+                    overflow: 'visible !important',
+                  },
+                }
+              : {}),
+          }
+        : {}),
+      ...(props.flatMobileSurface
+        ? {
+            '& #main-content .MuiCard-root': {
+              backgroundColor: 'transparent !important',
+              backgroundImage: 'none !important',
+              boxShadow: 'none !important',
+            },
+          }
+        : {}),
     },
     paddingBottom: props.addPadding
       ? 'calc(156px + env(safe-area-inset-bottom, 0px))'
@@ -301,11 +354,28 @@ const useStyles = makeStyles((theme) => ({
 }))
 
 const Layout = (props) => {
+  const location = useLocation()
   const themeConfig = useCurrentTheme()
   const muiTheme = useMemo(() => createTheme(themeConfig), [themeConfig])
   const queue = useSelector((state) => state.player?.queue || [])
   const hasQueue = queue.length > 0
-  const classes = useStyles({ addPadding: hasQueue })
+  const flatMobileSurface = ['/personal', '/library', '/about'].some(
+    (path) => location.pathname.startsWith(path),
+  )
+  const scrollablePhoneSurface = ['/personal', '/library', '/about'].some(
+    (path) => location.pathname.startsWith(path),
+  )
+  const scrollablePhoneCard = ['/personal', '/about'].some((path) =>
+    location.pathname.startsWith(path),
+  )
+  const scrollablePhoneLibrary = location.pathname.startsWith('/library')
+  const classes = useStyles({
+    addPadding: hasQueue,
+    flatMobileSurface,
+    scrollablePhoneSurface,
+    scrollablePhoneCard,
+    scrollablePhoneLibrary,
+  })
   useSearchRefocus()
 
   useEffect(() => {

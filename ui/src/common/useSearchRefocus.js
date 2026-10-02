@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 
 // Search field names used by SearchInput across different list views:
-// - 'name': AlbumList, ArtistList, LibraryList, PlayerList, RadioList, UserList
+// - 'name': AlbumList, ArtistList, LibraryList, RadioList, UserList
 // - 'title': SongList
 // - 'q': PlaylistList
 // If a new list view uses a different source field, add it here.

@@ -163,7 +163,7 @@ const useStyles = makeStyles((theme) => {
         : '0 2px 8px rgba(0, 0, 0, 0.15)',
     },
     tagGroupDivider: {
-      width: 1,
+      width: 2,
       height: 20,
       flexShrink: 0,
       margin: '0 2px',

@@ -13,6 +13,7 @@ const nukeCol = {
 
 export default {
   themeName: 'Nuclear',
+  brandColor: nukeCol['icon'],
   palette: {
     primary: {
       main: nukeCol['primary'],

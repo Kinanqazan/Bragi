@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import clsx from 'clsx'
-import { toggleSidebar, changeListParams } from 'react-admin'
+import { toggleSidebar, changeListParams, useTranslate } from 'react-admin'
 import { MdClose } from 'react-icons/md'
 import MenuIcon from '@material-ui/icons/Menu'
 import SearchIcon from '@material-ui/icons/Search'
@@ -22,6 +22,7 @@ import CastButton from '../cast/CastButton'
 import BragiLogo from '../icons/BragiLogo'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
 import { getStoredPerPage } from '../common/perPageStore'
+import { createSongListResetAction } from '../song/songListNavigation'
 
 const useStyles = makeStyles(
   (theme) => {
@@ -106,6 +107,29 @@ const useStyles = makeStyles(
         opacity: 0,
         pointerEvents: 'none !important',
       },
+      mobileBackBar: {
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+        paddingBottom: 8,
+        paddingLeft: 8,
+        paddingRight: 16,
+        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+        color: `${theme.palette.text.primary} !important`,
+        boxSizing: 'border-box',
+      },
+      mobileBackRow: {
+        display: 'flex',
+        alignItems: 'center',
+        minHeight: 48,
+        gap: 8,
+      },
+      mobileBackTitle: {
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontSize: '1.05rem',
+        fontWeight: 600,
+      },
       topRow: {
         display: 'flex',
         flexDirection: 'row',
@@ -132,7 +156,7 @@ const useStyles = makeStyles(
       brandLogo: {
         width: 28,
         height: 28,
-        color: theme.palette.primary.main,
+        color: theme.brandColor || theme.palette.primary.main,
         flexShrink: 0,
       },
       brandTitle: {
@@ -589,7 +613,35 @@ const MobileTopBar = () => {
   )
 }
 
-const NO_SEARCH_BAR_PREFIXES = ['/personal', '/user', '/player', '/library']
+const MobileBackTopBar = ({ title }) => {
+  const classes = useStyles()
+  const history = useHistory()
+  const dispatch = useDispatch()
+
+  const handleBackToSongs = () => {
+    dispatch(createSongListResetAction())
+    history.replace('/song')
+  }
+
+  return (
+    <div className={classes.mobileBackBar}>
+      <div className={classes.mobileBackRow}>
+        <IconButton
+          className={classes.headerIconButton}
+          onClick={handleBackToSongs}
+          aria-label="Back to Songs"
+          title="Back to Songs"
+        >
+          <ArrowBackIcon style={{ fontSize: 24 }} />
+        </IconButton>
+        <Typography className={classes.mobileBackTitle}>{title}</Typography>
+      </div>
+      <Dialogs />
+    </div>
+  )
+}
+
+const NO_SEARCH_BAR_PREFIXES = ['/personal', '/user', '/library', '/about']
 
 const shouldHideSearchBar = (pathname) => {
   return NO_SEARCH_BAR_PREFIXES.some((prefix) => pathname.startsWith(prefix))
@@ -597,9 +649,24 @@ const shouldHideSearchBar = (pathname) => {
 
 const AppBar = (props) => {
   const location = useLocation()
+  const translate = useTranslate()
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
 
   if (isMobile) {
+    if (
+      ['/personal', '/library', '/about'].some((path) =>
+        location.pathname.startsWith(path),
+      )
+    ) {
+      const title = location.pathname.startsWith('/personal')
+        ? translate('menu.personal.name', { _: 'Personal Settings' })
+        : location.pathname.startsWith('/library')
+          ? translate('menu.library', { _: 'Library' })
+          : translate('menu.about', { _: 'About' })
+
+      return <MobileBackTopBar title={title} />
+    }
+
     if (shouldHideSearchBar(location.pathname)) {
       return (
         <div style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>

@@ -88,6 +88,15 @@ func (c MediaFileMetadataChanges) values() (map[string][]string, error) {
 			tags[key] = []string{clean}
 		}
 	}
+	// Keep the plural artist tags in sync with the display value. Artist pages
+	// join multiple credits with ArtistJoiner, while plural tags store one credit
+	// per value. Also honor the configured separators accepted by the scanner.
+	if c.Artist != nil {
+		tags["ARTISTS"] = splitArtistDisplayValue(strings.TrimSpace(*c.Artist), model.TagTrackArtist)
+	}
+	if c.AlbumArtist != nil {
+		tags["ALBUMARTISTS"] = splitArtistDisplayValue(strings.TrimSpace(*c.AlbumArtist), model.TagAlbumArtist)
+	}
 	for _, field := range []struct {
 		name   string
 		tag    string
@@ -118,6 +127,25 @@ func (c MediaFileMetadataChanges) values() (map[string][]string, error) {
 		return nil, fmt.Errorf("%w: no metadata fields provided", model.ErrValidation)
 	}
 	return tags, nil
+}
+
+func splitArtistDisplayValue(value string, tag model.TagName) []string {
+	if value == "" {
+		return []string{}
+	}
+	values := []string{value}
+	if joiner := conf.Server.Scanner.ArtistJoiner; joiner != "" && strings.Contains(value, joiner) {
+		values = strings.Split(value, joiner)
+	}
+	values = model.TagArtistsConf().WithParticipantExceptions(tag).SplitTagValue(values)
+	artists := make([]string, 0, len(values))
+	for _, artist := range values {
+		artist = strings.TrimSpace(artist)
+		if artist != "" && !slices.Contains(artists, artist) {
+			artists = append(artists, artist)
+		}
+	}
+	return artists
 }
 
 func (s *maintenanceService) DeleteMediaFile(ctx context.Context, id string) error {

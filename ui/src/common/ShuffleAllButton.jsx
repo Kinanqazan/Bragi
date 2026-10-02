@@ -1,5 +1,6 @@
 import React from 'react'
-import { Button, useDataProvider, useNotify, useTranslate } from 'react-admin'
+import { IconButton } from '@material-ui/core'
+import { useDataProvider, useNotify, useTranslate } from 'react-admin'
 import { useDispatch } from 'react-redux'
 import ShuffleIcon from '@material-ui/icons/Shuffle'
 import { playTracks } from '../actions'
@@ -32,12 +33,13 @@ export const ShuffleAllButton = ({ filters }) => {
   }
 
   return (
-    <Button
+    <IconButton
       onClick={handleOnClick}
-      label={translate('resources.song.actions.shuffleAll')}
+      className="shuffleAllButton"
+      aria-label={translate('resources.song.actions.shuffleAll')}
     >
       <ShuffleIcon />
-    </Button>
+    </IconButton>
   )
 }
 

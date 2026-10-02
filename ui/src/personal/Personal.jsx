@@ -10,9 +10,16 @@ import { LastfmScrobbleToggle } from './LastfmScrobbleToggle'
 import { ListenBrainzScrobbleToggle } from './ListenBrainzScrobbleToggle'
 import config from '../config'
 import { ReplayGainToggle } from './ReplayGainToggle'
+import SidebarLinkSettings from './SidebarLinkSettings'
 
 const useStyles = makeStyles({
-  root: { marginTop: '1em' },
+  root: {
+    marginTop: '1em',
+    background: 'transparent !important',
+    backgroundColor: 'transparent !important',
+    backgroundImage: 'none !important',
+    boxShadow: 'none !important',
+  },
 })
 
 const Personal = () => {
@@ -32,6 +39,7 @@ const Personal = () => {
         {config.lastFMEnabled && <LastfmScrobbleToggle />}
         {config.listenBrainzEnabled && <ListenBrainzScrobbleToggle />}
       </SimpleForm>
+      <SidebarLinkSettings />
     </Card>
   )
 }

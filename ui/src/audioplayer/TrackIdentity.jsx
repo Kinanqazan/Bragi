@@ -30,6 +30,11 @@ const useStyles = makeStyles((theme) => ({
       textDecoration: 'underline',
     },
   },
+  mobileTitleLink: {
+    '&, &:hover, &:focus, &:active': {
+      textDecoration: 'none !important',
+    },
+  },
   artist: {
     marginTop: 4,
     overflow: 'hidden',
@@ -46,7 +51,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }))
 
-const TrackIdentity = ({ track }) => {
+const TrackIdentity = ({ track, mobile = false, onTitleClick }) => {
   const classes = useStyles()
   const location = useLocation()
   const song = track?.song || track
@@ -74,7 +79,12 @@ const TrackIdentity = ({ track }) => {
     <div className={classes.root}>
       {linkTo ? (
         <Link
-          className={classes.titleLink}
+          className={
+            mobile
+              ? `${classes.titleLink} ${classes.mobileTitleLink}`
+              : classes.titleLink
+          }
+          onClick={mobile ? onTitleClick : undefined}
           to={{
             pathname: linkTo,
             state: { returnTo: `${location.pathname}${location.search}` },

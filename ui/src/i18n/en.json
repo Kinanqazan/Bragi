@@ -656,32 +656,11 @@
     "refresh": "Refresh App"
   },
   "about": {
-    "links": {
-      "homepage": "Home page",
-      "source": "Source code",
-      "featureRequests": "Feature requests",
-      "lastInsightsCollection": "Last insights collection",
-      "insights": {
-        "disabled": "Disabled",
-        "waiting": "Waiting"
-      }
-    },
-    "tabs": {
-      "about": "About",
-      "config": "Configuration"
-    },
-    "config": {
-      "configName": "Config Name",
-      "environmentVariable": "Environment Variable",
-      "currentValue": "Current Value",
-      "configurationFile": "Configuration File",
-      "exportToml": "Export Configuration (TOML)",
-      "downloadToml": "Download Configuration (TOML)",
-      "exportSuccess": "Configuration exported to clipboard in TOML format",
-      "exportFailed": "Failed to copy configuration",
-      "devFlagsHeader": "Development Flags (subject to change/removal)",
-      "devFlagsComment": "These are experimental settings and may be removed in future versions"
-    }
+    "eyebrow": "YOUR PERSONAL MUSIC SERVER",
+    "headline": "Your music, on your terms.",
+    "description": "Bragi is my self-hosted music server and player for my music library, available on the web and Android.",
+    "creatorLabel": "BUILT BY",
+    "creator": "I’m exploring applied AI by building practical software."
   },
   "activity": {
     "title": "Activity",
