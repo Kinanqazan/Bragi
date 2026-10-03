@@ -134,7 +134,7 @@ describe('SongShow metadata editing', () => {
     renderSongShow()
 
     expect(screen.getByText(
-      'No embedded cover is stored in this song. The displayed cover comes from its disc or album when available.',
+      'No embedded cover is stored in this song. The displayed cover comes from shared disc, album, or folder artwork when available.',
     )).toBeInTheDocument()
   })
 

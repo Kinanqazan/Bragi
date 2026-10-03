@@ -938,7 +938,7 @@ const SongShowLayout = (props) => {
         <div className={classes.details} role="group" aria-label="Song metadata">
           {canEdit && !displayRecord.hasCoverArt && (
             <Typography color="textSecondary" component="p" variant="caption">
-              No embedded cover is stored in this song. The displayed cover comes from its disc or album when available.
+              No embedded cover is stored in this song. The displayed cover comes from shared disc, album, or folder artwork when available.
             </Typography>
           )}
           <div className={classes.titleRow}>
