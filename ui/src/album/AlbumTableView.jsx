@@ -21,7 +21,6 @@ import {
   Artwork,
   DateField,
   DurationField,
-  LoveButton,
   RangeField,
   RatingField,
   SizeField,

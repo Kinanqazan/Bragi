@@ -9,7 +9,7 @@ import { closeExtendedInfoDialog } from '../actions/dialogs.js'
 
 // noSSR: withWidth otherwise renders null until mounted, so the artist line pops in and grows the row.
 const ALink = withWidth({ noSSR: true })((props) => {
-  const { artist, width, ...rest } = props
+  const { artist, width, onArtistClick, ...rest } = props
   const artistLink = useGetHandleArtistClick(width)
   const dispatch = useDispatch()
 
@@ -20,6 +20,10 @@ const ALink = withWidth({ noSSR: true })((props) => {
       onClick={(e) => {
         e.stopPropagation()
         dispatch(closeExtendedInfoDialog())
+        if (onArtistClick) {
+          onArtistClick(e)
+          e.currentTarget.blur()
+        }
       }}
       {...rest}
     >
@@ -33,6 +37,7 @@ const parseAndReplaceArtists = (
   displayAlbumArtist,
   albumArtists,
   className,
+  onArtistClick,
 ) => {
   let result = []
   let lastIndex = 0
@@ -46,7 +51,12 @@ const parseAndReplaceArtists = (
       }
       // Add the artist link
       result.push(
-        <ALink artist={artist} className={className} key={artist.id} />,
+        <ALink
+          artist={artist}
+          className={className}
+          onArtistClick={onArtistClick}
+          key={artist.id}
+        />,
       )
       lastIndex = index + artist.name.length
     }
@@ -64,7 +74,13 @@ const parseAndReplaceArtists = (
   return result
 }
 
-export const ArtistLinkField = ({ record, className, limit, source }) => {
+export const ArtistLinkField = ({
+  record,
+  className,
+  limit,
+  source,
+  onArtistClick,
+}) => {
   const role = source.toLowerCase()
 
   // Get artists array with fallback
@@ -80,6 +96,7 @@ export const ArtistLinkField = ({ record, className, limit, source }) => {
       record[source],
       artists,
       className,
+      onArtistClick,
     )
 
     if (artistsLinks.length > 0) {
@@ -103,6 +120,7 @@ export const ArtistLinkField = ({ record, className, limit, source }) => {
               <ALink
                 artist={remixer}
                 className={className}
+                onArtistClick={onArtistClick}
                 key={`remixer-${remixer.id}`}
               />,
             )
@@ -151,7 +169,12 @@ export const ArtistLinkField = ({ record, className, limit, source }) => {
 
   // Create artist links
   const artistsList = dedupedArtists.map((artist) => (
-    <ALink artist={artist} className={className} key={artist.id} />
+    <ALink
+      artist={artist}
+      className={className}
+      onArtistClick={onArtistClick}
+      key={artist.id}
+    />
   ))
 
   if (limitedShow) {
@@ -166,6 +189,7 @@ ArtistLinkField.propTypes = {
   record: PropTypes.object,
   className: PropTypes.string,
   source: PropTypes.string,
+  onArtistClick: PropTypes.func,
 }
 
 ArtistLinkField.defaultProps = {

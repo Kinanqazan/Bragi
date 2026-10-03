@@ -224,7 +224,7 @@ func SongToBaseItem(mf model.MediaFile, fields Fields) BaseItemDto {
 }
 
 func embeddedArtPending(mf model.MediaFile) bool {
-	return mf.HasCoverArt && conf.Server.EnableMediaFileCoverArt &&
+	return mf.HasCoverArt && conf.MediaFileCoverArtEnabled() &&
 		mf.ImageHash == "" && !mf.ItemImage.ImageAbsent
 }
 

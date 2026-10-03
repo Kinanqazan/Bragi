@@ -1,6 +1,6 @@
 # Song page and metadata editing implementation plan
 
-Status: Stages 1–3 are implemented and confirmed working by the user. Stage 4.1 (player lyrics resolution and plain-text display) is implemented and ready for user testing.
+Status: Stages 1–5 are implemented and confirmed working by the user. Stage 6 is implemented and ready for user testing.
 
 ## Goal and agreed scope
 
@@ -112,7 +112,7 @@ Implement one numbered step at a time. Complete its verification, report the res
 
 ## Step 4 — Paste or import separate lyrics
 
-**Progress:** Step 4.1 is implemented and the user confirmed a same-folder `.txt` sidecar loads in the player. Step 4.2 is implemented and ready for manual testing.
+**Status:** Implemented; the user confirmed sidecar loading, direct editing, save, cancel, delete, and mobile scrolling all work.
 
 **Visible result:** a Lyrics section supports plain text and timed `.lrc` imports, saved beside the song.
 
@@ -127,17 +127,21 @@ Implement one numbered step at a time. Complete its verification, report the res
 
 ## Step 5 — Embedded lyrics
 
+**Status:** Implemented; automated checks pass. The user confirmed embedded lyrics remain available after reloading the app.
+
 **Visible result:** choose to save lyrics inside the music file for validated formats.
 
-1. Extend the safe tag-writing module with explicit embedded-lyrics handling for supported formats. Define supported plain/timed encoding rather than assuming every container supports identical fields.
-2. Present Separate file / Inside music file as an explicit destination and explain any source-priority conflict without deleting existing lyrics automatically.
-3. Reindex embedded lyrics and refresh the player.
+1. Read and write the standard `LYRICS` tag through the existing safe-copy metadata writer. Round-trip coverage exercises MP3, FLAC, M4A, Ogg, Opus, WAV, and AIFF. Plain text and timestamped LRC text are stored as text; the existing player parser handles timestamps.
+2. Present Separate file / Inside music file as an explicit destination. Existing sidecars remain untouched and keep priority in playback; the page explains this when a sidecar exists. Saving uses a version check so stale edits do not overwrite newer lyrics.
+3. Verify the written tag, refresh the containing folder, and update the player/library when the scan completes. If scanning cannot complete, keep the saved result and offer Retry library refresh; the player refresh event waits until the indexed result is ready.
 
-**User checkpoint:** embed lyrics in a song without a conflicting sidecar, rescan, play the song, inspect it with another metadata reader, and confirm other tags/artwork survived.
+**User checkpoint:** on a copied/test-library song, choose Inside music file, save plain lyrics and play the song. Repeat with timestamped LRC text and confirm highlighting. Inspect the tag with another metadata reader and confirm title, artist, album, and artwork are unchanged. If the song has a TXT/LRC sidecar, confirm it remains untouched and takes priority until deleted. Confirm a reload shows the saved text. Backend changes require restarting `scripts/dev.ps1`.
 
 **Completion condition:** supported embedded lyrics persist and display correctly. Unsupported combinations have a clear alternative.
 
 ## Step 6 — Embedded song artwork
+
+**Status:** Implemented; focused UI, storage, service, and API checks pass. Awaiting user testing.
 
 **Visible result:** preview and replace the selected song's embedded front cover on its page.
 
@@ -146,7 +150,7 @@ Implement one numbered step at a time. Complete its verification, report the res
 3. Refresh track artwork and the relevant artwork state/cache. Respect the existing per-track artwork setting and album/folder artwork priorities; explain the source shown when a shared cover takes precedence.
 4. Keep editing scoped to the selected song. Do not overwrite a shared `cover.jpg` or other songs' embedded images.
 
-**User checkpoint:** replace one cover, see it update on the page/list/player, reload and restart playback, check other songs, and verify the embedded image with another reader.
+**User checkpoint:** on a test-library song, choose an image with the camera icon, confirm the preview appears, and test Cancel before saving. Save another image, then confirm it persists after reload and appears on the page/list/player. Metadata editing automatically enables per-song embedded artwork; the standalone cover-art setting can still enable it for read-only libraries. Album/folder cover priorities may still supply artwork elsewhere. Check another track in the same album and verify the edited file's other tags and embedded pictures with another metadata reader. Backend changes require restarting `scripts/dev.ps1`.
 
 **Completion condition:** stored and displayed song artwork agree under the supported configuration.
 
@@ -159,4 +163,4 @@ Implement one numbered step at a time. Complete its verification, report the res
 
 ## Next action
 
-User test Step 4.2 on a copied/test-library song: import or paste and save `.txt`, then test `.lrc` and timed highlighting. Confirm the files are beside the audio, player lyrics refresh after a save, Cancel discards drafts, and metadata edits remain independent. After this checkpoint passes, proceed to Step 5 (embedded lyrics).
+User-test Step 6 with a copied/test-library song. Address any issue found before moving to the next stage.

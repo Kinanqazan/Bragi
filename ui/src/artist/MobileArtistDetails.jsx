@@ -1,26 +1,27 @@
 import React, { useState } from 'react'
-import { Typography, Collapse } from '@material-ui/core'
+import { Typography } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
-import Card from '@material-ui/core/Card'
 import config from '../config'
-import { LoveButton, RatingField, ImageUploadOverlay, ImageViewerDialog } from '../common'
+import { RatingField, ImageUploadOverlay, ImageViewerDialog } from '../common'
 import subsonic from '../subsonic'
-import { SafeHTML } from '../common/SafeHTML'
 import { Artwork } from '../common/Artwork'
 import ArtistNameEditor from './ArtistNameEditor'
 
 const useStyles = makeStyles(
-  (theme) => ({
+  () => ({
     root: {
       display: 'flex',
-      backgroundColor: 'transparent',
+      backgroundColor: 'transparent !important',
+      backgroundImage: 'none !important',
     },
     bgContainer: {
       display: 'flex',
+      alignItems: 'center',
       height: 'auto',
       width: '100%',
       padding: '0.5rem 0',
-      backgroundColor: 'transparent',
+      backgroundColor: 'transparent !important',
+      backgroundImage: 'none !important',
     },
     link: {
       margin: '1px',
@@ -31,43 +32,31 @@ const useStyles = makeStyles(
       flexDirection: 'column',
       justifyContent: 'center',
       marginLeft: '0.5rem',
-    },
-    biography: {
-      display: 'flex',
-      marginLeft: '0.5rem',
-      marginRight: '0.5rem',
-      marginTop: '0.5em',
-      zIndex: '1',
-      '& p': {
-        whiteSpace: ({ expanded }) => (expanded ? 'unset' : 'nowrap'),
-        overflow: 'hidden',
-        width: '95vw',
-        textOverflow: 'ellipsis',
-      },
+      minWidth: 0,
+      backgroundColor: 'transparent !important',
+      backgroundImage: 'none !important',
     },
     cover: {
-      width: 110,
-      height: 110,
-      borderRadius: '55px',
+      width: '5.5rem',
+      height: '5.5rem',
+      borderRadius: '50%',
       backgroundColor: 'transparent',
       transition: 'opacity 0.3s ease-in-out',
       objectFit: 'cover',
     },
     artistImage: {
       marginLeft: '0.5em',
-      maxHeight: '7rem',
-      backgroundColor: 'transparent',
+      maxHeight: '5.5rem',
+      height: '5.5rem',
+      backgroundColor: 'transparent !important',
+      backgroundImage: 'none !important',
       marginTop: '0.5rem',
-      width: '7rem',
-      minWidth: '7rem',
+      width: '5.5rem',
+      minWidth: '5.5rem',
       display: 'flex',
       borderRadius: '5em',
       position: 'relative',
       boxShadow: 'none',
-    },
-    loveButton: {
-      top: theme.spacing(-0.2),
-      left: theme.spacing(0.5),
     },
     rating: {
       marginTop: '5px',
@@ -79,10 +68,9 @@ const useStyles = makeStyles(
   { name: 'NDMobileArtistDetails' },
 )
 
-const MobileArtistDetails = ({ biography, record, onNameSaved }) => {
+const MobileArtistDetails = ({ record, onNameSaved }) => {
   const img = subsonic.getCoverArtUrl(record, 800)
-  const [expanded, setExpanded] = useState(false)
-  const classes = useStyles({ img, expanded })
+  const classes = useStyles()
   const title = record.name
   const [isLightboxOpen, setLightboxOpen] = useState(false)
 
@@ -110,14 +98,9 @@ const MobileArtistDetails = ({ biography, record, onNameSaved }) => {
               className={classes.artistName}
             >
               {title}
-              <ArtistNameEditor record={record} onSaved={onNameSaved} />
-              <LoveButton
-                className={classes.loveButton}
+              <ArtistNameEditor
                 record={record}
-                resource={'artist'}
-                size={'small'}
-                aria-label="love"
-                color="primary"
+                onSaved={onNameSaved}
               />
             </Typography>
             {config.enableStarRating && (
@@ -130,15 +113,6 @@ const MobileArtistDetails = ({ biography, record, onNameSaved }) => {
             )}
           </div>
         </div>
-      </div>
-      <div className={classes.biography}>
-        <Collapse collapsedSize={'1.5em'} in={expanded} timeout={'auto'}>
-          <Typography variant={'body1'} onClick={() => setExpanded(!expanded)}>
-            <span>
-              <SafeHTML>{biography}</SafeHTML>
-            </span>
-          </Typography>
-        </Collapse>
       </div>
       {isLightboxOpen && (
         <ImageViewerDialog

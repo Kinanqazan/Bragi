@@ -4,7 +4,7 @@ type Data struct {
 	InsightsID string `json:"id"`
 	Version    string `json:"version"`
 	Uptime     int64  `json:"uptime"`
-	// Platform is the app store or hosting provider this instance runs on, self-declared via ND_PLATFORM
+	// Platform is the app store or hosting provider this instance runs on, self-declared via BR_PLATFORM
 	Platform string `json:"platform,omitempty"`
 	Build    struct {
 		// build settings used by the Go compiler

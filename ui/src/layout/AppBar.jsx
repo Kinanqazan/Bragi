@@ -97,10 +97,19 @@ const useStyles = makeStyles(
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        transition:
-          'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'none',
         transform: 'translateY(0)',
         opacity: 1,
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          height: 14,
+          background: `linear-gradient(to bottom, ${MOBILE_BACKGROUND_COLOR}, transparent)`,
+          pointerEvents: 'none',
+        },
       },
       mobileAppBarHidden: {
         transform: 'translateY(-100%) !important',
@@ -228,25 +237,26 @@ const useStyles = makeStyles(
   },
 )
 
-// Hook to detect scroll direction across any child scrollable container (capture phase)
-const useHeaderVisibility = (enabled = true, resetKey = '') => {
-  const [visible, setVisible] = useState(true)
+// Track scroll movement across any child scrollable container (capture phase).
+const useHeaderCollapse = (headerRef, enabled = true, resetKey = '') => {
+  const [offset, setOffset] = useState(0)
+  const offsetRef = useRef(0)
   const lastScrollY = useRef(0)
   const lastScrollTarget = useRef(null)
-  const touchStartY = useRef(0)
 
   // AppBar survives route changes. Do not carry a hidden state or a scroll
   // baseline from the previous page into the next one.
   useEffect(() => {
-    setVisible(true)
+    offsetRef.current = 0
+    setOffset(0)
     lastScrollY.current = 0
     lastScrollTarget.current = null
-    touchStartY.current = 0
   }, [resetKey])
 
   useEffect(() => {
     if (!enabled) {
-      setVisible(true)
+      offsetRef.current = 0
+      setOffset(0)
       return
     }
 
@@ -268,75 +278,31 @@ const useHeaderVisibility = (enabled = true, resetKey = '') => {
         lastScrollY.current = 0
       }
 
-      // Always show when near the very top of the list
-      if (currentScrollY <= 25) {
-        setVisible(true)
-        lastScrollY.current = currentScrollY
-        return
-      }
-
       const diff = currentScrollY - lastScrollY.current
-
-      // Jitter dampening threshold
-      if (Math.abs(diff) < 10) return
-
-      if (diff > 0) {
-        // Scrolling down -> hide header
-        setVisible(false)
-      } else {
-        // Scrolling up -> show header
-        setVisible(true)
-      }
-
       lastScrollY.current = currentScrollY
-    }
+      const maxOffset = headerRef.current?.getBoundingClientRect().height || 82
+      const nextOffset = Math.max(
+        0,
+        Math.min(maxOffset, offsetRef.current + diff),
+      )
 
-    const handleTouchStart = (e) => {
-      if (e.touches && e.touches[0]) {
-        touchStartY.current = e.touches[0].clientY
-      }
-    }
-
-    const handleTouchMove = (e) => {
-      if (!e.touches || !e.touches[0]) return
-      const currentY = e.touches[0].clientY
-      const diff = touchStartY.current - currentY // positive = finger moved up = scroll down
-
-      if (Math.abs(diff) > 12) {
-        if (diff > 0) {
-          setVisible(false)
-        } else {
-          setVisible(true)
-        }
-        touchStartY.current = currentY
-      }
+      // At the top, restore the full bar even if the browser reports a small
+      // negative scroll position during overscroll.
+      offsetRef.current = currentScrollY <= 0 ? 0 : nextOffset
+      setOffset(offsetRef.current)
     }
 
     window.addEventListener('scroll', handleScroll, {
       capture: true,
       passive: true,
     })
-    window.addEventListener('touchstart', handleTouchStart, {
-      capture: true,
-      passive: true,
-    })
-    window.addEventListener('touchmove', handleTouchMove, {
-      capture: true,
-      passive: true,
-    })
 
     return () => {
       window.removeEventListener('scroll', handleScroll, { capture: true })
-      window.removeEventListener('touchstart', handleTouchStart, {
-        capture: true,
-      })
-      window.removeEventListener('touchmove', handleTouchMove, {
-        capture: true,
-      })
     }
-  }, [enabled])
+  }, [enabled, headerRef])
 
-  return visible
+  return offset
 }
 
 const MobileTopBar = () => {
@@ -344,6 +310,7 @@ const MobileTopBar = () => {
   const dispatch = useDispatch()
   const history = useHistory()
   const location = useLocation()
+  const headerRef = useRef(null)
   const listParams = useSelector(
     (state) => state.admin?.resources?.song?.list?.params,
   )
@@ -364,10 +331,13 @@ const MobileTopBar = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery))
   const debounceTimerRef = useRef(null)
-  const isHeaderVisible = useHeaderVisibility(
+  const headerOffset = useHeaderCollapse(
+    headerRef,
     !isSearchOpen,
     location.key || `${location.pathname}${location.search}${location.hash}`,
   )
+  const headerHeight = headerRef.current?.getBoundingClientRect().height || 82
+  const isHeaderFullyCollapsed = headerOffset >= headerHeight
 
   const isSongPage =
     location.pathname === '/' || location.pathname.startsWith('/song')
@@ -516,10 +486,12 @@ const MobileTopBar = () => {
   return (
     <MuiAppBar
       position="fixed"
+      ref={headerRef}
       className={clsx(
         classes.mobileAppBar,
-        !isHeaderVisible && classes.mobileAppBarHidden,
+        isHeaderFullyCollapsed && classes.mobileAppBarHidden,
       )}
+      style={{ transform: `translateY(-${headerOffset}px)` }}
     >
       {/* Hidden React-Admin Title Portal anchor */}
       <span id="react-admin-title" style={{ display: 'none' }} />

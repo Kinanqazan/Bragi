@@ -9,7 +9,6 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
-  Box,
   useMediaQuery,
   Popover,
   MenuList,
@@ -46,7 +45,6 @@ import MenuIcon from '@material-ui/icons/Menu'
 import BragiLogo from '../icons/BragiLogo'
 import { VscSync } from 'react-icons/vsc'
 import { GiMagnifyingGlass } from 'react-icons/gi'
-import { BiError, BiMessageError } from 'react-icons/bi'
 import { humanize, pluralize } from 'inflection'
 import songLists from '../song/songLists'
 import LibrarySelector from '../common/LibrarySelector'
@@ -332,6 +330,9 @@ const useStyles = makeStyles((theme) => {
           : 'rgba(0, 0, 0, 0.06)',
         borderColor: alpha(theme.palette.primary.main, 0.3),
       },
+      [theme.breakpoints.down('sm')]: {
+        padding: '8px 10px',
+      },
     },
     userInfo: {
       display: 'flex',
@@ -346,6 +347,10 @@ const useStyles = makeStyles((theme) => {
       borderRadius: '50%',
       backgroundColor: alpha(theme.palette.primary.main, 0.2),
       color: theme.palette.primary.main,
+      [theme.breakpoints.down('sm')]: {
+        width: 36,
+        height: 36,
+      },
     },
     userNameWrapper: {
       minWidth: 0,
@@ -360,6 +365,9 @@ const useStyles = makeStyles((theme) => {
       textOverflow: 'ellipsis',
       color: theme.palette.text.primary,
       lineHeight: 1.2,
+      [theme.breakpoints.down('sm')]: {
+        fontSize: '0.92rem',
+      },
     },
     syncButton: {
       padding: 5,
@@ -372,7 +380,7 @@ const useStyles = makeStyles((theme) => {
           : 'rgba(0, 0, 0, 0.05)',
       },
     },
-    settingsButton: {
+    refreshButton: {
       padding: 5,
       color: theme.palette.text.secondary,
       transition: 'all 0.2s ease',
@@ -381,6 +389,13 @@ const useStyles = makeStyles((theme) => {
         backgroundColor: isDark
           ? 'rgba(255, 255, 255, 0.08)'
           : 'rgba(0, 0, 0, 0.05)',
+      },
+      [theme.breakpoints.down('sm')]: {
+        padding: 10,
+        '& svg': {
+          width: 24,
+          height: 24,
+        },
       },
     },
     collapsedAvatarButton: {
@@ -394,12 +409,6 @@ const useStyles = makeStyles((theme) => {
       left: 4,
       zIndex: 1,
       color: theme.palette.primary.main,
-    },
-    warningIcon: {
-      color: `${theme.palette.warning.main} !important`,
-    },
-    errorIcon: {
-      color: `${theme.palette.error.main} !important`,
     },
     errorText: {
       color: theme.palette.error.main,
@@ -569,8 +578,6 @@ const Menu = ({ dense = false }) => {
     }
   }, [serverStart, notify])
 
-  const serverDown = !serverStart?.startTime
-  const hasWarning = Boolean(scanStatus?.error)
 
   const songResource = resourcesByName.get('song')
   const albumResource = resourcesByName.get('album')
@@ -843,39 +850,18 @@ const Menu = ({ dense = false }) => {
               </div>
             </div>
 
-            <Box display="flex" alignItems="center" onClick={(e) => e.stopPropagation()}>
-              <Tooltip title={translate('menu.refresh', { _: 'Refresh App' })}>
-                <IconButton
-                  size="small"
-                  className={classes.settingsButton}
-                  onClick={handleReloadApp}
-                  aria-label={translate('menu.refresh', { _: 'Refresh App' })}
-                >
-                  <RefreshIcon style={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title={translate('menu.settings', { _: 'Settings & Activity' })}>
-                <IconButton
-                  size="small"
-                  className={clsx(
-                    classes.settingsButton,
-                    hasWarning && classes.warningIcon,
-                    serverDown && classes.errorIcon,
-                  )}
-                  onClick={handleOpenMenu}
-                  aria-label="Settings & Activity"
-                >
-                  {serverDown ? (
-                    <BiError size={18} />
-                  ) : hasWarning ? (
-                    <BiMessageError size={18} />
-                  ) : (
-                    <TuneIcon style={{ fontSize: 18 }} />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Box>
+            <Tooltip title={translate('menu.refresh', { _: 'Refresh App' })}>
+              <IconButton
+                className={classes.refreshButton}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  handleReloadApp()
+                }}
+                aria-label={translate('menu.refresh', { _: 'Refresh App' })}
+              >
+                <RefreshIcon style={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
           </div>
         </div>
       ) : (

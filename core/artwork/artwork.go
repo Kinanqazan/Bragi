@@ -265,7 +265,7 @@ func (s *service) serveResolution(ctx context.Context, res resolution, size int,
 func (s *service) serveMediaFile(ctx context.Context, artID model.ArtworkID, size int, square bool) (*Image, error) {
 	// The setting is not in the config fingerprint, so honor it at serve time: a direct mf- URL
 	// must fall back to disc/album instead of serving stale persisted embedded art.
-	if !conf.Server.EnableMediaFileCoverArt {
+	if !conf.MediaFileCoverArtEnabled() {
 		mf, err := s.ds.MediaFile(ctx).Get(artID.ID)
 		if err != nil {
 			return nil, err
@@ -289,7 +289,7 @@ func (s *service) serveMediaFile(ctx context.Context, artID model.ArtworkID, siz
 	if err != nil {
 		return nil, err
 	}
-	if noRow && conf.Server.EnableMediaFileCoverArt && mf.HasCoverArt {
+	if noRow && conf.MediaFileCoverArtEnabled() && mf.HasCoverArt {
 		return s.provisionalEmbedded(ctx, artID, *mf, size, square)
 	}
 	// Mirror MediaFile.CoverArtID: a track defers to its disc art, which falls back to the album.

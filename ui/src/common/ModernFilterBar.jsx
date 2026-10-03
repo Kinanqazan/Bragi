@@ -299,6 +299,15 @@ export const modernFilterStyles = (theme) => {
         outlineOffset: 1,
       },
     },
+    facetMoodChip: {
+      borderRadius: 9,
+      borderColor: alpha(theme.palette.text.primary, isDark ? 0.2 : 0.14),
+      backgroundColor: alpha(theme.palette.text.primary, isDark ? 0.14 : 0.08),
+      '&:hover': {
+        backgroundColor: alpha(theme.palette.text.primary, isDark ? 0.18 : 0.12),
+        borderColor: alpha(theme.palette.text.primary, isDark ? 0.28 : 0.2),
+      },
+    },
     facetChipActive: {
       backgroundColor: `${primaryColor} !important`,
       borderColor: `${primaryColor} !important`,
@@ -825,7 +834,7 @@ export const ModernFilterBar = ({
           id: `mood-${mood.id || mood.tagValue}`,
           label: mood.tagValue || mood.name || mood.id || '',
           type: 'mood',
-          value: mood.tagValue || mood.name || mood.id,
+          value: mood.id,
         })),
         ...genreList.map((genre) => ({
           id: `genre-${genre.id}`,
@@ -851,11 +860,7 @@ export const ModernFilterBar = ({
     (tag) => {
       handleFilterChange(
         tag.type === 'mood' ? 'mood' : 'genre_id',
-        isFacetTagActive(tag)
-          ? undefined
-          : tag.type === 'mood'
-            ? tag.value
-            : [tag.value],
+        isFacetTagActive(tag) ? undefined : [tag.value],
       )
     },
     [handleFilterChange, isFacetTagActive],
@@ -943,6 +948,7 @@ export const ModernFilterBar = ({
                       type="button"
                       className={clsx(
                         classes.facetChip,
+                        tag.type === 'mood' && classes.facetMoodChip,
                         active && classes.facetChipActive,
                       )}
                       onClick={() => handleFacetTagClick(tag)}
@@ -1124,11 +1130,11 @@ export const ModernFilterBar = ({
                   }
                   value={
                     moodList.filter((m) =>
-                      (filterValues?.mood || []).includes(m.tagValue || m.id),
+                      (filterValues?.mood || []).includes(m.id),
                     ) || []
                   }
                   onChange={(_, newValue) => {
-                    const values = newValue.map((v) => v.tagValue || v.id)
+                    const values = newValue.map((v) => v.id)
                     handleFilterChange(
                       'mood',
                       values.length > 0 ? values : undefined,

@@ -66,7 +66,10 @@ import { useRefresh, useDataProvider } from 'react-admin'
 // Resources whose records are media files, and so inherit their album's artwork.
 const trackResources = ['song', 'playlistTrack']
 
-export const useResourceRefresh = (...visibleResources) => {
+export const useResourceRefresh = (...args) => {
+  const options = typeof args[args.length - 1] === 'object' ? args.pop() : {}
+  const visibleResources = args
+  const suppressWildcardRefresh = options.suppressWildcardRefresh === true
   const lastTimeRef = useRef(Date.now())
   const refresh = useRefresh()
   const dataProvider = useDataProvider()
@@ -94,6 +97,7 @@ export const useResourceRefresh = (...visibleResources) => {
         ))
 
     if (hasWildcard) {
+      if (suppressWildcardRefresh) return
       dataProvider.clearCache?.()
       refresh()
       return
@@ -131,5 +135,5 @@ export const useResourceRefresh = (...visibleResources) => {
         }
       })
     }
-  }, [lastReceived, resources, refresh, dataProvider, loadedResources, visibleResources])
+  }, [lastReceived, resources, refresh, dataProvider, loadedResources, visibleResources, suppressWildcardRefresh])
 }

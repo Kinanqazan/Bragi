@@ -80,7 +80,7 @@ const useStyles = makeStyles((theme) => {
       userSelect: 'none',
       position: 'relative',
     },
-    // Accent-tinted quick actions stay distinct from neutral filter chips.
+    // Neutral quick actions reserve the theme accent for selected filters.
     quickActionsRow: {
       width: '100%',
       maxWidth: '100%',
@@ -106,11 +106,22 @@ const useStyles = makeStyles((theme) => {
       WebkitTapHighlightColor: 'transparent',
       transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
       backgroundColor: isDark
-        ? alpha(primaryColor, 0.07)
-        : alpha(primaryColor, 0.04),
-      color: primaryColor,
-      border: `1px solid ${alpha(primaryColor, isDark ? 0.17 : 0.12)}`,
+        ? 'rgba(255, 255, 255, 0.06)'
+        : 'rgba(0, 0, 0, 0.04)',
+      color: theme.palette.text.primary,
+      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.09)'}`,
       position: 'relative',
+      '@media (hover: hover)': {
+        '&:hover': {
+          backgroundColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.07)',
+        },
+      },
+      '&:focus-visible': {
+        outline: `2px solid ${primaryColor}`,
+        outlineOffset: 2,
+      },
       '&:active': {
         transform: 'scale(0.93)',
       },
@@ -150,6 +161,11 @@ const useStyles = makeStyles((theme) => {
       '&:active': {
         transform: 'scale(0.94)',
       },
+    },
+    moodTagChip: {
+      borderRadius: 11,
+      backgroundColor: alpha(theme.palette.text.primary, isDark ? 0.14 : 0.08),
+      border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.2 : 0.14)}`,
     },
     tagChipActive: {
       backgroundColor: isDark
@@ -469,7 +485,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
           id: `mood-${m.id || val}`,
           label: val,
           type: 'mood',
-          value: val,
+          value: m.id,
         })
       }
     })
@@ -514,7 +530,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
     (tag) => {
       const active = isTagActive(tag)
       if (tag.type === 'mood') {
-        handleFilterChange('mood', active ? undefined : tag.value)
+        handleFilterChange('mood', active ? undefined : [tag.value])
       } else if (tag.type === 'genre') {
         handleFilterChange('genre_id', active ? undefined : [tag.genreId])
       }
@@ -546,6 +562,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
                 <div
                   className={clsx(
                     classes.tagChip,
+                    tag.type === 'mood' && classes.moodTagChip,
                     active && classes.tagChipActive,
                   )}
                   onClick={() => handleTagClick(tag)}
@@ -750,11 +767,11 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
                 }
                 value={
                   moodList.filter((m) =>
-                    (filterValues?.mood || []).includes(m.tagValue || m.id),
+                    (filterValues?.mood || []).includes(m.id),
                   ) || []
                 }
                 onChange={(_, newValue) => {
-                  const values = newValue.map((v) => v.tagValue || v.id)
+                  const values = newValue.map((v) => v.id)
                   handleFilterChange(
                     'mood',
                     values.length > 0 ? values : undefined,

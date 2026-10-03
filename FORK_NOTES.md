@@ -15,7 +15,7 @@ EnableMediaFileDeletion = true
 or the Docker environment variable:
 
 ```text
-ND_ENABLEMEDIAFILEDELETION=true
+BR_ENABLEMEDIAFILEDELETION=true
 ```
 
 The music volume must be mounted read-write. Only administrators can call the

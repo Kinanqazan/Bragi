@@ -18,7 +18,6 @@ import {
   DOWNLOAD_MENU_ALBUM,
   DOWNLOAD_MENU_ARTIST,
 } from '../actions'
-import { LoveButton } from './LoveButton'
 import config from '../config'
 import { formatBytes } from '../utils'
 import { artistDownloadSize } from './artist'
@@ -53,7 +52,6 @@ const MoreButton = ({ record, onClick, info, ...rest }) => {
 
 const ContextMenu = ({
   resource,
-  showLove,
   record,
   color,
   className,
@@ -161,16 +159,8 @@ const ContextMenu = ({
     return null
   }
 
-  const present = !record.missing
-
   return (
     <span className={clsx(classes.noWrap, className)}>
-      <LoveButton
-        record={record}
-        resource={resource}
-        visible={config.enableFavourites && showLove && present}
-        color={color}
-      />
       <MoreButton
         record={record}
         onClick={handleClick}
@@ -221,11 +211,9 @@ AlbumContextMenu.propTypes = {
   record: PropTypes.object,
   discNumber: PropTypes.number,
   color: PropTypes.string,
-  showLove: PropTypes.bool,
 }
 
 AlbumContextMenu.defaultProps = {
-  showLove: true,
   addLabel: true,
 }
 
@@ -249,10 +237,8 @@ export const ArtistContextMenu = (props) =>
 ArtistContextMenu.propTypes = {
   record: PropTypes.object,
   color: PropTypes.string,
-  showLove: PropTypes.bool,
 }
 
 ArtistContextMenu.defaultProps = {
-  showLove: true,
   addLabel: true,
 }

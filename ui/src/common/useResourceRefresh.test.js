@@ -161,6 +161,15 @@ describe('useResourceRefresh', () => {
   })
 
   describe('Visible resources specified', () => {
+    it('skips a wildcard refresh while a route is resolving renamed resource IDs', () => {
+      mockStore({ refresh: { lastReceived: lastTime, resources: { '*': '*' } } })
+
+      useResourceRefresh('song', { suppressWildcardRefresh: true })
+
+      expect(refresh).not.toHaveBeenCalled()
+      expect(getMany).not.toHaveBeenCalled()
+    })
+
     it('triggers a UI refresh when received a "any" resource refresh', () => {
       mockStore({
         refresh: { lastReceived: lastTime, resources: { '*': '*' } },

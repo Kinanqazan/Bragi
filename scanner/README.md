@@ -459,7 +459,7 @@ The scanner's behavior can be customized through several configuration settings 
 | `PID.Track` | Format for track persistent IDs (critical for tracking moved files) | "musicbrainz_trackid\|albumid,discnumber,tracknumber,title"         |
 | `PID.Album` | Format for album persistent IDs (affects album grouping)            | "musicbrainz_albumid\|albumartistid,album,albumversion,releasedate" |
 
-These options can be set in the Navidrome configuration file (e.g., `navidrome.toml`) or via environment variables with the `ND_` prefix (e.g., `ND_SCANNER_ENABLED=false`). For environment variables, dots in option names are replaced with underscores.
+These options can be set in the Bragi configuration file or via environment variables with the `BR_` prefix (e.g., `BR_SCANNER_ENABLED=false`). For environment variables, dots in option names are replaced with underscores. The legacy `ND_` prefix is still accepted for compatibility.
 
 ## Conclusion
 

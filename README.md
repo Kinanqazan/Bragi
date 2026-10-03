@@ -46,13 +46,13 @@
 - Beautiful glassmorphic themes (such as `SquiddiesGlass`, `amusic`, and updated `gruvboxDark`) featuring modern typography, refined dark palettes, and subtle micro-animations.
 
 ### 10. 🗑️ Permanent Media File Deletion (Admin Safeguard)
-- Administrators can permanently delete individual songs directly from the web context menu (`ND_ENABLEMEDIAFILEDELETION="true"`).
+- Administrators can permanently delete individual songs directly from the web context menu (`BR_ENABLEMEDIAFILEDELETION="true"`).
 - Protected by strict server-side safeguards: administrator-only checks, path traversal/symlink escape prevention, and automated cleanup of related database records.
 
 ### 11. 🏷️ Song Metadata Editing (Admin Safeguard)
-- Administrators can edit a song's title, artist, and album artist on its song page (`ND_ENABLEMEDIAFILEMETADATAEDITING="true"`).
+- Administrators can edit a song's title, artist, and album artist on its song page (`BR_ENABLEMEDIAFILEMETADATAEDITING="true"`).
 - Changes are written to the selected song's embedded tags; filenames and folders stay unchanged. This setting is off by default.
-- Administrators can also set a display-name override on an artist page. It is stored in Bragi and does not rewrite song tags.
+- Administrators can set a display-name override on an artist page. It is stored in Bragi and does not rewrite song tags.
 
 ---
 
@@ -60,14 +60,16 @@
 
 Pushes to `master` automatically build and publish the container image to GitHub Container Registry:
 
+Use `BR_` for Bragi environment variables. Before using an image with these defaults, rename any `ND_` variables in your Compose service to `BR_`; legacy `ND_` variables remain accepted when no corresponding `BR_` value is set.
+
 ```yaml
 services:
   bragi:
     image: ghcr.io/kinanqaz/bragi:latest
     container_name: bragi
     environment:
-      ND_ENABLEMEDIAFILEDELETION: "true" # Optional: enable admin file deletion
-      ND_ENABLEMEDIAFILEMETADATAEDITING: "true" # Optional: enable admin song metadata editing
+      BR_ENABLEMEDIAFILEDELETION: "true" # Optional: enable admin file deletion
+      BR_ENABLEMEDIAFILEMETADATAEDITING: "true" # Optional: enable admin song metadata editing
     volumes:
       - /path/to/data:/data
       - /path/to/music:/music:rw

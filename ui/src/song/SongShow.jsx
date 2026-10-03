@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   CircularProgress,
@@ -14,6 +14,7 @@ import CloudUploadIcon from '@material-ui/icons/CloudUpload'
 import DeleteOutlineIcon from '@material-ui/icons/DeleteOutline'
 import EditIcon from '@material-ui/icons/Edit'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
+import PhotoCameraIcon from '@material-ui/icons/PhotoCamera'
 import SaveIcon from '@material-ui/icons/Save'
 import {
   ShowContextProvider,
@@ -94,6 +95,35 @@ const useStyles = makeStyles((theme) => ({
       justifySelf: 'center',
       marginTop: 'calc(8px + env(safe-area-inset-top, 0px))',
     },
+  },
+  artworkPreview: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  artworkActions: {
+    position: 'absolute',
+    top: theme.spacing(1),
+    left: theme.spacing(1),
+    zIndex: 3,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.25),
+    padding: theme.spacing(0.25),
+    borderRadius: 24,
+    background: 'rgba(0, 0, 0, 0.58)',
+    color: '#fff',
+    '& .MuiIconButton-root': {
+      color: 'inherit',
+      width: 36,
+      height: 36,
+    },
+  },
+  artworkFileInput: {
+    display: 'none',
   },
   playOverlay: {
     position: 'absolute',
@@ -275,6 +305,19 @@ const useStyles = makeStyles((theme) => ({
       padding: theme.spacing(0, 1),
     },
   },
+  lyricsDestination: {
+    maxWidth: 190,
+    minHeight: 32,
+    padding: theme.spacing(0.5, 1),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+    background: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    font: 'inherit',
+  },
+  lyricsNotice: {
+    marginTop: theme.spacing(1),
+  },
   lyricsFileInput: {
     display: 'none',
   },
@@ -353,13 +396,21 @@ const SongShowLayout = (props) => {
   })
   const [localRecord, setLocalRecord] = useState(null)
   const [refreshError, setRefreshError] = useState('')
-  const [lyricsFiles, setLyricsFiles] = useState({ txt: {}, lrc: {} })
+  const [lyricsFiles, setLyricsFiles] = useState({ txt: {}, lrc: {}, embedded: {} })
+  const [lyricsDestination, setLyricsDestination] = useState('separate')
   const [lyricsExtension, setLyricsExtension] = useState('.txt')
   const [lyricsDraft, setLyricsDraft] = useState('')
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [lyricsSaving, setLyricsSaving] = useState(false)
   const [lyricsDeleting, setLyricsDeleting] = useState(false)
+  const [lyricsRefreshing, setLyricsRefreshing] = useState(false)
+  const [lyricsRefreshRequired, setLyricsRefreshRequired] = useState(false)
+  const [lyricsRefreshError, setLyricsRefreshError] = useState('')
   const [lyricsError, setLyricsError] = useState('')
+  const [artworkFile, setArtworkFile] = useState(null)
+  const [artworkPreview, setArtworkPreview] = useState('')
+  const [artworkSaving, setArtworkSaving] = useState(false)
+  const artworkInputRef = useRef(null)
 
   useEffect(() => {
     if (!record) return
@@ -369,6 +420,8 @@ const SongShowLayout = (props) => {
 
   const displayRecord = localRecord || record
   const canEdit = config.enableMediaFileMetadataEditing && permissions === 'admin'
+  const recordId = displayRecord?.id
+  const mediaFileId = displayRecord?.mediaFileId
   const changedFields = useMemo(() => {
     if (!displayRecord) return {}
     const changes = Object.fromEntries(
@@ -387,22 +440,36 @@ const SongShowLayout = (props) => {
   }, [draft, displayRecord])
   const hasUnsavedChanges = editing && Object.keys(changedFields).length > 0
   const lyricsKey = lyricsExtension.slice(1)
-  const lyricsChanged = lyricsDraft !== (lyricsFiles[lyricsKey]?.content || '')
-  const hasAnyUnsavedChanges = hasUnsavedChanges || lyricsChanged
+  const lyricsBaseline = lyricsDestination === 'embedded'
+    ? lyricsFiles.embedded?.content || ''
+    : lyricsFiles[lyricsKey]?.content || ''
+  const lyricsChanged = lyricsDraft !== lyricsBaseline
+  const hasAnyUnsavedChanges = hasUnsavedChanges || lyricsChanged || !!artworkFile
 
   useEffect(() => {
-    if (!displayRecord || !canEdit) return undefined
+    if (!artworkPreview) return undefined
+    return () => URL.revokeObjectURL(artworkPreview)
+  }, [artworkPreview])
+
+  useEffect(() => {
+    if (!recordId || !canEdit) return undefined
     let active = true
     setLyricsLoading(true)
-    const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+    const id = encodeURIComponent(mediaFileId || recordId)
     httpClient(`${REST_URL}/song/${id}/lyrics`)
       .then(({ json }) => {
         if (!active) return
-        const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+        const files = { txt: json?.txt || {}, lrc: json?.lrc || {}, embedded: json?.embedded || {} }
         const extension = files.lrc.exists ? '.lrc' : '.txt'
+        const destination = files.lrc.exists || files.txt.exists || !files.embedded.exists
+          ? 'separate'
+          : 'embedded'
         setLyricsFiles(files)
+        setLyricsDestination(destination)
         setLyricsExtension(extension)
-        setLyricsDraft(files[extension.slice(1)].content || '')
+        setLyricsDraft(destination === 'embedded'
+          ? files.embedded.content || ''
+          : files[extension.slice(1)].content || '')
         setLyricsError('')
       })
       .catch((error) => {
@@ -414,7 +481,7 @@ const SongShowLayout = (props) => {
     return () => {
       active = false
     }
-  }, [canEdit, displayRecord?.id, displayRecord?.mediaFileId])
+  }, [canEdit, recordId, mediaFileId])
 
   useEffect(() => {
     if (!hasAnyUnsavedChanges) return undefined
@@ -548,6 +615,55 @@ const SongShowLayout = (props) => {
     }
   }
 
+  const handleArtworkSelection = (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setArtworkFile(file)
+    setArtworkPreview(URL.createObjectURL(file))
+    setRefreshError('')
+  }
+
+  const handleArtworkCancel = () => {
+    setArtworkFile(null)
+    setArtworkPreview('')
+  }
+
+  const handleArtworkSave = async () => {
+    if (!displayRecord || !artworkFile || artworkSaving) return
+    setArtworkSaving(true)
+    setRefreshError('')
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const formData = new FormData()
+      formData.append('image', artworkFile)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/artwork`, {
+        method: 'PUT',
+        headers: new Headers({}),
+        body: formData,
+      })
+      if (json.mediaFile) {
+        setLocalRecord(json.mediaFile)
+        dispatch(updateTrackMetadata(json.mediaFile))
+      }
+      setArtworkFile(null)
+      setArtworkPreview('')
+      dataProvider.clearCache?.()
+      if (json.refreshRequired) {
+        setRefreshError(json.refreshError || 'Artwork was saved, but the library index has not refreshed yet.')
+      } else {
+        refresh()
+      }
+    } catch (error) {
+      notify(error.message || 'Could not save song artwork.', {
+        type: 'warning',
+        multiLine: true,
+      })
+    } finally {
+      setArtworkSaving(false)
+    }
+  }
+
   const handleLyricsImport = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -576,22 +692,38 @@ const SongShowLayout = (props) => {
     setLyricsError('')
     try {
       const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
-      const { json } = await httpClient(`${REST_URL}/song/${id}/lyrics`, {
+      const endpoint = lyricsDestination === 'embedded'
+        ? `${REST_URL}/song/${id}/lyrics/embedded`
+        : `${REST_URL}/song/${id}/lyrics`
+      const body = lyricsDestination === 'embedded'
+        ? { content: lyricsDraft, expectedVersion: lyricsFiles.embedded?.version || '' }
+        : {
+            extension: lyricsExtension,
+            content: lyricsDraft,
+            expectedVersion: lyricsFiles[lyricsKey]?.version || '',
+          }
+      const { json } = await httpClient(endpoint, {
         method: 'PUT',
-        body: JSON.stringify({
-          extension: lyricsExtension,
-          content: lyricsDraft,
-          expectedVersion: lyricsFiles[lyricsKey]?.version || '',
-        }),
+        body: JSON.stringify(body),
       })
-      const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+      const files = { txt: json?.txt || {}, lrc: json?.lrc || {}, embedded: json?.embedded || {} }
       setLyricsFiles(files)
-      setLyricsDraft(files[lyricsKey].content || '')
+      setLyricsDraft(lyricsDestination === 'embedded'
+        ? files.embedded.content || ''
+        : files[lyricsKey].content || '')
+      setLyricsRefreshRequired(Boolean(json?.refreshRequired))
+      setLyricsRefreshError(json?.refreshError || '')
       setLyricsError('')
+      if (json?.mediaFile) {
+        setLocalRecord(json.mediaFile)
+        dispatch(updateTrackMetadata(json.mediaFile))
+      }
       dataProvider.clearCache?.()
-      window.dispatchEvent(
-        new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: id } }),
-      )
+      if (lyricsDestination !== 'embedded' || !json?.refreshRequired) {
+        window.dispatchEvent(
+          new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: id } }),
+        )
+      }
     } catch (error) {
       setLyricsError(error.message || 'Could not save lyrics.')
     } finally {
@@ -600,8 +732,50 @@ const SongShowLayout = (props) => {
   }
 
   const handleCancelLyrics = () => {
-    setLyricsDraft(lyricsFiles[lyricsKey]?.content || '')
+    setLyricsDraft(lyricsBaseline)
     setLyricsError('')
+  }
+
+  const handleLyricsDestinationChange = (event) => {
+    const destination = event.target.value
+    if (!lyricsChanged) {
+      setLyricsDraft(destination === 'embedded'
+        ? lyricsFiles.embedded?.content || ''
+        : lyricsFiles[lyricsKey]?.content || '')
+    }
+    setLyricsDestination(destination)
+    setLyricsError('')
+  }
+
+  const handleRetryLyricsRefresh = async () => {
+    if (!displayRecord || lyricsRefreshing) return
+    setLyricsRefreshing(true)
+    setLyricsRefreshError('')
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/metadata/refresh`, { method: 'POST' })
+      setLocalRecord(json.mediaFile)
+      dispatch(updateTrackMetadata(json.mediaFile))
+      const { json: refreshedLyrics } = await httpClient(`${REST_URL}/song/${id}/lyrics`)
+      const files = {
+        txt: refreshedLyrics?.txt || {},
+        lrc: refreshedLyrics?.lrc || {},
+        embedded: refreshedLyrics?.embedded || {},
+      }
+      setLyricsFiles(files)
+      setLyricsDraft(lyricsDestination === 'embedded'
+        ? files.embedded.content || ''
+        : files[lyricsKey]?.content || '')
+      setLyricsRefreshRequired(false)
+      dataProvider.clearCache?.()
+      window.dispatchEvent(
+        new CustomEvent('bragi:refresh-song-lyrics', { detail: { songId: id } }),
+      )
+    } catch (error) {
+      setLyricsRefreshError(error.message || 'The library refresh did not complete.')
+    } finally {
+      setLyricsRefreshing(false)
+    }
   }
 
   const handleDeleteLyrics = async () => {
@@ -621,7 +795,7 @@ const SongShowLayout = (props) => {
           lrcVersion: lyricsFiles.lrc?.version || '',
         }),
       })
-      const files = { txt: json?.txt || {}, lrc: json?.lrc || {} }
+      const files = { txt: json?.txt || {}, lrc: json?.lrc || {}, embedded: json?.embedded || {} }
       setLyricsFiles(files)
       setLyricsExtension('.txt')
       setLyricsDraft('')
@@ -690,6 +864,60 @@ const SongShowLayout = (props) => {
             className={classes.artwork}
             title={displayRecord.title}
           />
+          {artworkPreview && (
+            <img className={classes.artworkPreview} src={artworkPreview} alt="Artwork preview" />
+          )}
+          {canEdit && (
+            <div className={classes.artworkActions} role="group" aria-label="Song artwork">
+              <Tooltip title={artworkFile ? 'Choose another image' : 'Change song artwork'}>
+                <span>
+                  <IconButton
+                    aria-label={artworkFile ? 'Choose another image' : 'Change song artwork'}
+                    disabled={artworkSaving}
+                    onClick={() => artworkInputRef.current?.click()}
+                    size="small"
+                  >
+                    <PhotoCameraIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              {artworkFile && (
+                <>
+                  <Tooltip title="Save artwork">
+                    <span>
+                      <IconButton
+                        aria-label={artworkSaving ? 'Saving artwork' : 'Save artwork'}
+                        color="primary"
+                        disabled={artworkSaving}
+                        onClick={handleArtworkSave}
+                        size="small"
+                      >
+                        {artworkSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Cancel artwork change">
+                    <IconButton
+                      aria-label="Cancel artwork change"
+                      disabled={artworkSaving}
+                      onClick={handleArtworkCancel}
+                      size="small"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          )}
+          <input
+            ref={artworkInputRef}
+            className={classes.artworkFileInput}
+            type="file"
+            accept="image/*"
+            aria-label="Choose song artwork"
+            onChange={handleArtworkSelection}
+          />
           <div className={classes.playOverlay} role="group" aria-label="Song playback">
             <Button
               className={classes.playButton}
@@ -708,6 +936,11 @@ const SongShowLayout = (props) => {
           </div>
         </div>
         <div className={classes.details} role="group" aria-label="Song metadata">
+          {canEdit && !displayRecord.hasCoverArt && (
+            <Typography color="textSecondary" component="p" variant="caption">
+              No embedded cover is stored in this song. The displayed cover comes from its disc or album when available.
+            </Typography>
+          )}
           <div className={classes.titleRow}>
             <Typography className={classes.title} variant="h6" component="h1">
               {editing ? (
@@ -887,6 +1120,15 @@ const SongShowLayout = (props) => {
               <div className={classes.lyricsHeader}>
                 <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
                 <div className={classes.lyricsActions}>
+                  <select
+                    aria-label="Lyrics storage"
+                    className={classes.lyricsDestination}
+                    onChange={handleLyricsDestinationChange}
+                    value={lyricsDestination}
+                  >
+                    <option value="separate">Separate file</option>
+                    <option value="embedded">Inside music file</option>
+                  </select>
                   <Tooltip title="Choose a TXT or LRC lyrics file">
                     <IconButton aria-label="Choose lyrics file" component="label" size="small">
                       <CloudUploadIcon />
@@ -923,7 +1165,7 @@ const SongShowLayout = (props) => {
                       </IconButton>
                     </span>
                   </Tooltip>
-                  {(lyricsFiles.txt.exists || lyricsFiles.lrc.exists) && (
+                  {lyricsDestination === 'separate' && (lyricsFiles.txt.exists || lyricsFiles.lrc.exists) && (
                     <Tooltip title="Delete separate lyrics">
                       <span>
                         <IconButton
@@ -944,6 +1186,11 @@ const SongShowLayout = (props) => {
                 <CircularProgress size={20} aria-label="Loading lyrics" />
               ) : (
                 <>
+                  {lyricsDestination === 'embedded' && (lyricsFiles.txt.exists || lyricsFiles.lrc.exists) && (
+                    <Typography className={classes.lyricsNotice} color="textSecondary" role="status">
+                      Separate TXT/LRC files take priority in the player. They will not be removed when saving embedded lyrics.
+                    </Typography>
+                  )}
                   <textarea
                     aria-label="Lyrics text"
                     className={classes.lyricsInput}
@@ -953,6 +1200,14 @@ const SongShowLayout = (props) => {
                     onChange={(event) => setLyricsDraft(event.target.value)}
                   />
                   {lyricsError && <Typography role="alert" color="error">{lyricsError}</Typography>}
+                  {lyricsRefreshRequired && (
+                    <Typography className={classes.lyricsNotice} color="textSecondary" role="status">
+                      Lyrics were saved in the music file, but the library refresh did not finish. {lyricsRefreshError}{' '}
+                      <Button size="small" disabled={lyricsRefreshing} onClick={handleRetryLyricsRefresh}>
+                        {lyricsRefreshing ? 'Refreshing…' : 'Retry library refresh'}
+                      </Button>
+                    </Typography>
+                  )}
                 </>
               )}
             </section>

@@ -6,7 +6,6 @@ import {
   makeStyles,
 } from '@material-ui/core'
 import EqualizerRoundedIcon from '@material-ui/icons/EqualizerRounded'
-import PlayArrowRoundedIcon from '@material-ui/icons/PlayArrowRounded'
 import { useDispatch } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { playTracks } from '../actions'
@@ -162,12 +161,15 @@ const useStyles = makeStyles((theme) => ({
     msOverflowStyle: 'none',
     '&::-webkit-scrollbar': { display: 'none' },
   },
+  artistCarousel: {
+    gap: theme.spacing(1),
+  },
   trackCard: {
     display: 'flex',
-    flex: '0 0 120px',
+    flex: '0 0 104px',
     flexDirection: 'column',
     alignItems: 'stretch',
-    width: 120,
+    width: 104,
     minWidth: 0,
     padding: 0,
     color: theme.palette.text.primary,
@@ -183,8 +185,8 @@ const useStyles = makeStyles((theme) => ({
       borderRadius: 12,
     },
     [theme.breakpoints.down('xs')]: {
-      flexBasis: 108,
-      width: 108,
+      flexBasis: 92,
+      width: 92,
     },
   },
   trackArtwork: {
@@ -201,34 +203,22 @@ const useStyles = makeStyles((theme) => ({
       : '0 5px 15px rgba(0,0,0,0.08)',
   },
   artworkImage: { width: '100%', height: '100%' },
-  rank: {
+  trackPlayCount: {
     position: 'absolute',
-    top: 7,
-    left: 7,
+    top: 6,
+    left: 6,
     display: 'grid',
     placeItems: 'center',
-    width: 25,
-    height: 25,
-    borderRadius: 8,
+    minWidth: 20,
+    height: 20,
+    boxSizing: 'border-box',
+    padding: '0 5px',
+    borderRadius: 7,
     color: '#fff',
     backgroundColor: 'rgba(10, 10, 12, 0.72)',
-    fontSize: '0.68rem',
+    fontSize: '0.6rem',
     fontWeight: 800,
     backdropFilter: 'blur(8px)',
-  },
-  playBadge: {
-    position: 'absolute',
-    right: 7,
-    bottom: 7,
-    display: 'grid',
-    placeItems: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: '50%',
-    color: theme.palette.getContrastText(theme.palette.primary.main),
-    backgroundColor: theme.palette.primary.main,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
-    '& svg': { fontSize: 21 },
   },
   trackInfo: {
     display: 'flex',
@@ -246,29 +236,12 @@ const useStyles = makeStyles((theme) => ({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  trackArtist: {
-    width: '100%',
-    marginTop: 3,
-    overflow: 'hidden',
-    color: theme.palette.text.secondary,
-    fontSize: '0.69rem',
-    lineHeight: 1.2,
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
-  plays: {
-    marginTop: theme.spacing(0.7),
-    color: theme.palette.text.secondary,
-    fontSize: '0.66rem',
-    lineHeight: 1,
-    fontWeight: 600,
-  },
   artistCard: {
     display: 'flex',
-    flex: '0 0 128px',
+    flex: '0 0 108px',
     flexDirection: 'column',
     alignItems: 'center',
-    width: 128,
+    width: 108,
     minWidth: 0,
     padding: 0,
     color: theme.palette.text.primary,
@@ -293,6 +266,7 @@ const useStyles = makeStyles((theme) => ({
     position: 'relative',
     width: 92,
     height: 92,
+    marginLeft: -6,
     flexShrink: 0,
     overflow: 'hidden',
     borderRadius: '50%',
@@ -384,7 +358,7 @@ export const ListeningStats = ({
         aria-label={`${label} carousel`}
         tabIndex={0}
       >
-        {tracks.map((track, index) => (
+        {tracks.map((track) => (
           <ButtonBase
             className={classes.trackCard}
             key={track.id}
@@ -403,22 +377,15 @@ export const ListeningStats = ({
                 className={classes.artworkImage}
                 title={track.title}
               />
-              {!unplayed && <span className={classes.rank}>{index + 1}</span>}
-              <span className={classes.playBadge}>
-                <PlayArrowRoundedIcon />
-              </span>
+              {!unplayed && (
+                <span className={classes.trackPlayCount}>
+                  {formatCount(track.plays)}
+                </span>
+              )}
             </div>
             <div className={classes.trackInfo}>
               <Typography className={classes.trackTitle}>
                 {track.title}
-              </Typography>
-              <Typography className={classes.trackArtist}>
-                {track.artist || 'Unknown artist'}
-              </Typography>
-              <Typography className={classes.plays}>
-                {unplayed
-                  ? 'No recorded plays'
-                  : `${formatCount(track.plays)} plays`}
               </Typography>
             </div>
           </ButtonBase>
@@ -503,11 +470,11 @@ export const ListeningStats = ({
               </div>
               {stats?.topArtists?.length ? (
                 <div
-                  className={classes.carousel}
+                  className={`${classes.carousel} ${classes.artistCarousel}`}
                   aria-label="Top artists carousel"
                   tabIndex={0}
                 >
-                  {stats.topArtists.map((artist, index) => (
+                  {stats.topArtists.map((artist) => (
                     <ButtonBase
                       className={classes.artistCard}
                       key={artist.id}
@@ -522,14 +489,13 @@ export const ListeningStats = ({
                           className={classes.artworkImage}
                           title={artist.name}
                         />
-                        <span className={classes.rank}>{index + 1}</span>
+                        <span className={classes.trackPlayCount}>
+                          {formatCount(artist.plays)}
+                        </span>
                       </div>
                       <div className={classes.artistInfo}>
                         <Typography className={classes.artistName}>
                           {artist.name}
-                        </Typography>
-                        <Typography className={classes.plays}>
-                          {formatCount(artist.plays)} plays
                         </Typography>
                       </div>
                     </ButtonBase>

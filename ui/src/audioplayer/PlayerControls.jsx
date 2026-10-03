@@ -35,6 +35,7 @@ const PlayerControls = ({
   showCast = true,
   compact = false,
   isolateGestures = false,
+  primaryControl = null,
 }) => {
   const classes = useStyles()
   const playbackPress = useImmediateControlPress(
@@ -56,20 +57,22 @@ const PlayerControls = ({
         >
           <SkipPreviousIcon />
         </IconButton>
-        <IconButton
-          {...playbackPress}
-          disableRipple
-          aria-label={snapshot.playing ? 'Pause' : 'Play'}
-          className={clsx('nd-player-primary-control', classes.primaryBtn)}
-        >
-          {snapshot.loading ? (
-            <span className="nd-player-loading" aria-label="Loading" />
-          ) : snapshot.playing ? (
-            <PauseIcon />
-          ) : (
-            <PlayArrowIcon />
-          )}
-        </IconButton>
+        {primaryControl || (
+          <IconButton
+            {...playbackPress}
+            disableRipple
+            aria-label={snapshot.playing ? 'Pause' : 'Play'}
+            className={clsx('nd-player-primary-control', classes.primaryBtn)}
+          >
+            {snapshot.loading ? (
+              <span className="nd-player-loading" aria-label="Loading" />
+            ) : snapshot.playing ? (
+              <PauseIcon />
+            ) : (
+              <PlayArrowIcon />
+            )}
+          </IconButton>
+        )}
         <IconButton
           onClick={commands.next}
           aria-label="Next track"

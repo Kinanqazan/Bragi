@@ -4,11 +4,17 @@
 export function devTemplatePlugin(isStandalone = false, environment = process.env) {
   // Keep the browser's runtime config aligned with settings passed to the Go
   // backend by scripts/dev.ps1.
+  const environmentValue = (bragiName, legacyName) =>
+    environment[bragiName] || environment[legacyName]
   const devAppConfig = JSON.stringify(
     JSON.stringify({
-      castMediaBaseURL: environment.ND_CASTMEDIABASEURL || '',
+      castMediaBaseURL:
+        environmentValue('BR_CASTMEDIABASEURL', 'ND_CASTMEDIABASEURL') || '',
       enableMediaFileMetadataEditing:
-        environment.ND_ENABLEMEDIAFILEMETADATAEDITING === 'true',
+        environmentValue(
+          'BR_ENABLEMEDIAFILEMETADATAEDITING',
+          'ND_ENABLEMEDIAFILEMETADATAEDITING',
+        ) === 'true',
     }),
   )
 

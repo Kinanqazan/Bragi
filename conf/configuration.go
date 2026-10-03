@@ -322,6 +322,13 @@ var (
 	hooks  []func()
 )
 
+// MediaFileCoverArtEnabled reports whether track-embedded artwork is available.
+// Metadata editing implies artwork display so edited covers immediately appear
+// in the app; the standalone option remains available for read-only libraries.
+func MediaFileCoverArtEnabled() bool {
+	return Server.EnableMediaFileCoverArt || Server.EnableMediaFileMetadataEditing
+}
+
 // SnapshotConfig returns a function that restores Server to its current state.
 // Uses JSON round-tripping so Dir fields get fresh sync.Once values.
 func SnapshotConfig() func() {
@@ -401,7 +408,7 @@ func Load(noConfigDump bool) {
 			logFatal(fmt.Sprintf("Error opening log file %s: %s", Server.LogFile, err.Error()))
 		}
 		log.SetOutput(out)
-	} else if os.Getenv("ND_SYSTEMD_PRIORITY_LOGGING") != "" && os.Getenv("JOURNAL_STREAM") != "" {
+	} else if environmentValue("SYSTEMD_PRIORITY_LOGGING") != "" && os.Getenv("JOURNAL_STREAM") != "" {
 		// When running under systemd, prepend syslog priority prefixes so
 		// journald assigns the correct severity to each log line.
 		// Note that we have an additional environment variable, as JOURNAL_STREAM
@@ -452,10 +459,10 @@ func Load(noConfigDump bool) {
 	// Log configuration source
 	if Server.ConfigFile != "" {
 		log.Info("Loaded configuration", "file", Server.ConfigFile)
-	} else if hasNDEnvVars() {
+	} else if hasConfigEnvironmentVariables() {
 		log.Info("No configuration file found. Loaded configuration only from environment variables")
 	} else {
-		log.Warn("No configuration file found. Using default values. To specify a config file, use the --configfile flag or set the ND_CONFIGFILE environment variable.")
+		log.Warn("No configuration file found. Using default values. To specify a config file, use the --configfile flag or set BR_CONFIGFILE (legacy ND_CONFIGFILE is also accepted).")
 	}
 
 	// Print current configuration if log level is Debug
@@ -520,7 +527,6 @@ var deprecatedOptions = []struct{ name, replacement string }{
 var removedOptions = []string{"Spotify.ID", "Spotify.Secret"}
 
 func logDeprecatedOptions(oldName, newName string) {
-	envVar := envVarName(oldName)
 	newEnvVar := envVarName(newName)
 	logWarning := func(oldName, newName string) {
 		if newName != "" {
@@ -529,8 +535,10 @@ func logDeprecatedOptions(oldName, newName string) {
 			log.Warn(fmt.Sprintf("Option '%s' is deprecated and will be ignored in a future release", oldName))
 		}
 	}
-	if os.Getenv(envVar) != "" {
-		logWarning(envVar, newEnvVar)
+	for _, envVar := range envVarNames(oldName) {
+		if os.Getenv(envVar) != "" {
+			logWarning(envVar, newEnvVar)
+		}
 	}
 	if viper.InConfig(oldName) {
 		logWarning(oldName, newName)
@@ -541,36 +549,37 @@ func logDeprecatedOptions(oldName, newName string) {
 // not available anymore
 func logRemovedOptions(options ...string) {
 	for _, option := range options {
-		envVar := envVarName(option)
 		logWarning := func(option string) {
 			log.Warn(fmt.Sprintf("Option '%s' is not available anymore and will be ignored. Please remove it from your config", option))
 		}
 		if viper.InConfig(option) {
 			logWarning(option)
 		}
-		if os.Getenv(envVar) != "" {
-			logWarning(envVar)
+		for _, envVar := range envVarNames(option) {
+			if os.Getenv(envVar) != "" {
+				logWarning(envVar)
+			}
 		}
 	}
 }
 
-// remapEnvVarKeysFromConfig detects ND_-prefixed keys in the config file (users mistakenly
-// using environment variable names) and remaps them to canonical Viper keys with a warning.
+// remapEnvVarKeysFromConfig detects prefixed environment-style keys in config files (users
+// mistakenly using environment variable names) and remaps them to canonical keys.
 func remapEnvVarKeysFromConfig() {
 	for _, key := range viper.AllKeys() {
-		if !strings.HasPrefix(key, "nd_") || !viper.InConfig(key) {
+		prefix, stripped, ok := configEnvKeyParts(key)
+		if !ok || !viper.InConfig(key) {
 			continue
 		}
-		stripped := strings.TrimPrefix(key, "nd_")
-		canonicalKey := ndKeyToCanonical(key)
-		displayNDKey := "ND_" + strings.ToUpper(stripped)
+		canonicalKey := prefixedEnvKeyToCanonical(stripped)
+		displayEnvKey := prefix + strings.ToUpper(stripped)
 		canonicalName := canonicalOptionName(canonicalKey)
 
 		if viper.InConfig(canonicalKey) {
 			logFatal(fmt.Sprintf(
-				"Config file contains both '%s' and '%s'. Remove the ND_-prefixed version. "+
-					"The 'ND_' prefix is only needed for environment variables, not config file keys.",
-				displayNDKey, cmp.Or(canonicalName, toPascalCase(canonicalKey)),
+				"Config file contains both '%s' and '%s'. Remove the environment-prefixed version. "+
+					"The 'BR_' or legacy 'ND_' prefix is only needed for environment variables, not config file keys.",
+				displayEnvKey, cmp.Or(canonicalName, toPascalCase(canonicalKey)),
 			))
 			return
 		}
@@ -579,8 +588,8 @@ func remapEnvVarKeysFromConfig() {
 		// Unknown keys get no advice here, logUnknownOptions reports them instead
 		if canonicalName != "" {
 			_, _ = fmt.Fprintf(os.Stderr, "WARNING: Config key '%s' uses environment variable naming. Use '%s' instead. "+
-				"The 'ND_' prefix is only needed for environment variables.\n",
-				displayNDKey, canonicalName,
+				"The 'BR_' or legacy 'ND_' prefix is only needed for environment variables.\n",
+				displayEnvKey, canonicalName,
 			)
 		}
 	}
@@ -596,18 +605,52 @@ func mapDeprecatedOption(legacyName, newName string) {
 }
 
 // explicitlySet reports whether the user provided the option, ignoring defaults,
-// which viper.IsSet counts as set. The ND_ spelling is also accepted in the config
-// file, and remapEnvVarKeysFromConfig has already moved it out of InConfig's reach.
+// which viper.IsSet counts as set. Prefixed spellings are also accepted in the config
+// file, and remapEnvVarKeysFromConfig has already moved them out of InConfig's reach.
 func explicitlySet(name string) bool {
-	envVar := envVarName(name)
-	return viper.InConfig(name) || os.Getenv(envVar) != "" || viper.InConfig(strings.ToLower(envVar))
+	if viper.InConfig(name) {
+		return true
+	}
+	for _, envVar := range envVarNames(name) {
+		if os.Getenv(envVar) != "" || viper.InConfig(strings.ToLower(envVar)) {
+			return true
+		}
+	}
+	return false
 }
 
 func envVarName(option string) string {
 	if option == "" {
 		return ""
 	}
-	return "ND_" + strings.ToUpper(strings.ReplaceAll(option, ".", "_"))
+	return prefixedEnvVarName("BR", option)
+}
+
+func legacyEnvVarName(option string) string {
+	if option == "" {
+		return ""
+	}
+	return prefixedEnvVarName("ND", option)
+}
+
+func envVarNames(option string) []string {
+	if option == "" {
+		return nil
+	}
+	return []string{envVarName(option), legacyEnvVarName(option)}
+}
+
+func environmentValue(option string) string {
+	for _, envVar := range envVarNames(option) {
+		if value := os.Getenv(envVar); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func prefixedEnvVarName(prefix, option string) string {
+	return prefix + "_" + strings.ToUpper(strings.ReplaceAll(option, ".", "_"))
 }
 
 func logUnknownOptions() {
@@ -655,8 +698,8 @@ func unknownConfigKeys() []string {
 		if skipDefault && strings.HasPrefix(key, "default.") {
 			continue
 		}
-		// Only ND_-prefixed keys that remapEnvVarKeysFromConfig could resolve are valid
-		if strings.HasPrefix(key, "nd_") && canonicalOptionName(ndKeyToCanonical(key)) != "" {
+		// Only environment-prefixed keys that remapEnvVarKeysFromConfig could resolve are valid
+		if _, stripped, ok := configEnvKeyParts(key); ok && canonicalOptionName(prefixedEnvKeyToCanonical(stripped)) != "" {
 			continue
 		}
 		unknown = append(unknown, key)
@@ -665,8 +708,18 @@ func unknownConfigKeys() []string {
 	return asWrittenInConfigFile(unknown)
 }
 
-func ndKeyToCanonical(key string) string {
-	return strings.ReplaceAll(strings.TrimPrefix(key, "nd_"), "_", ".")
+func configEnvKeyParts(key string) (prefix, stripped string, ok bool) {
+	lower := strings.ToLower(key)
+	for _, candidate := range []string{"br_", "nd_"} {
+		if strings.HasPrefix(lower, candidate) {
+			return strings.ToUpper(candidate), strings.TrimPrefix(lower, candidate), true
+		}
+	}
+	return "", "", false
+}
+
+func prefixedEnvKeyToCanonical(stripped string) string {
+	return strings.ReplaceAll(stripped, "_", ".")
 }
 
 // canonicalOptionName returns the documented spelling of a known option key, or ""
@@ -929,10 +982,12 @@ func AddHook(hook func()) {
 	hooks = append(hooks, hook)
 }
 
-// hasNDEnvVars checks if any ND_ prefixed environment variables are set (excluding ND_CONFIGFILE)
-func hasNDEnvVars() bool {
+// hasConfigEnvironmentVariables checks whether config values came from either supported prefix.
+func hasConfigEnvironmentVariables() bool {
 	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "ND_") && !strings.HasPrefix(env, "ND_CONFIGFILE=") {
+		name, _, _ := strings.Cut(env, "=")
+		upperName := strings.ToUpper(name)
+		if (strings.HasPrefix(upperName, "BR_") || strings.HasPrefix(upperName, "ND_")) && upperName != "BR_CONFIGFILE" && upperName != "ND_CONFIGFILE" {
 			return true
 		}
 	}
@@ -1145,17 +1200,29 @@ func InitConfig(cfgFile string, loadEnvVars bool) {
 		viper.SetConfigName("navidrome")
 	}
 
-	_ = viper.BindEnv("port")
 	if loadEnvVars {
-		viper.SetEnvPrefix("ND")
+		viper.SetEnvPrefix("BR")
 		replacer := strings.NewReplacer(".", "_")
 		viper.SetEnvKeyReplacer(replacer)
 		viper.AutomaticEnv()
+		bindConfigEnvironmentVariables()
 	}
 
 	err := viper.ReadInConfig()
 	if viper.ConfigFileUsed() != "" && err != nil {
 		logFatal("Navidrome could not open config file:", err)
+	}
+}
+
+func bindConfigEnvironmentVariables() {
+	keys, _ := configKeys()
+	for key := range keys {
+		envVars := envVarNames(key)
+		if key == "port" {
+			// Preserve the existing unprefixed PORT fallback used by some hosts.
+			envVars = append(envVars, "PORT")
+		}
+		_ = viper.BindEnv(append([]string{key}, envVars...)...)
 	}
 }
 
@@ -1165,10 +1232,12 @@ func getConfigFile(cfgFile string) string {
 	if cfgFile != "" {
 		return cfgFile
 	}
-	cfgFile = os.Getenv("ND_CONFIGFILE")
-	if cfgFile != "" {
-		if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
-			return cfgFile
+	for _, envVar := range []string{"BR_CONFIGFILE", "ND_CONFIGFILE"} {
+		cfgFile = os.Getenv(envVar)
+		if cfgFile != "" {
+			if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
+				return cfgFile
+			}
 		}
 	}
 	return ""

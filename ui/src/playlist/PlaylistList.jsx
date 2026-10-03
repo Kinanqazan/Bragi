@@ -21,7 +21,6 @@ import {
   ArtworkAvatar,
   DurationField,
   List,
-  LoveButton,
   ModernFilterBar,
   ToggleFieldsMenu,
   Writable,
@@ -29,7 +28,6 @@ import {
   useSelectedFields,
   useResourceRefresh,
 } from '../common'
-import config from '../config'
 import ChangePublicStatusButton from './ChangePublicStatusButton'
 import { songFilterStyles } from '../song/SongList'
 
@@ -136,13 +134,6 @@ const PlaylistListBulkActions = (props) => {
   )
 }
 
-// Datagrid reads `source`/`sortable`/`label` off this element for the column
-// header; only record/resource are forwarded so they never leak onto the button.
-export const PlaylistLove = ({ record, className }) => (
-  <LoveButton record={record} resource={'playlist'} className={className} />
-)
-PlaylistLove.defaultProps = { source: 'starred', sortable: false }
-
 const PlaylistList = (props) => {
   const isXsmall = useMediaQuery((theme) => theme.breakpoints.down('xs'))
   const isDesktop = useMediaQuery((theme) => theme.breakpoints.up('md'))
@@ -163,7 +154,6 @@ const PlaylistList = (props) => {
       sync: !isXsmall && (
         <ToggleAutoImport source="sync" sortByOrder={'DESC'} />
       ),
-      starred: config.enableFavourites && <PlaylistLove />,
     }),
     [isDesktop, isXsmall],
   )

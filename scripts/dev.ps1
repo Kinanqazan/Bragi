@@ -247,14 +247,17 @@ if (-not (Test-PortAvailable -CheckPort $BackendPort)) {
     throw "Backend port $BackendPort is already in use. Stop the previous test server before running this script."
 }
 
-$env:ND_MUSICFOLDER = Join-Path $projectRoot 'tests\fixtures\test_songs files'
-$env:ND_DATAFOLDER = Join-Path $projectRoot 'tmp\navidrome-data'
-$env:ND_PORT = "$BackendPort"
-$env:ND_DEVACTIVITYPANEL = 'true'
-$env:ND_ENABLEMEDIAFILEMETADATAEDITING = 'true'
+$env:BR_MUSICFOLDER = Join-Path $projectRoot 'tests\fixtures\test_songs files'
+$env:BR_DATAFOLDER = Join-Path $projectRoot 'tmp\navidrome-data'
+$env:BR_PORT = "$BackendPort"
+$env:BR_DEVACTIVITYPANEL = 'true'
+$env:BR_ENABLEMEDIAFILEMETADATAEDITING = 'true'
 $env:PORT = "$Port"
 $env:BACKEND_PORT = "$BackendPort"
 
+if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
+    $CastMediaBaseURL = $env:BR_CASTMEDIABASEURL
+}
 if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
     $CastMediaBaseURL = $env:ND_CASTMEDIABASEURL
 }
@@ -265,14 +268,14 @@ if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
     }
 }
 if (-not [string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
-    $env:ND_CASTMEDIABASEURL = $CastMediaBaseURL.TrimEnd('/')
+    $env:BR_CASTMEDIABASEURL = $CastMediaBaseURL.TrimEnd('/')
 }
 # Keep the development manifest and service worker available so this exact URL
 # can be installed as a PWA while the UI still uses Vite's hot reload.
 $env:VITE_ENABLE_DEV_PWA = 'true'
 
-if (-not (Test-Path $env:ND_DATAFOLDER)) {
-    New-Item -ItemType Directory -Path $env:ND_DATAFOLDER -Force | Out-Null
+if (-not (Test-Path $env:BR_DATAFOLDER)) {
+    New-Item -ItemType Directory -Path $env:BR_DATAFOLDER -Force | Out-Null
 }
 
 $tmpPath = Join-Path $projectRoot 'tmp'
@@ -290,7 +293,7 @@ foreach ($address in (Get-LanIPv4Addresses)) {
 }
 Write-Host "  Reverse-proxy upstream: http://<this-machine-ip>:$Port" -ForegroundColor Cyan
 if (-not [string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
-    Write-Host "  Cast media URL: $($env:ND_CASTMEDIABASEURL)" -ForegroundColor Cyan
+    Write-Host "  Cast media URL: $($env:BR_CASTMEDIABASEURL)" -ForegroundColor Cyan
 } else {
     Write-Host '  Cast media URL: not set (the receiver cannot use localhost)' -ForegroundColor DarkYellow
 }

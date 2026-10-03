@@ -7,6 +7,7 @@ import {
   useShowContext,
   ReferenceManyField,
   Title as RaTitle,
+  useRefresh,
 } from 'react-admin'
 import subsonic from '../subsonic'
 import { ModernSongList } from '../song/ModernSongList'
@@ -62,23 +63,28 @@ const useStyles = makeStyles(
       width: '100%',
       justifyContent: 'flex-start',
       display: 'flex',
-      paddingTop: '0.25em',
-      paddingBottom: '0.25em',
-      paddingLeft: '1em',
-      paddingRight: '1em',
+      padding: '0.25em 1em !important',
+      minHeight: '0 !important',
+      height: 'auto !important',
+      alignItems: 'center',
       flexWrap: 'wrap',
       overflowX: 'auto',
+      '&& > button': {
+        marginTop: '0 !important',
+        marginBottom: '0 !important',
+      },
       [theme.breakpoints.down('xs')]: {
-        paddingLeft: '0.5em',
-        paddingRight: '0.5em',
+        padding: '0 0.5em !important',
         gap: '0.5em',
         justifyContent: 'space-around',
       },
     },
     actionsContainer: {
       paddingLeft: '.75rem',
+      marginTop: 0,
       [theme.breakpoints.down('xs')]: {
         padding: '.5rem',
+        marginTop: '0.25rem',
       },
     },
   }),
@@ -129,8 +135,10 @@ const ArtistShowLayout = (props) => {
   const showContext = useShowContext(props)
   const record = useRecordContext()
   const [displayName, setDisplayName] = useState('')
+  const [refreshAfterRename, setRefreshAfterRename] = useState(false)
   const classes = useStyles()
-  useResourceRefresh('artist', 'song')
+  const refresh = useRefresh()
+  useResourceRefresh('song')
   useScrollRestoration(!!record?.id)
 
   const perPage = getStoredPerPage()
@@ -139,13 +147,27 @@ const ArtistShowLayout = (props) => {
     setDisplayName(record?.name || '')
   }, [record?.id, record?.name])
 
+  useEffect(() => {
+    if (!refreshAfterRename) return
+    setRefreshAfterRename(false)
+    refresh()
+  }, [refreshAfterRename, refresh])
+
   const displayRecord = record ? { ...record, name: displayName || record.name } : null
 
   return (
     <>
       {displayRecord && <RaTitle title={<Title subTitle={displayRecord.name} />} />}
       <div className={classes.container}>
-        {displayRecord && <ArtistDetails record={displayRecord} onNameSaved={setDisplayName} />}
+        {displayRecord && (
+          <ArtistDetails
+            record={displayRecord}
+            onNameSaved={(name) => {
+              setDisplayName(name)
+              setRefreshAfterRename(true)
+            }}
+          />
+        )}
         {displayRecord && (
           <div className={classes.actionsContainer}>
             <ArtistActions record={displayRecord} className={classes.actions} />

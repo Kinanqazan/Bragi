@@ -30,6 +30,52 @@ func checkImageUploadPermission(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
+func parseUploadedImage(w http.ResponseWriter, r *http.Request) ([]byte, string, error) {
+	maxImageSize := artwork.MaxImageUploadSize()
+	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
+	err := r.ParseMultipartForm(min(maxImageSize, 10<<20))
+	defer func() {
+		if r.MultipartForm != nil {
+			_ = r.MultipartForm.RemoveAll()
+		}
+	}()
+	if err != nil {
+		return nil, "", fmt.Errorf("file too large or invalid form")
+	}
+	file, _, err := r.FormFile("image")
+	if err != nil {
+		return nil, "", fmt.Errorf("missing image file")
+	}
+	defer file.Close()
+	config, format, err := image.DecodeConfig(file)
+	if err != nil || config.Width < 1 || config.Height < 1 || config.Width > 16000 || config.Height > 16000 || int64(config.Width)*int64(config.Height) > 100_000_000 {
+		return nil, "", fmt.Errorf("invalid or excessively large image")
+	}
+	mimeType := ""
+	switch format {
+	case "jpeg":
+		mimeType = "image/jpeg"
+	case "png":
+		mimeType = "image/png"
+	case "gif":
+		mimeType = "image/gif"
+	case "webp":
+		mimeType = "image/webp"
+	default:
+		return nil, "", fmt.Errorf("unsupported image format")
+	}
+	if seeker, ok := file.(io.Seeker); ok {
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			return nil, "", fmt.Errorf("reading image file")
+		}
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maxImageSize+1))
+	if err != nil || int64(len(data)) > maxImageSize {
+		return nil, "", fmt.Errorf("file too large or unreadable")
+	}
+	return data, mimeType, nil
+}
+
 func handleImageUpload(saveFn func(ctx context.Context, reader io.Reader, ext string) error) http.HandlerFunc {
 	maxImageSize := artwork.MaxImageUploadSize()
 	return func(w http.ResponseWriter, r *http.Request) {

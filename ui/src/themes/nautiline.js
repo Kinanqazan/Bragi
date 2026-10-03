@@ -670,9 +670,6 @@ const NautilineTheme = {
       genreList: {
         marginTop: spacing.md,
       },
-      loveButton: {
-        marginLeft: spacing.sm,
-      },
     },
     NDAlbumShow: {
       albumActions: actionButtonsStyle(),

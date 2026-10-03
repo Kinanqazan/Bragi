@@ -436,7 +436,7 @@ func (r *resolver) resolveMediaFile(ctx context.Context, id string) (resolution,
 	}
 	chain := chainState{trace: traceFrom(ctx)}
 	switch {
-	case !conf.Server.EnableMediaFileCoverArt:
+	case !conf.MediaFileCoverArtEnabled():
 		chain.record("embedded", OutcomeSkipped, "EnableMediaFileCoverArt is off")
 		return resolution{}, nil
 	case !mf.HasCoverArt:

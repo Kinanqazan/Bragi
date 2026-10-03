@@ -81,6 +81,10 @@ func (*mediaDeletionMaintenanceMock) UpdateMediaFileMetadata(context.Context, st
 	return nil, nil
 }
 
+func (*mediaDeletionMaintenanceMock) UpdateMediaFileArtwork(context.Context, string, []byte, string) (*core.MediaFileMetadataResult, error) {
+	return nil, nil
+}
+
 func (*mediaDeletionMaintenanceMock) RefreshMediaFileMetadata(context.Context, string) (*model.MediaFile, error) {
 	return nil, nil
 }
@@ -90,6 +94,10 @@ func (*mediaDeletionMaintenanceMock) LoadMediaFileLyrics(context.Context, string
 }
 
 func (*mediaDeletionMaintenanceMock) SaveMediaFileLyrics(context.Context, string, string, string, string) (*core.MediaFileLyrics, error) {
+	return nil, nil
+}
+
+func (*mediaDeletionMaintenanceMock) SaveEmbeddedMediaFileLyrics(context.Context, string, string, string) (*core.MediaFileLyrics, error) {
 	return nil, nil
 }
 

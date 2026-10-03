@@ -5,7 +5,7 @@ import Card from '@material-ui/core/Card'
 import CardContent from '@material-ui/core/CardContent'
 import ArtistExternalLinks from './ArtistExternalLink'
 import config from '../config'
-import { LoveButton, RatingField, ImageUploadOverlay, ImageViewerDialog } from '../common'
+import { RatingField, ImageUploadOverlay, ImageViewerDialog } from '../common'
 import ExpandInfoDialog from '../dialogs/ExpandInfoDialog'
 import AlbumInfo from '../album/AlbumInfo'
 import subsonic from '../subsonic'
@@ -14,7 +14,7 @@ import { Artwork } from '../common/Artwork'
 import ArtistNameEditor from './ArtistNameEditor'
 
 const useStyles = makeStyles(
-  (theme) => ({
+  () => ({
     root: {
       display: 'flex',
       padding: '0.5em 0',
@@ -23,6 +23,7 @@ const useStyles = makeStyles(
       display: 'flex',
       flex: '1',
       flexDirection: 'column',
+      justifyContent: 'center',
     },
     biography: {
       display: 'inline-block',
@@ -33,23 +34,29 @@ const useStyles = makeStyles(
       minHeight: '4.5em',
     },
     content: {
-      flex: '1 0 auto',
+      flex: '0 1 auto',
       padding: '0 1.5em !important',
     },
+    artistHeadingRow: {
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      columnGap: '0.75rem',
+    },
     cover: {
-      width: '12rem',
-      height: '12rem',
-      borderRadius: '6em',
+      width: '8rem',
+      height: '8rem',
+      borderRadius: '50%',
       cursor: 'pointer',
       backgroundColor: 'transparent',
       transition: 'opacity 0.3s ease-in-out',
       objectFit: 'cover',
     },
     artistImage: {
-      maxHeight: '12rem',
-      minHeight: '12rem',
-      width: '12rem',
-      minWidth: '12rem',
+      maxHeight: '8rem',
+      minHeight: '8rem',
+      width: '8rem',
+      minWidth: '8rem',
       backgroundColor: 'transparent',
       display: 'flex',
       alignItems: 'center',
@@ -59,18 +66,18 @@ const useStyles = makeStyles(
     },
     artistDetail: {
       flex: '1',
-      padding: '0.5em 0',
+      padding: '0 !important',
       display: 'flex',
-      minHeight: '10rem',
+      minHeight: '8rem',
       backgroundColor: 'transparent',
       boxShadow: 'none',
     },
     button: {
       marginLeft: '1.5em',
     },
-    loveButton: {
-      top: theme.spacing(-0.2),
-      left: theme.spacing(0.5),
+    artistActions: {
+      display: 'flex',
+      alignItems: 'center',
     },
     rating: {
       marginTop: '5px',
@@ -106,22 +113,21 @@ const DesktopArtistDetails = ({ artistInfo, record, biography, onNameSaved }) =>
         </div>
         <div className={classes.details}>
           <div className={classes.content}>
-            <Typography
-              component="h5"
-              variant="h5"
-              className={classes.artistName}
-            >
-              {title}
-              <ArtistNameEditor record={record} onSaved={onNameSaved} />
-              <LoveButton
-                className={classes.loveButton}
-                record={record}
-                resource={'artist'}
-                size={'default'}
-                aria-label="artist context menu"
-                color="primary"
-              />
-            </Typography>
+            <div className={classes.artistHeadingRow}>
+              <Typography
+                component="h5"
+                variant="h5"
+                className={classes.artistName}
+              >
+                {title}
+              </Typography>
+              <div className={classes.artistActions}>
+                <ArtistNameEditor
+                  record={record}
+                  onSaved={onNameSaved}
+                />
+              </div>
+            </div>
             {config.enableStarRating && (
               <div>
                 <RatingField

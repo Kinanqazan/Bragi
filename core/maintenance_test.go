@@ -5,6 +5,9 @@ import (
 	"errors"
 	"io/fs"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/navidrome/navidrome/conf"
@@ -16,6 +19,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	"go.senan.xyz/taglib"
 )
 
 var _ = Describe("Maintenance", func() {
@@ -342,6 +346,116 @@ var _ = Describe("Media file metadata changes", func() {
 	})
 })
 
+var _ = Describe("Embedded lyrics metadata", func() {
+	It("prefers the default embedded lyric and generates a version token", func() {
+		musicFS := fakeEmbeddedLyricsMusicFS{info: metadata.Info{Tags: model.RawTags{
+			"LYRICS:ENG": {"English lyrics"},
+			"LYRICS:XXX": {"[00:01.20]Default lyrics"},
+		}}}
+
+		lyrics, err := readEmbeddedMediaFileLyrics(musicFS, "song.mp3")
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(lyrics.Content).To(Equal("[00:01.20]Default lyrics"))
+		Expect(lyrics.Exists).To(BeTrue())
+		Expect(lyrics.Version).To(Equal(embeddedLyricsVersion(lyrics.Content)))
+	})
+
+	It("saves embedded lyrics in the original file and leaves sidecars and other tags intact", func() {
+		oldEnabled := conf.Server.EnableMediaFileMetadataEditing
+		conf.Server.EnableMediaFileMetadataEditing = true
+		DeferCleanup(func() { conf.Server.EnableMediaFileMetadataEditing = oldEnabled })
+
+		dir, err := os.MkdirTemp("", "bragi-embedded-lyrics-service-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		_, sourceFile, _, ok := runtime.Caller(0)
+		Expect(ok).To(BeTrue())
+		source, err := os.ReadFile(filepath.Join(filepath.Dir(sourceFile), "..", "tests", "fixtures", "test.flac"))
+		Expect(err).ToNot(HaveOccurred())
+		mediaPath := filepath.Join(dir, "song.flac")
+		Expect(os.WriteFile(mediaPath, source, 0o600)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(dir, "song.txt"), []byte("Keep this sidecar"), 0o600)).To(Succeed())
+		info, err := os.Stat(mediaPath)
+		Expect(err).ToNot(HaveOccurred())
+		libraryURL, err := corestorage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+
+		ds := createTestDataStore()
+		mediaFiles := ds.MockedMediaFile.(*extendedMediaFileRepo)
+		mediaFiles.SetData(model.MediaFiles{{
+			ID: "song-1", LibraryID: 1, LibraryPath: libraryURL.String(), Path: "song.flac",
+			Size: info.Size(), UpdatedAt: info.ModTime(),
+		}})
+		ctx := request.WithUser(context.Background(), model.User{ID: "admin", IsAdmin: true})
+		service := NewMaintenance(ds)
+
+		initial, err := service.LoadMediaFileLyrics(ctx, "song-1")
+		Expect(err).ToNot(HaveOccurred())
+		lyrics, err := service.SaveEmbeddedMediaFileLyrics(ctx, "song-1", "[00:01.20]Embedded line", initial.Embedded.Version)
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(lyrics.Embedded.Content).To(Equal("[00:01.20]Embedded line"))
+		Expect(lyrics.Txt.Content).To(Equal("Keep this sidecar"))
+		Expect(lyrics.RefreshRequired).To(BeTrue(), "the service was created without a scanner")
+
+		written, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		defer written.Close()
+		Expect(written.AllTags().Tags["LYRICS"]).To(Equal([]string{"[00:01.20]Embedded line"}))
+		Expect(written.AllTags().Tags["ALBUM"]).To(Equal([]string{"Album"}))
+	})
+})
+
+var _ = Describe("Song artwork metadata", func() {
+	It("updates embedded art for one song without changing its tags", func() {
+		oldEnabled := conf.Server.EnableMediaFileMetadataEditing
+		conf.Server.EnableMediaFileMetadataEditing = true
+		DeferCleanup(func() { conf.Server.EnableMediaFileMetadataEditing = oldEnabled })
+
+		dir, err := os.MkdirTemp("", "bragi-song-artwork-service-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		_, sourceFile, _, ok := runtime.Caller(0)
+		Expect(ok).To(BeTrue())
+		source, err := os.ReadFile(filepath.Join(filepath.Dir(sourceFile), "..", "tests", "fixtures", "test.mp3"))
+		Expect(err).ToNot(HaveOccurred())
+		mediaPath := filepath.Join(dir, "song.mp3")
+		Expect(os.WriteFile(mediaPath, source, 0o600)).To(Succeed())
+		info, err := os.Stat(mediaPath)
+		Expect(err).ToNot(HaveOccurred())
+		libraryURL, err := corestorage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+
+		ds := createTestDataStore()
+		mediaFiles := ds.MockedMediaFile.(*extendedMediaFileRepo)
+		mediaFiles.SetData(model.MediaFiles{{
+			ID: "song-art-1", LibraryID: 1, LibraryPath: libraryURL.String(), Path: "song.mp3",
+			Size: info.Size(), UpdatedAt: info.ModTime(),
+		}})
+		ctx := request.WithUser(context.Background(), model.User{ID: "admin", IsAdmin: true})
+		service := NewMaintenance(ds)
+		cover := []byte("replacement-cover")
+		before, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		beforeTags := before.AllTags().Tags
+		Expect(before.Close()).To(Succeed())
+
+		result, err := service.UpdateMediaFileArtwork(ctx, "song-art-1", cover, "image/jpeg")
+
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.Saved).To(BeTrue())
+		Expect(result.RefreshRequired).To(BeTrue(), "the test service has no scanner")
+		written, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		defer written.Close()
+		Expect(written.AllTags().Tags).To(Equal(beforeTags))
+		image, err := taglib.ReadImageOptions(mediaPath, 0)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(image).To(Equal(cover))
+	})
+})
+
 // Test helper to create a mock DataStore with controllable behavior
 func createTestDataStore() *tests.MockDataStore {
 	ds := &tests.MockDataStore{}
@@ -479,6 +593,15 @@ func (fakeReadOnlyMusicFS) Open(string) (fs.File, error) {
 
 func (fakeReadOnlyMusicFS) ReadTags(...string) (map[string]metadata.Info, error) {
 	return nil, nil
+}
+
+type fakeEmbeddedLyricsMusicFS struct {
+	fakeReadOnlyMusicFS
+	info metadata.Info
+}
+
+func (f fakeEmbeddedLyricsMusicFS) ReadTags(names ...string) (map[string]metadata.Info, error) {
+	return map[string]metadata.Info{names[0]: f.info}, nil
 }
 
 type fakeMutableMusicFS struct {

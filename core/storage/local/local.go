@@ -115,6 +115,36 @@ func (lfs *localFS) WriteTags(name string, tags map[string][]string) error {
 	if name == "." || !fs.ValidPath(name) || len(tags) == 0 {
 		return &fs.PathError{Op: "write-tags", Path: name, Err: fs.ErrInvalid}
 	}
+	return lfs.writeStagedMediaFile(name, func(stagingPath string) error {
+		if err := taglib.WriteTags(stagingPath, tags, 0); err != nil {
+			return fmt.Errorf("writing media tags: %w", err)
+		}
+		return verifyWrittenTags(stagingPath, tags)
+	})
+}
+
+func (lfs *localFS) WriteImage(name string, image []byte, mimeType string) error {
+	if name == "." || !fs.ValidPath(name) || len(image) == 0 || mimeType == "" {
+		return &fs.PathError{Op: "write-image", Path: name, Err: fs.ErrInvalid}
+	}
+	return lfs.writeStagedMediaFile(name, func(stagingPath string) error {
+		if err := taglib.WriteImageOptions(stagingPath, image, 0, "Front Cover", "", mimeType); err != nil {
+			return fmt.Errorf("writing embedded image: %w", err)
+		}
+		written, err := taglib.ReadImageOptions(stagingPath, 0)
+		if err != nil {
+			return fmt.Errorf("verifying embedded image: %w", err)
+		}
+		if !bytes.Equal(written, image) {
+			return fmt.Errorf("verifying embedded image: saved image did not match")
+		}
+		return nil
+	})
+}
+
+// writeStagedMediaFile edits a hidden sibling copy and replaces the original
+// only after the requested metadata has been written and verified.
+func (lfs *localFS) writeStagedMediaFile(name string, write func(stagingPath string) error) error {
 
 	root, err := os.OpenRoot(lfs.root)
 	if err != nil {
@@ -176,10 +206,7 @@ func (lfs *localFS) WriteTags(name string, tags map[string][]string) error {
 	}
 
 	stagingPath := filepath.Join(lfs.root, tempName)
-	if err := taglib.WriteTags(stagingPath, tags, 0); err != nil {
-		return fmt.Errorf("writing media tags: %w", err)
-	}
-	if err := verifyWrittenTags(stagingPath, tags); err != nil {
+	if err := write(stagingPath); err != nil {
 		return err
 	}
 

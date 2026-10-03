@@ -162,7 +162,11 @@ func installedPackage() string {
 
 // hostingPlatform is env-based, not a file, as app stores can only inject env vars into our image.
 func hostingPlatform() string {
-	return strings.TrimSpace(os.Getenv("ND_PLATFORM"))
+	platform := os.Getenv("BR_PLATFORM")
+	if platform == "" {
+		platform = os.Getenv("ND_PLATFORM")
+	}
+	return strings.TrimSpace(platform)
 }
 
 var staticData = sync.OnceValue(func() insights.Data {
@@ -214,7 +218,7 @@ var staticData = sync.OnceValue(func() insights.Data {
 	data.Config.EnableLastFM = conf.Server.LastFM.Enabled && conf.Server.LastFM.ApiKey != "" && conf.Server.LastFM.Secret != ""
 	data.Config.EnableListenBrainz = conf.Server.ListenBrainz.Enabled
 	data.Config.EnableDeezer = conf.Server.Deezer.Enabled
-	data.Config.EnableMediaFileCoverArt = conf.Server.EnableMediaFileCoverArt
+	data.Config.EnableMediaFileCoverArt = conf.MediaFileCoverArtEnabled()
 	data.Config.EnableJukebox = conf.Server.Jukebox.Enabled
 	data.Config.EnablePrometheus = conf.Server.Prometheus.Enabled
 	data.Config.TranscodingCacheSize = conf.Server.TranscodingCacheSize

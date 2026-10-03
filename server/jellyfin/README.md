@@ -31,9 +31,9 @@ MaxConcurrentStreams = 4
 or via environment variables:
 
 ```bash
-ND_JELLYFIN_ENABLED=true
-ND_JELLYFIN_SERVERNAME="My Music Server"
-ND_JELLYFIN_EXPOSEDPUBLICUSERS="alice,bob"
+BR_JELLYFIN_ENABLED=true
+BR_JELLYFIN_SERVERNAME="My Music Server"
+BR_JELLYFIN_EXPOSEDPUBLICUSERS="alice,bob"
 ```
 
 Once enabled, the API is mounted at:

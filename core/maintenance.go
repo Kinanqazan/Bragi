@@ -2,11 +2,14 @@ package core
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -38,9 +41,11 @@ type Maintenance interface {
 	// DeleteAllMissingFiles deletes all files marked as missing
 	DeleteAllMissingFiles(ctx context.Context) error
 	UpdateMediaFileMetadata(ctx context.Context, id string, changes MediaFileMetadataChanges) (*MediaFileMetadataResult, error)
+	UpdateMediaFileArtwork(ctx context.Context, id string, image []byte, mimeType string) (*MediaFileMetadataResult, error)
 	RefreshMediaFileMetadata(ctx context.Context, id string) (*model.MediaFile, error)
 	LoadMediaFileLyrics(ctx context.Context, id string) (*MediaFileLyrics, error)
 	SaveMediaFileLyrics(ctx context.Context, id, extension, content, expectedVersion string) (*MediaFileLyrics, error)
+	SaveEmbeddedMediaFileLyrics(ctx context.Context, id, content, expectedVersion string) (*MediaFileLyrics, error)
 	DeleteMediaFileLyrics(ctx context.Context, id, expectedTxtVersion, expectedLrcVersion string) (*MediaFileLyrics, error)
 }
 
@@ -51,8 +56,12 @@ type LyricsSidecar struct {
 }
 
 type MediaFileLyrics struct {
-	Txt LyricsSidecar `json:"txt"`
-	Lrc LyricsSidecar `json:"lrc"`
+	Txt             LyricsSidecar    `json:"txt"`
+	Lrc             LyricsSidecar    `json:"lrc"`
+	Embedded        LyricsSidecar    `json:"embedded"`
+	RefreshRequired bool             `json:"refreshRequired,omitempty"`
+	RefreshError    string           `json:"refreshError,omitempty"`
+	MediaFile       *model.MediaFile `json:"mediaFile,omitempty"`
 }
 
 type MediaFileMetadataChanges struct {
@@ -265,6 +274,62 @@ func (s *maintenanceService) UpdateMediaFileMetadata(ctx context.Context, id str
 	return result, nil
 }
 
+func (s *maintenanceService) UpdateMediaFileArtwork(ctx context.Context, id string, image []byte, mimeType string) (*MediaFileMetadataResult, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	if len(image) == 0 || len(image) > 20<<20 || !strings.HasPrefix(mimeType, "image/") {
+		return nil, fmt.Errorf("%w: image is empty, too large, or has an invalid media type", model.ErrValidation)
+	}
+
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	fileInfo, err := fs.Stat(musicFS, mf.Path)
+	if err != nil {
+		return nil, fmt.Errorf("checking media file: %w", err)
+	}
+	if mf.Size != fileInfo.Size() || !mf.UpdatedAt.IsZero() && absDuration(mf.UpdatedAt.Sub(fileInfo.ModTime())) > time.Second {
+		return nil, ErrMediaFileMetadataConflict
+	}
+	writable, ok := musicFS.(storage.MediaFileImageWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	if err := writable.WriteImage(mf.Path, image, mimeType); err != nil {
+		return nil, fmt.Errorf("writing embedded artwork: %w", err)
+	}
+
+	result := &MediaFileMetadataResult{Saved: true}
+	updated, scanErr := s.refreshMetadataFolder(ctx, mf)
+	if scanErr != nil {
+		result.RefreshRequired = true
+		result.RefreshError = scanErr.Error()
+		return result, nil
+	}
+	result.MediaFile = updated
+	return result, nil
+}
+
 func absDuration(value time.Duration) time.Duration {
 	if value < 0 {
 		return -value
@@ -331,6 +396,144 @@ func (s *maintenanceService) LoadMediaFileLyrics(ctx context.Context, id string)
 		entry.target.Version = version
 		entry.target.Exists = version != ""
 	}
+	lyrics.Embedded, err = readEmbeddedMediaFileLyrics(musicFS, mf.Path)
+	if err != nil {
+		return nil, fmt.Errorf("reading embedded lyrics: %w", err)
+	}
+	return lyrics, nil
+}
+
+func readEmbeddedMediaFileLyrics(musicFS storage.MusicFS, name string) (LyricsSidecar, error) {
+	allTags, err := musicFS.ReadTags(name)
+	if err != nil {
+		return LyricsSidecar{}, err
+	}
+	info, ok := allTags[name]
+	if !ok && len(allTags) == 1 {
+		for _, only := range allTags {
+			info, ok = only, true
+		}
+	}
+	if !ok {
+		return LyricsSidecar{}, nil
+	}
+
+	keys := make([]string, 0, len(info.Tags))
+	for key := range info.Tags {
+		if strings.EqualFold(key, "lyrics") || strings.HasPrefix(strings.ToLower(key), "lyrics:") {
+			keys = append(keys, key)
+		}
+	}
+	if len(keys) == 0 {
+		return LyricsSidecar{}, nil
+	}
+	priority := func(key string) int {
+		switch strings.ToLower(key) {
+		case "lyrics:xxx":
+			return 0
+		case "lyrics":
+			return 1
+		case "lyrics:eng":
+			return 2
+		default:
+			return 3
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		left, right := priority(keys[i]), priority(keys[j])
+		if left != right {
+			return left < right
+		}
+		return strings.ToLower(keys[i]) < strings.ToLower(keys[j])
+	})
+	values := info.Tags[keys[0]]
+	if len(values) == 0 {
+		return LyricsSidecar{}, nil
+	}
+	content := strings.Join(values, "\n")
+	version := embeddedLyricsVersion(content)
+	return LyricsSidecar{Content: content, Version: version, Exists: true}, nil
+}
+
+func embeddedLyricsVersion(content string) string {
+	version := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(version[:])
+}
+
+func (s *maintenanceService) SaveEmbeddedMediaFileLyrics(ctx context.Context, id, content, expectedVersion string) (*MediaFileLyrics, error) {
+	user, ok := request.UserFrom(ctx)
+	if !ok || !user.IsAdmin {
+		return nil, model.ErrNotAuthorized
+	}
+	if !conf.Server.EnableMediaFileMetadataEditing {
+		return nil, ErrMediaFileMetadataEditingDisabled
+	}
+	if len(content) > 1<<20 || !utf8.ValidString(content) || strings.ContainsAny(content, "\x00\v") {
+		return nil, fmt.Errorf("%w: embedded lyrics must be valid UTF-8 text and at most 1 MiB", model.ErrValidation)
+	}
+
+	s.metadataMu.Lock()
+	defer s.metadataMu.Unlock()
+
+	mf, err := s.ds.MediaFile(ctx).Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if mf.Missing || !model.IsAudioFile(mf.Path) {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	store, err := storage.For(mf.LibraryPath)
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", ErrMediaFileMetadataUnsupported)
+	}
+	musicFS, err := store.FS()
+	if err != nil {
+		return nil, fmt.Errorf("opening media storage: %w", err)
+	}
+	fileInfo, err := fs.Stat(musicFS, mf.Path)
+	if err != nil {
+		return nil, fmt.Errorf("checking media file: %w", err)
+	}
+	if mf.Size != fileInfo.Size() || !mf.UpdatedAt.IsZero() && absDuration(mf.UpdatedAt.Sub(fileInfo.ModTime())) > time.Second {
+		return nil, ErrMediaFileMetadataConflict
+	}
+	currentLyrics, err := readEmbeddedMediaFileLyrics(musicFS, mf.Path)
+	if err != nil {
+		return nil, fmt.Errorf("reading embedded lyrics: %w", err)
+	}
+	if currentLyrics.Version != expectedVersion {
+		return nil, ErrMediaFileLyricsConflict
+	}
+	writable, ok := musicFS.(storage.MetadataWritableFS)
+	if !ok {
+		return nil, ErrMediaFileMetadataUnsupported
+	}
+	values := []string{content}
+	if content == "" {
+		values = []string{}
+	}
+	if err := writable.WriteTags(mf.Path, map[string][]string{"LYRICS": values}); err != nil {
+		return nil, fmt.Errorf("writing embedded lyrics: %w", err)
+	}
+
+	lyrics, err := s.LoadMediaFileLyrics(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("verifying embedded lyrics: %w", err)
+	}
+	if content == "" {
+		if lyrics.Embedded.Exists {
+			return nil, fmt.Errorf("verifying embedded lyrics: the tag was not cleared")
+		}
+	} else if lyrics.Embedded.Content != content {
+		return nil, fmt.Errorf("verifying embedded lyrics: the saved text did not match")
+	}
+	updated, scanErr := s.refreshMetadataFolder(ctx, mf)
+	if scanErr != nil {
+		lyrics.RefreshRequired = true
+		lyrics.RefreshError = scanErr.Error()
+		return lyrics, nil
+	}
+	lyrics.MediaFile = updated
 	return lyrics, nil
 }
 

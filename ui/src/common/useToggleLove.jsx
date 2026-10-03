@@ -5,6 +5,7 @@ import subsonic from '../subsonic'
 
 const CRUD_UPDATE_OPTIMISTIC = 'RA/CRUD_UPDATE_OPTIMISTIC'
 const UPDATE = 'UPDATE'
+const loveableSongResources = new Set(['song', 'playlistTrack'])
 
 export const useToggleLove = (resource, rawRecord = {}) => {
   const record = rawRecord || {}
@@ -57,7 +58,7 @@ export const useToggleLove = (resource, rawRecord = {}) => {
   ])
 
   const toggleLove = () => {
-    if (!record.id) return
+    if (!loveableSongResources.has(resource) || !record.id) return
     const prevStarred = Boolean(record.starred)
     const prevStarredAt = record.starredAt
     const nextStarred = !prevStarred

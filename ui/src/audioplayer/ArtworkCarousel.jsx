@@ -116,6 +116,11 @@ export const ArtworkCarousel = ({
       startY: e.clientY,
       active: true,
       x: 0,
+      visualX: 0,
+      scaleX:
+        (rootRef.current?.getBoundingClientRect().width || 0) /
+          (rootRef.current?.offsetWidth || 1) ||
+        1,
       isH: null,
     }
     setAnimating(false)
@@ -130,7 +135,12 @@ export const ArtworkCarousel = ({
       d.isH = Math.abs(dx) > Math.abs(dy)
     }
     if (!d.isH) return
-    d.x = (dx > 0 && !prev) || (dx < 0 && !next) ? dx * 0.25 : dx
+    d.visualX = dx
+    const layoutX = dx / d.scaleX
+    d.x =
+      (layoutX > 0 && !prev) || (layoutX < 0 && !next)
+        ? layoutX * 0.25
+        : layoutX
     setOffsetWithFrame(d.x)
   }
 
@@ -145,14 +155,14 @@ export const ArtworkCarousel = ({
     if (animating) return
     const nextAction = commands?.next
     const previousAction = commands?.previous
-    if (d.x < -45 && next && nextAction) {
+    if (d.visualX < -45 && next && nextAction) {
       setAnimating(true)
       commitOffset(-width)
       animationTimeoutRef.current = setTimeout(() => {
         animationTimeoutRef.current = null
         nextAction()
       }, 190)
-    } else if (d.x > 45 && prev && previousAction) {
+    } else if (d.visualX > 45 && prev && previousAction) {
       setAnimating(true)
       commitOffset(width)
       animationTimeoutRef.current = setTimeout(() => {

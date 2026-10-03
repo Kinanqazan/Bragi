@@ -148,6 +148,11 @@
         "topSongs": "Top Songs",
         "shuffle": "Shuffle",
         "radio": "Radio"
+      },
+      "notifications": {
+        "nameRequired": "Artist name cannot be empty",
+        "displayNameUpdated": "Artist display name updated.",
+        "nameUpdateFailed": "Could not update artist name: %{details}"
       }
     },
     "user": {

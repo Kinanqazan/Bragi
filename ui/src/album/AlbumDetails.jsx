@@ -25,7 +25,6 @@ import {
   CollapsibleComment,
   DurationField,
   formatRange,
-  LoveButton,
   RatingField,
   SizeField,
   useAlbumsPerPage,
@@ -86,10 +85,6 @@ const useStyles = makeStyles(
       backgroundColor: 'transparent',
       transition: 'opacity 0.3s ease-in-out',
     },
-    loveButton: {
-      top: theme.spacing(-0.2),
-      left: theme.spacing(0.5),
-    },
     notes: {
       display: 'inline-block',
       marginTop: '1em',
@@ -97,7 +92,6 @@ const useStyles = makeStyles(
       wordBreak: 'break-word',
       cursor: 'pointer',
     },
-    recordName: {},
     recordArtist: {},
     recordMeta: {},
     genreList: {
@@ -257,19 +251,8 @@ const AlbumDetails = (props) => {
         </div>
         <div className={classes.details}>
           <CardContent className={classes.content}>
-            <Typography
-              variant={isDesktop ? 'h5' : 'h6'}
-              className={classes.recordName}
-            >
+            <Typography variant={isDesktop ? 'h5' : 'h6'}>
               {record.name}
-              <LoveButton
-                className={classes.loveButton}
-                record={record}
-                resource={'album'}
-                size={isDesktop ? 'default' : 'small'}
-                aria-label="love"
-                color="primary"
-              />
             </Typography>
             <Typography component={'h6'} className={classes.recordArtist}>
               {record?.tags?.['albumversion']}

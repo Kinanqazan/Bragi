@@ -33,6 +33,12 @@ type MetadataWritableFS interface {
 	WriteTags(name string, tags map[string][]string) error
 }
 
+// MediaFileImageWritableFS safely replaces the primary embedded image while
+// preserving the rest of the media file and any additional embedded images.
+type MediaFileImageWritableFS interface {
+	WriteImage(name string, image []byte, mimeType string) error
+}
+
 // LyricsSidecarWritableFS provides safe, optimistic-concurrency writes for the
 // supported plain-text lyric sidecars.
 type LyricsSidecarWritableFS interface {

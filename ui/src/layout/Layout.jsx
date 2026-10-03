@@ -27,63 +27,8 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden',
     '@media (max-width: 959.95px)': {
       backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
-      ...(props.scrollablePhoneSurface
-        ? {
-            '&& #main-content': {
-              overflowX: 'hidden !important',
-              overflowY: props.scrollablePhoneLibrary
-                ? 'auto !important'
-                : 'hidden !important',
-              ...(props.scrollablePhoneLibrary
-                ? {
-                    WebkitOverflowScrolling: 'touch',
-                    overscrollBehaviorY: 'contain',
-                    paddingBottom:
-                      'calc(var(--nd-mobile-bottom-offset, 56px) + 16px) !important',
-                  }
-                : {}),
-            },
-            ...(props.scrollablePhoneCard
-              ? {
-                  '&& #main-content .phone-page-scroll': {
-                    flex: '1 1 0 !important',
-                    height: '0 !important',
-                    maxHeight: 'none !important',
-                    minHeight: '0 !important',
-                    overflowX: 'hidden !important',
-                    overflowY: 'auto !important',
-                    WebkitOverflowScrolling: 'touch',
-                    overscrollBehaviorY: 'contain',
-                    touchAction: 'pan-y',
-                  },
-                }
-              : {}),
-            ...(props.scrollablePhoneLibrary
-              ? {
-                  '&& #main-content > div': {
-                    flex: '0 0 auto !important',
-                    height: 'auto !important',
-                    maxHeight: 'none !important',
-                    minHeight: 'min-content !important',
-                    overflow: 'visible !important',
-                  },
-                }
-              : {}),
-          }
-        : {}),
-      ...(props.flatMobileSurface
-        ? {
-            '& #main-content .MuiCard-root': {
-              backgroundColor: 'transparent !important',
-              backgroundImage: 'none !important',
-              boxShadow: 'none !important',
-            },
-          }
-        : {}),
     },
-    paddingBottom: props.addPadding
-      ? 'calc(156px + env(safe-area-inset-bottom, 0px))'
-      : 'calc(56px + env(safe-area-inset-bottom, 0px))',
+    paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
     '& .MuiDrawer-root.MuiDrawer-modal, & .MuiDrawer-modal, & .RaSidebar-root .MuiDrawer-modal':
       {
         background: 'transparent !important',
@@ -304,6 +249,96 @@ const useStyles = makeStyles((theme) => ({
       },
     },
   }),
+  phoneScrollSurface: {
+    '@media (max-width: 959.95px)': {
+      '& #main-content': {
+        overflowX: 'hidden !important',
+        overflowY: 'hidden !important',
+      },
+    },
+  },
+  phoneScrollCard: {
+    '@media (max-width: 959.95px)': {
+      '&& #main-content .phone-page-scroll': {
+        flex: '1 1 0 !important',
+        height: '0 !important',
+        maxHeight: 'none !important',
+        minHeight: '0 !important',
+        overflowX: 'hidden !important',
+        overflowY: 'auto !important',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehaviorY: 'contain',
+        touchAction: 'pan-y',
+      },
+    },
+  },
+  phoneScrollLibrary: {
+    '@media (max-width: 959.95px)': {
+      '&& #main-content': {
+        overflowY: 'auto !important',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehaviorY: 'contain',
+        paddingBottom:
+          'calc(var(--nd-mobile-bottom-offset, 56px) + 16px) !important',
+      },
+      '&& #main-content > div': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        minHeight: 'min-content !important',
+        overflow: 'visible !important',
+      },
+      '&& #main-content > div > .MuiCard-root:first-child': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+      },
+      '&& #main-content .list-page.scrollablePhoneList': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        overflow: 'visible !important',
+      },
+      '&& #main-content .list-page.scrollablePhoneList > [class*="RaListToolbar-toolbar"]': {
+        display: 'flex !important',
+        height: 'auto !important',
+        minHeight: '0 !important',
+        padding: '0 !important',
+        background: 'transparent !important',
+        boxShadow: 'none !important',
+      },
+      '&& #main-content .list-page.scrollablePhoneList [class*="RaList-actions"]': {
+        display: 'flex !important',
+        height: 'auto !important',
+        minHeight: '0 !important',
+        padding: '0 !important',
+      },
+      '&& #main-content .list-page.scrollablePhoneList [class*="RaTopToolbar-root"]': {
+        display: 'flex !important',
+        height: 'auto !important',
+        minHeight: '0 !important',
+        maxHeight: 'none !important',
+        background: 'transparent !important',
+        boxShadow: 'none !important',
+      },
+      '&& #main-content .list-page.scrollablePhoneList .RaList-main, && #main-content .list-page.scrollablePhoneList .RaList-content': {
+        flex: '0 0 auto !important',
+        height: 'auto !important',
+        maxHeight: 'none !important',
+        minHeight: 'min-content !important',
+        overflow: 'visible !important',
+      },
+    },
+  },
+  flatMobileSurface: {
+    '@media (max-width: 959.95px)': {
+      '& #main-content .MuiCard-root': {
+        backgroundColor: 'transparent !important',
+        backgroundImage: 'none !important',
+        boxShadow: 'none !important',
+      },
+    },
+  },
   appFrame: {
     marginTop: '0 !important',
     paddingTop: '0 !important',
@@ -360,7 +395,7 @@ const Layout = (props) => {
   const muiTheme = useMemo(() => createTheme(themeConfig), [themeConfig])
   const queue = useSelector((state) => state.player?.queue || [])
   const hasQueue = queue.length > 0
-  const flatMobileSurface = ['/personal', '/library', '/about'].some(
+  const flatMobileSurface = ['/personal', '/library', '/about', '/artist'].some(
     (path) => location.pathname.startsWith(path),
   )
   const scrollablePhoneSurface = ['/personal', '/library', '/about'].some(
@@ -370,13 +405,16 @@ const Layout = (props) => {
     location.pathname.startsWith(path),
   )
   const scrollablePhoneLibrary = location.pathname.startsWith('/library')
-  const classes = useStyles({
-    addPadding: hasQueue,
-    flatMobileSurface,
-    scrollablePhoneSurface,
-    scrollablePhoneCard,
-    scrollablePhoneLibrary,
-  })
+  const classes = useStyles()
+  const layoutClassName = [
+    classes.root,
+    scrollablePhoneSurface && classes.phoneScrollSurface,
+    scrollablePhoneCard && classes.phoneScrollCard,
+    scrollablePhoneLibrary && classes.phoneScrollLibrary,
+    flatMobileSurface && classes.flatMobileSurface,
+  ]
+    .filter(Boolean)
+    .join(' ')
   useSearchRefocus()
 
   useEffect(() => {
@@ -412,7 +450,7 @@ const Layout = (props) => {
     <>
       <RALayout
         {...props}
-        className={classes.root}
+        className={layoutClassName}
         classes={{
           appFrame: classes.appFrame,
           contentWithSidebar: classes.contentWithSidebar,

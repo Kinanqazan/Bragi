@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { cleanup, render, screen } from '@testing-library/react'
 import { ThemeProvider, createTheme } from '@material-ui/core/styles'
 import { describe, expect, it } from 'vitest'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 
 vi.mock('./ArtworkCarousel', () => ({ default: () => null }))
 const artworkColorMocks = vi.hoisted(() => ({
@@ -20,6 +20,8 @@ vi.mock('./MobilePlayerBar', () => ({
     snapshot,
     commands,
     ambientColor,
+    titleRef,
+    artistRef,
   }) => (
     <aside
       ref={rootRef}
@@ -28,6 +30,12 @@ vi.mock('./MobilePlayerBar', () => ({
       style={style}
       {...gestureHandlers}
     >
+      <span ref={titleRef} data-testid="mini-title-anchor" aria-hidden="true" />
+      <span
+        ref={artistRef}
+        data-testid="mini-artist-anchor"
+        aria-hidden="true"
+      />
       <button
         type="button"
         aria-label={snapshot.playing ? 'Pause' : 'Play'}
@@ -47,7 +55,19 @@ vi.mock('./PlayerControls', () => ({
 }))
 vi.mock('./ProgressBar', () => ({ default: () => null }))
 vi.mock('./QueueDrawer', () => ({ default: () => null }))
-vi.mock('./TrackIdentity', () => ({ default: () => null }))
+vi.mock('./TrackIdentity', () => ({
+  default: ({ shared, titleRef, artistRef, gestureHandlers, track }) =>
+    shared ? (
+      <div {...gestureHandlers}>
+        <span ref={titleRef} data-testid="shared-title">
+          {track.title}
+        </span>
+        <span ref={artistRef} data-testid="shared-artist">
+          {track.artist}
+        </span>
+      </div>
+    ) : null,
+}))
 vi.mock('./VolumeControl', () => ({ default: () => null }))
 vi.mock('./PlayerToolbar', () => ({
   default: () => null,
@@ -118,7 +138,35 @@ const dispatchPointer = (element, type, properties) => {
 }
 
 describe('MobilePlayerSurface gestures', () => {
-  afterEach(cleanup)
+  beforeEach(() => {
+    const rect = (left, top, width, height) => ({
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    })
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function () {
+        const testId = this.getAttribute('data-testid')
+        const anchor = this.getAttribute('data-player-anchor')
+        if (this.getAttribute('aria-label') === 'Full-screen player') {
+          return rect(0, 0, 400, 800)
+        }
+        if (testId === 'mock-mobile-player-bar') return rect(10, 660, 380, 92)
+        if (anchor === 'full-title') return rect(100, 68, 200, 24)
+        if (anchor === 'full-artist') return rect(155, 96, 90, 20)
+        if (testId === 'mini-title-anchor') return rect(118, 685, 180, 19)
+        if (testId === 'mini-artist-anchor') return rect(118, 709, 180, 17)
+        return rect(0, 0, 0, 0)
+      },
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
 
   it('provides ambient artwork color to the backdrop and mobile player bar', () => {
     const { rerenderSurface } = renderSurface()
@@ -210,6 +258,8 @@ describe('MobilePlayerSurface gestures', () => {
 
   it('collapses the full-screen player after a downward swipe', () => {
     const { onExpandedChange } = renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    const initialFrameTransform = frame.style.transform
     const surface = screen.getByRole('region', {
       name: 'Full-screen player',
       hidden: true,
@@ -227,9 +277,6 @@ describe('MobilePlayerSurface gestures', () => {
       clientX: 106,
       clientY: 160,
     })
-    expect(surface.style.transform).toMatch(
-      /translate3d\(0, [\d.]+%, 0\) scale\(/,
-    )
     dispatchPointer(surface, 'pointerup', {
       pointerId: 1,
       pointerType: 'touch',
@@ -237,8 +284,10 @@ describe('MobilePlayerSurface gestures', () => {
       clientY: 160,
     })
 
+    expect(surface.style.transform).toBe('none')
+    expect(frame.style.transform).not.toBe(initialFrameTransform)
     expect(onExpandedChange).not.toHaveBeenCalled()
-    dispatchPointer(surface, 'transitionend', { propertyName: 'transform' })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
     expect(onExpandedChange).toHaveBeenCalledWith(false)
     expect(
@@ -246,8 +295,49 @@ describe('MobilePlayerSurface gestures', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('moves one frame, title, and artist between both player sizes', () => {
+    renderSurface()
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    const frame = screen.getByTestId('shared-player-frame')
+    const title = screen.getByTestId('shared-title')
+    const artist = screen.getByTestId('shared-artist')
+    const initialTitle = title.style.transform
+    const initialArtist = artist.style.transform
+
+    dispatchPointer(surface, 'pointerdown', {
+      pointerId: 30,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    })
+    dispatchPointer(surface, 'pointermove', {
+      pointerId: 30,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 170,
+    })
+    dispatchPointer(surface, 'pointerup', {
+      pointerId: 30,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 170,
+    })
+
+    expect(screen.getByTestId('shared-player-frame')).toBe(frame)
+    expect(screen.getByTestId('shared-title')).toBe(title)
+    expect(screen.getByTestId('shared-artist')).toBe(artist)
+    expect(title).toHaveTextContent('Test song')
+    expect(artist).toHaveTextContent('Test artist')
+    expect(title.style.transform).not.toBe(initialTitle)
+    expect(artist.style.transform).not.toBe(initialArtist)
+    expect(
+      document.querySelectorAll('.nd-player-ambient-backdrop'),
+    ).toHaveLength(1)
+  })
+
   it('keeps the dragged layer mounted until its snap animation completes', () => {
     const { onExpandedChange } = renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
     const surface = screen.getByRole('region', { name: 'Full-screen player' })
 
     dispatchPointer(surface, 'pointerdown', {
@@ -269,10 +359,10 @@ describe('MobilePlayerSurface gestures', () => {
       clientY: 260,
     })
 
-    expect(surface.style.transition).toContain('cubic-bezier')
+    expect(frame.style.transition).toContain('cubic-bezier')
     expect(onExpandedChange).not.toHaveBeenCalled()
 
-    dispatchPointer(surface, 'transitionend', { propertyName: 'transform' })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
     expect(onExpandedChange).toHaveBeenCalledWith(false)
   })
@@ -296,9 +386,7 @@ describe('MobilePlayerSurface gestures', () => {
     const onExpandedChange = vi.fn()
     renderSurface(onExpandedChange, false)
     const mini = screen.getByTestId('mock-mobile-player-bar')
-    const surface = document.querySelector(
-      'section[aria-label="Full-screen player"]',
-    )
+    const frame = screen.getByTestId('shared-player-frame')
 
     dispatchPointer(mini, 'pointerdown', {
       pointerId: 4,
@@ -319,9 +407,9 @@ describe('MobilePlayerSurface gestures', () => {
       clientY: 240,
     })
 
-    expect(mini.style.transition).toContain('cubic-bezier')
+    expect(frame.style.transition).toContain('cubic-bezier')
     expect(onExpandedChange).not.toHaveBeenCalled()
-    dispatchPointer(surface, 'transitionend', { propertyName: 'transform' })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
     expect(onExpandedChange).toHaveBeenCalledWith(true)
   })
@@ -335,9 +423,7 @@ describe('MobilePlayerSurface gestures', () => {
       seek: vi.fn(),
       setVolume: vi.fn(),
     })
-    const surface = document.querySelector(
-      'section[aria-label="Full-screen player"]',
-    )
+    const frame = screen.getByTestId('shared-player-frame')
     const mini = screen.getByTestId('mock-mobile-player-bar')
 
     // The mini player owns the gesture until the fullscreen snap completes.
@@ -359,7 +445,7 @@ describe('MobilePlayerSurface gestures', () => {
       clientX: 100,
       clientY: 240,
     })
-    dispatchPointer(surface, 'transitionend', { propertyName: 'transform' })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
     const play = screen.getByRole('button', { name: 'Play', hidden: true })
     play.click()
@@ -379,6 +465,7 @@ describe('MobilePlayerSurface gestures', () => {
     const surface = screen.getByRole('region', {
       name: 'Full-screen player',
     })
+    const frame = screen.getByTestId('shared-player-frame')
     const mini = screen.getByTestId('mock-mobile-player-bar')
 
     dispatchPointer(surface, 'pointerdown', {
@@ -399,7 +486,7 @@ describe('MobilePlayerSurface gestures', () => {
       clientX: 100,
       clientY: 160,
     })
-    dispatchPointer(surface, 'transitionend', { propertyName: 'transform' })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
     screen.getByRole('button', { name: 'Play' }).click()
 
@@ -408,6 +495,8 @@ describe('MobilePlayerSurface gestures', () => {
 
   it('cancels a partial drag without collapsing', () => {
     const { onExpandedChange } = renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    const initialFrameTransform = frame.style.transform
     const surface = screen.getByRole('region', { name: 'Full-screen player' })
 
     dispatchPointer(surface, 'pointerdown', {
@@ -428,7 +517,7 @@ describe('MobilePlayerSurface gestures', () => {
     })
 
     expect(onExpandedChange).not.toHaveBeenCalled()
-    expect(surface.style.transform).toBe('translate3d(0, 0%, 0) scale(1)')
+    expect(frame.style.transform).toBe(initialFrameTransform)
   })
 
   it('does not classify short or upward motion as a downward swipe', () => {
@@ -464,7 +553,7 @@ describe('MobilePlayerSurface gestures', () => {
     })
 
     expect(mini.style.transform).toBe('translate3d(0, 60px, 0) scale(1)')
-    expect(mini.style.opacity).toBe('0.75')
+    expect(mini.style.opacity).toBe('1')
 
     dispatchPointer(mini, 'pointerup', {
       pointerId: 20,

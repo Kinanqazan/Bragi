@@ -1,6 +1,10 @@
 package local
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"io/fs"
 	"net/url"
 	"os"
@@ -510,6 +514,108 @@ var _ = Describe("LocalStorage", func() {
 })
 
 var _ = Describe("metadata writes", func() {
+	BeforeEach(func() {
+		DeferCleanup(configtest.SetupConfig())
+		RegisterExtractor("test", func(fs.FS, string) Extractor {
+			return &mockTestExtractor{results: make(map[string]metadata.Info)}
+		})
+		conf.Server.Scanner.Extractor = "test"
+	})
+
+	It("replaces the first embedded image and preserves tags and additional pictures", func() {
+		dir, err := os.MkdirTemp("", "bragi-image-write-")
+		Expect(err).ToNot(HaveOccurred())
+		DeferCleanup(func() { _ = os.RemoveAll(dir) })
+		original, err := os.ReadFile("tests/fixtures/test.mp3")
+		Expect(err).ToNot(HaveOccurred())
+		mediaPath := filepath.Join(dir, "song.mp3")
+		Expect(os.WriteFile(mediaPath, original, 0o600)).To(Succeed())
+		Expect(taglib.WriteTags(mediaPath, map[string][]string{
+			"TITLE": {"Keep title"}, "ARTIST": {"Keep artist"},
+		}, 0)).To(Succeed())
+		Expect(taglib.WriteImageOptions(mediaPath, []byte("original-front"), 0, "Front Cover", "", "image/jpeg")).To(Succeed())
+		Expect(taglib.WriteImageOptions(mediaPath, []byte("keep-back"), 1, "Back Cover", "", "image/jpeg")).To(Succeed())
+		before, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		beforeTags := before.AllTags().Tags
+		beforeImages := len(before.Properties().Images)
+		Expect(before.Close()).To(Succeed())
+		backCover, err := taglib.ReadImageOptions(mediaPath, 1)
+		Expect(err).ToNot(HaveOccurred())
+
+		var replacement bytes.Buffer
+		cover := image.NewRGBA(image.Rect(0, 0, 2, 2))
+		cover.Set(0, 0, color.RGBA{R: 240, A: 255})
+		Expect(jpeg.Encode(&replacement, cover, nil)).To(Succeed())
+
+		u, err := storage.LocalPathToURL(dir)
+		Expect(err).ToNot(HaveOccurred())
+		localStore := newLocalStorage(u)
+		musicFS, err := localStore.FS()
+		Expect(err).ToNot(HaveOccurred())
+		writer, ok := musicFS.(storage.MediaFileImageWritableFS)
+		Expect(ok).To(BeTrue())
+		Expect(writer.WriteImage("song.mp3", replacement.Bytes(), "image/jpeg")).To(Succeed())
+
+		after, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(after.AllTags().Tags["TITLE"]).To(Equal(beforeTags["TITLE"]))
+		Expect(after.AllTags().Tags["ARTIST"]).To(Equal(beforeTags["ARTIST"]))
+		Expect(len(after.Properties().Images)).To(Equal(beforeImages))
+		Expect(after.Close()).To(Succeed())
+		writtenImage, err := taglib.ReadImageOptions(mediaPath, 0)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(writtenImage).To(Equal(replacement.Bytes()))
+		writtenBackCover, err := taglib.ReadImageOptions(mediaPath, 1)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(writtenBackCover).To(Equal(backCover))
+
+		entries, err := os.ReadDir(dir)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(entries).To(HaveLen(1), "staging files are removed after replacement")
+	})
+
+	It("writes timestamped lyrics into supported music tags and preserves other tags and artwork", func() {
+		_, sourceFile, _, ok := runtime.Caller(0)
+		Expect(ok).To(BeTrue())
+		fixtures := filepath.Join(filepath.Dir(sourceFile), "..", "..", "..", "tests", "fixtures")
+		for _, extension := range []string{"mp3", "flac", "m4a", "ogg", "opus", "wav", "aiff"} {
+			By("writing embedded lyrics to ." + extension)
+			dir, err := os.MkdirTemp("", "bragi-embedded-lyrics-")
+			Expect(err).ToNot(HaveOccurred())
+			fixture, err := os.ReadFile(filepath.Join(fixtures, "test."+extension))
+			Expect(err).ToNot(HaveOccurred())
+			mediaPath := filepath.Join(dir, "song."+extension)
+			Expect(os.WriteFile(mediaPath, fixture, 0o600)).To(Succeed())
+			DeferCleanup(func() { _ = os.RemoveAll(dir) })
+
+			before, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+			Expect(err).ToNot(HaveOccurred())
+			beforeTags := before.AllTags().Tags
+			beforeImages := len(before.Properties().Images)
+			Expect(before.Close()).To(Succeed())
+
+			u, err := storage.LocalPathToURL(dir)
+			Expect(err).ToNot(HaveOccurred())
+			localStore := newLocalStorage(u)
+			musicFS, err := localStore.FS()
+			Expect(err).ToNot(HaveOccurred())
+			writer := musicFS.(storage.MetadataWritableFS)
+			lyrics := "[00:01.20]First line\n[00:02.40]Second line"
+			Expect(writer.WriteTags("song."+extension, map[string][]string{"LYRICS": {lyrics}})).To(Succeed())
+
+			after, err := taglib.OpenReadOnly(mediaPath, taglib.WithReadStyle(taglib.ReadStyleFast))
+			Expect(err).ToNot(HaveOccurred())
+			afterTags := after.AllTags().Tags
+			Expect(afterTags["LYRICS"]).To(Equal([]string{lyrics}))
+			for _, key := range []string{"TITLE", "ALBUM", "ARTIST"} {
+				Expect(afterTags[key]).To(Equal(beforeTags[key]), key+" must be preserved")
+			}
+			Expect(len(after.Properties().Images)).To(Equal(beforeImages), "embedded artwork must be preserved")
+			Expect(after.Close()).To(Succeed())
+		}
+	})
+
 	It("updates only named fields using a verified hidden sibling copy", func() {
 		dir, err := os.MkdirTemp("", "bragi-metadata-write-")
 		Expect(err).ToNot(HaveOccurred())
@@ -526,7 +632,7 @@ var _ = Describe("metadata writes", func() {
 
 		u, err := storage.LocalPathToURL(dir)
 		Expect(err).ToNot(HaveOccurred())
-		localStore := &localStorage{u: u}
+		localStore := newLocalStorage(u)
 		musicFS, err := localStore.FS()
 		Expect(err).ToNot(HaveOccurred())
 		writer, ok := musicFS.(storage.MetadataWritableFS)
@@ -566,7 +672,7 @@ var _ = Describe("metadata writes", func() {
 
 		u, err := storage.LocalPathToURL(dir)
 		Expect(err).ToNot(HaveOccurred())
-		localStore := &localStorage{u: u}
+		localStore := newLocalStorage(u)
 		musicFS, err := localStore.FS()
 		Expect(err).ToNot(HaveOccurred())
 		writer := musicFS.(storage.MetadataWritableFS)
@@ -584,13 +690,21 @@ var _ = Describe("metadata writes", func() {
 })
 
 var _ = Describe("lyrics sidecars", func() {
+	BeforeEach(func() {
+		DeferCleanup(configtest.SetupConfig())
+		RegisterExtractor("test", func(fs.FS, string) Extractor {
+			return &mockTestExtractor{results: make(map[string]metadata.Info)}
+		})
+		conf.Server.Scanner.Extractor = "test"
+	})
+
 	It("writes a sidecar atomically and rejects a stale version", func() {
 		dir, err := os.MkdirTemp("", "bragi-lyrics-")
 		Expect(err).ToNot(HaveOccurred())
 		DeferCleanup(func() { _ = os.RemoveAll(dir) })
 		u, err := storage.LocalPathToURL(dir)
 		Expect(err).ToNot(HaveOccurred())
-		localStore := &localStorage{u: u}
+		localStore := newLocalStorage(u)
 		musicFS, err := localStore.FS()
 		Expect(err).ToNot(HaveOccurred())
 		writer := musicFS.(storage.LyricsSidecarWritableFS)
@@ -624,7 +738,7 @@ var _ = Describe("lyrics sidecars", func() {
 		DeferCleanup(func() { _ = os.RemoveAll(dir) })
 		u, err := storage.LocalPathToURL(dir)
 		Expect(err).ToNot(HaveOccurred())
-		localStore := &localStorage{u: u}
+		localStore := newLocalStorage(u)
 		musicFS, err := localStore.FS()
 		Expect(err).ToNot(HaveOccurred())
 		writer := musicFS.(storage.LyricsSidecarWritableFS)
@@ -643,7 +757,7 @@ var _ = Describe("lyrics sidecars", func() {
 		DeferCleanup(func() { _ = os.RemoveAll(dir) })
 		u, err := storage.LocalPathToURL(dir)
 		Expect(err).ToNot(HaveOccurred())
-		localStore := &localStorage{u: u}
+		localStore := newLocalStorage(u)
 		musicFS, err := localStore.FS()
 		Expect(err).ToNot(HaveOccurred())
 		writer := musicFS.(storage.LyricsSidecarWritableFS)

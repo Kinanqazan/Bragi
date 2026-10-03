@@ -38,6 +38,26 @@ func updateMediaFileMetadata(maintenance core.Maintenance) http.HandlerFunc {
 	}
 }
 
+func updateMediaFileArtwork(maintenance core.Maintenance) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		image, mimeType, err := parseUploadedImage(w, r)
+		if err != nil {
+			http.Error(w, "invalid artwork upload: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		result, err := maintenance.UpdateMediaFileArtwork(r.Context(), chi.URLParam(r, "id"), image, mimeType)
+		if err != nil {
+			writeMetadataError(w, err)
+			return
+		}
+		status := http.StatusOK
+		if result.RefreshRequired {
+			status = http.StatusAccepted
+		}
+		writeJSON(w, status, result)
+	}
+}
+
 func refreshMediaFileMetadata(maintenance core.Maintenance) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		mediaFile, err := maintenance.RefreshMediaFileMetadata(r.Context(), chi.URLParam(r, "id"))
@@ -84,6 +104,36 @@ func saveMediaFileLyrics(maintenance core.Maintenance) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, lyrics)
+	}
+}
+
+func saveEmbeddedMediaFileLyrics(maintenance core.Maintenance) http.HandlerFunc {
+	type lyricsUpdate struct {
+		Content         string `json:"content"`
+		ExpectedVersion string `json:"expectedVersion"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		var changes lyricsUpdate
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, (1<<20)+64*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&changes); err != nil {
+			http.Error(w, "invalid embedded lyrics update: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
+			http.Error(w, "invalid embedded lyrics update: expected a single JSON object", http.StatusBadRequest)
+			return
+		}
+		lyrics, err := maintenance.SaveEmbeddedMediaFileLyrics(r.Context(), chi.URLParam(r, "id"), changes.Content, changes.ExpectedVersion)
+		if err != nil {
+			writeMetadataError(w, err)
+			return
+		}
+		status := http.StatusOK
+		if lyrics.RefreshRequired {
+			status = http.StatusAccepted
+		}
+		writeJSON(w, status, lyrics)
 	}
 }
 

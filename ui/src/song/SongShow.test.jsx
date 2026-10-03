@@ -2,7 +2,7 @@ import React from 'react'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { ThemeProvider, createTheme } from '@material-ui/core/styles'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   record: {
@@ -21,7 +21,16 @@ const mocks = vi.hoisted(() => ({
   clearCache: vi.fn(),
 }))
 
-vi.mock('../config', () => ({ default: { enableMediaFileMetadataEditing: true } }))
+const originalCreateObjectURL = URL.createObjectURL
+const originalRevokeObjectURL = URL.revokeObjectURL
+afterEach(() => {
+  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: originalCreateObjectURL })
+  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: originalRevokeObjectURL })
+})
+
+vi.mock('../config', () => ({
+  default: { enableMediaFileMetadataEditing: true },
+}))
 vi.mock('../dataProvider', () => ({ httpClient: mocks.httpClient }))
 vi.mock('react-redux', () => ({ useDispatch: () => vi.fn() }))
 vi.mock('react-admin', async (importOriginal) => {
@@ -34,7 +43,10 @@ vi.mock('react-admin', async (importOriginal) => {
     useShowController: () => ({ record: mocks.record, loading: false }),
     useNotify: () => mocks.notify,
     useRefresh: () => mocks.refresh,
-    useDataProvider: () => ({ clearCache: mocks.clearCache }),
+    useDataProvider: () => ({
+      clearCache: mocks.clearCache,
+      getList: vi.fn().mockResolvedValue({ data: [] }),
+    }),
     usePermissions: () => ({ permissions: 'admin' }),
   }
 })
@@ -74,7 +86,7 @@ describe('SongShow metadata editing', () => {
     mocks.httpClient.mockImplementation((url) => Promise.resolve({
       status: 200,
       json: url.endsWith('/lyrics')
-        ? { txt: {}, lrc: {} }
+        ? { txt: {}, lrc: {}, embedded: {} }
         : {
             saved: true,
             refreshRequired: false,
@@ -94,7 +106,7 @@ describe('SongShow metadata editing', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Song title' }), {
       target: { value: 'New title' },
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Artist' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Artist' }), {
       target: { value: 'New artist' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -113,9 +125,17 @@ describe('SongShow metadata editing', () => {
 
     expect(screen.getByText('Old album artist')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
-    expect(screen.getByRole('textbox', { name: 'Album artist' })).toHaveValue(
+    expect(screen.getByRole('combobox', { name: 'Album artist' })).toHaveValue(
       'Old album artist',
     )
+  })
+
+  it('explains when the displayed cover falls back to shared disc or album artwork', () => {
+    renderSongShow()
+
+    expect(screen.getByText(
+      'No embedded cover is stored in this song. The displayed cover comes from its disc or album when available.',
+    )).toBeInTheDocument()
   })
 
   it('edits genres and moods in their existing chip positions and saves trimmed values', async () => {
@@ -126,16 +146,16 @@ describe('SongShow metadata editing', () => {
     }
     renderSongShow()
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
-    expect(screen.getByRole('textbox', { name: 'Genre 1' })).toHaveValue('Rock')
-    expect(screen.getByRole('textbox', { name: 'Genre 2' })).toHaveValue('Alternative')
-    expect(screen.getByRole('textbox', { name: 'Mood 1' })).toHaveValue('Dreamy')
+    expect(screen.getByRole('combobox', { name: 'Genre 1' })).toHaveValue('Rock')
+    expect(screen.getByRole('combobox', { name: 'Genre 2' })).toHaveValue('Alternative')
+    expect(screen.getByRole('combobox', { name: 'Mood 1' })).toHaveValue('Dreamy')
     expect(screen.queryByRole('textbox', { name: 'Genres' })).not.toBeInTheDocument()
-    fireEvent.change(screen.getByRole('textbox', { name: 'Genre 2' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Genre 2' }), {
       target: { value: ' Indie ' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Remove genre 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add mood' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'Mood 2' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Mood 2' }), {
       target: { value: 'Calm' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
@@ -158,8 +178,8 @@ describe('SongShow metadata editing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
 
     expect(screen.getByRole('textbox', { name: 'Song title' }).parentElement).toBe(titleHeading)
-    expect(screen.getByRole('textbox', { name: 'Artist' }).parentElement).toBe(artistLine)
-    expect(screen.getByRole('textbox', { name: 'Album artist' }).parentElement).toBe(albumArtistLine)
+    expect(screen.getByRole('combobox', { name: 'Artist' }).parentElement).toBe(artistLine)
+    expect(screen.getByRole('combobox', { name: 'Album artist' }).parentElement).toBe(albumArtistLine)
     expect(screen.queryByText('Duration')).not.toBeInTheDocument()
     expect(
       within(screen.getByRole('group', { name: 'Song actions' })).getByRole('button', {
@@ -182,6 +202,58 @@ describe('SongShow metadata editing', () => {
     expect(within(actions).getByRole('button', { name: 'Toggle favorite' })).toBeInTheDocument()
     expect(playButton).toHaveTextContent('(02:00)')
     expect(editButton).toHaveTextContent('')
+  })
+
+  it('previews a replacement cover before saving it to the song file', async () => {
+    const createObjectURL = vi.fn(() => 'blob:cover-preview')
+    const revokeObjectURL = vi.fn()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL })
+    const view = renderSongShow()
+    const file = new File(['cover bytes'], 'cover.png', { type: 'image/png' })
+    fireEvent.change(screen.getByLabelText('Choose song artwork'), {
+      target: { files: [file] },
+    })
+
+    expect(await screen.findByRole('img', { name: 'Artwork preview' })).toHaveAttribute(
+      'src',
+      'blob:cover-preview',
+    )
+    expect(mocks.httpClient).not.toHaveBeenCalledWith(
+      expect.stringContaining('/artwork'),
+      expect.anything(),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Save artwork' }))
+
+    await waitFor(() =>
+      expect(mocks.httpClient).toHaveBeenCalledWith(
+        '/api/song/media-1/artwork',
+        expect.objectContaining({ method: 'PUT', body: expect.any(FormData) }),
+      ),
+    )
+    expect(mocks.clearCache).toHaveBeenCalledOnce()
+    expect(mocks.refresh).toHaveBeenCalledOnce()
+    expect(view.container.querySelector('img[alt="Artwork preview"]')).not.toBeInTheDocument()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:cover-preview')
+  })
+
+  it('discards a cover preview when canceled without writing the song file', () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:discarded-cover') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    const view = renderSongShow()
+    const file = new File(['cover bytes'], 'cover.png', { type: 'image/png' })
+    fireEvent.change(screen.getByLabelText('Choose song artwork'), {
+      target: { files: [file] },
+    })
+    expect(screen.getByRole('img', { name: 'Artwork preview' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel artwork change' }))
+
+    expect(view.container.querySelector('img[alt="Artwork preview"]')).not.toBeInTheDocument()
+    expect(mocks.httpClient).not.toHaveBeenCalledWith(
+      expect.stringContaining('/artwork'),
+      expect.anything(),
+    )
   })
 
   it('lets the user cancel a draft without saving', () => {
@@ -223,7 +295,7 @@ describe('SongShow metadata editing', () => {
     const file = new File(['First line\nSecond line'], 'song.txt', { type: 'text/plain' })
     Object.defineProperty(file, 'text', { value: async () => 'First line\nSecond line' })
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Lyrics text' })).toBeInTheDocument())
-    fireEvent.change(view.container.querySelector('input[type="file"]'), {
+    fireEvent.change(view.container.querySelector('input[accept=".txt,.lrc"]'), {
       target: { files: [file] },
     })
 
@@ -264,7 +336,7 @@ describe('SongShow metadata editing', () => {
     )
     const file = new File(['[00:02.00]New timed line'], 'new-song.lrc', { type: 'text/plain' })
     Object.defineProperty(file, 'text', { value: async () => '[00:02.00]New timed line' })
-    fireEvent.change(view.container.querySelector('input[type="file"]'), {
+    fireEvent.change(view.container.querySelector('input[accept=".txt,.lrc"]'), {
       target: { files: [file] },
     })
     await waitFor(() =>
@@ -313,5 +385,44 @@ describe('SongShow metadata editing', () => {
     expect(screen.queryByRole('button', { name: 'Delete lyrics' })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Lyrics text' })).toHaveValue('')
     confirmSpy.mockRestore()
+  })
+
+  it('saves lyrics into the music file and keeps separate sidecars untouched', async () => {
+    mocks.httpClient.mockImplementation((url) => Promise.resolve({
+      status: 200,
+      json: url.endsWith('/lyrics/embedded')
+        ? {
+            txt: { content: 'Sidecar lyric', version: 'txt-v1', exists: true },
+            lrc: {},
+            embedded: { content: 'Updated embedded lyric', version: 'embedded-v2', exists: true },
+            saved: true,
+          }
+        : url.endsWith('/lyrics')
+          ? {
+              txt: { content: 'Sidecar lyric', version: 'txt-v1', exists: true },
+              lrc: {},
+              embedded: { content: 'Embedded lyric', version: 'embedded-v1', exists: true },
+            }
+          : {},
+    }))
+    renderSongShow()
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Lyrics text' })).toHaveValue('Sidecar lyric'))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Lyrics storage' }), {
+      target: { value: 'embedded' },
+    })
+    expect(screen.getByRole('status')).toHaveTextContent(/take priority in the player/)
+    expect(screen.getByRole('textbox', { name: 'Lyrics text' })).toHaveValue('Embedded lyric')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lyrics text' }), {
+      target: { value: 'Updated embedded lyric' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save lyrics' }))
+
+    await waitFor(() => expect(mocks.httpClient).toHaveBeenCalledWith('/api/song/media-1/lyrics/embedded', {
+      method: 'PUT',
+      body: JSON.stringify({ content: 'Updated embedded lyric', expectedVersion: 'embedded-v1' }),
+    }))
+    expect(screen.getByRole('textbox', { name: 'Lyrics text' })).toHaveValue('Updated embedded lyric')
+    expect(screen.queryByRole('button', { name: 'Delete lyrics' })).not.toBeInTheDocument()
   })
 })

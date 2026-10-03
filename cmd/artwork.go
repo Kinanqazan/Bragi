@@ -587,7 +587,7 @@ func explainConfig(kind model.Kind) (name, value string) {
 	case model.KindDiscArtwork:
 		return "DiscArtPriority", conf.Server.DiscArtPriority
 	case model.KindMediaFileArtwork:
-		return "EnableMediaFileCoverArt", strconv.FormatBool(conf.Server.EnableMediaFileCoverArt)
+		return "EnableMediaFileCoverArt", strconv.FormatBool(conf.MediaFileCoverArtEnabled())
 	}
 	return "", ""
 }

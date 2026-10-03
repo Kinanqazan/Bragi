@@ -438,6 +438,7 @@ const useStyles = makeStyles((theme) => {
 })
 
 const firstMood = (song) => song.tags?.mood?.[0] || ''
+const firstFacet = (song) => song.genres?.[0]?.name || song.genre || ''
 
 export const LONG_PRESS_DELAY = 500
 const LONG_PRESS_MOVE_TOLERANCE = 8

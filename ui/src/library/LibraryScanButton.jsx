@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import {
-  Button,
   useNotify,
   useRefresh,
   useTranslate,
   useUnselectAll,
 } from 'react-admin'
+import { Button } from '@material-ui/core'
 import { useSelector } from 'react-redux'
 import SyncIcon from '@material-ui/icons/Sync'
 import CachedIcon from '@material-ui/icons/Cached'
@@ -60,10 +60,11 @@ const LibraryScanButton = ({ fullScan, selectedIds, className }) => {
     <Button
       onClick={handleClick}
       disabled={isDisabled}
-      label={label}
+      size="small"
+      startIcon={icon}
       className={className}
     >
-      {icon}
+      {label}
     </Button>
   )
 }

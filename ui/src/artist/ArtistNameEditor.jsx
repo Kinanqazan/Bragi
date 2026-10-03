@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Dialog,
   DialogActions,
@@ -21,10 +21,18 @@ const ArtistNameEditor = ({ record, onSaved }) => {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(record.name || '')
   const [saving, setSaving] = useState(false)
+  const mounted = useRef(true)
 
   useEffect(() => {
     setName(record.name || '')
   }, [record.id, record.name])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   if (!config.enableMediaFileMetadataEditing || permissions !== 'admin') return null
 
@@ -32,7 +40,7 @@ const ArtistNameEditor = ({ record, onSaved }) => {
     event.preventDefault()
     const cleanName = name.trim()
     if (!cleanName) {
-      notify('Artist name cannot be empty', 'warning')
+      notify('resources.artist.notifications.nameRequired', { type: 'warning' })
       return
     }
     setSaving(true)
@@ -42,14 +50,17 @@ const ArtistNameEditor = ({ record, onSaved }) => {
         method: 'PUT',
         body: JSON.stringify({ name: cleanName }),
       })
-      onSaved(response.json.name)
       dataProvider.clearCache?.()
       setOpen(false)
-      notify('Artist name updated', 'info')
+      onSaved(response.json.name)
+      notify('resources.artist.notifications.displayNameUpdated', { type: 'info' })
     } catch (error) {
-      notify(error.message || 'Could not update artist name', 'warning')
+      notify('resources.artist.notifications.nameUpdateFailed', {
+        type: 'warning',
+        messageArgs: { details: error.message || 'Unknown error.' },
+      })
     } finally {
-      setSaving(false)
+      if (mounted.current) setSaving(false)
     }
   }
 

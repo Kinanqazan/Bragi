@@ -1,8 +1,13 @@
 package nativeapi
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/color"
+	"image/png"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,9 +26,11 @@ var _ = Describe("Song metadata endpoints", func() {
 	newRequest := func(method, route, body string, user model.User) *httptest.ResponseRecorder {
 		router := chi.NewRouter()
 		router.With(adminOnlyMiddleware).Put("/song/{id}/metadata", updateMediaFileMetadata(service))
+		router.With(adminOnlyMiddleware).Put("/song/{id}/artwork", updateMediaFileArtwork(service))
 		router.With(adminOnlyMiddleware).Post("/song/{id}/metadata/refresh", refreshMediaFileMetadata(service))
 		router.With(adminOnlyMiddleware).Get("/song/{id}/lyrics", getMediaFileLyrics(service))
 		router.With(adminOnlyMiddleware).Put("/song/{id}/lyrics", saveMediaFileLyrics(service))
+		router.With(adminOnlyMiddleware).Put("/song/{id}/lyrics/embedded", saveEmbeddedMediaFileLyrics(service))
 		router.With(adminOnlyMiddleware).Delete("/song/{id}/lyrics", deleteMediaFileLyrics(service))
 		req := httptest.NewRequest(method, route, strings.NewReader(body))
 		req = req.WithContext(request.WithUser(req.Context(), user))
@@ -62,6 +69,33 @@ var _ = Describe("Song metadata endpoints", func() {
 		Expect(service.updatedID).To(BeEmpty())
 	})
 
+	It("accepts a validated image upload and refreshes the selected song", func() {
+		var imageBytes bytes.Buffer
+		cover := image.NewRGBA(image.Rect(0, 0, 2, 2))
+		cover.Set(0, 0, color.RGBA{B: 255, A: 255})
+		Expect(png.Encode(&imageBytes, cover)).To(Succeed())
+		var body bytes.Buffer
+		form := multipart.NewWriter(&body)
+		file, err := form.CreateFormFile("image", "cover.png")
+		Expect(err).ToNot(HaveOccurred())
+		_, err = file.Write(imageBytes.Bytes())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(form.Close()).To(Succeed())
+		req := httptest.NewRequest(http.MethodPut, "/song/song-1/artwork", &body)
+		req.Header.Set("Content-Type", form.FormDataContentType())
+		req = req.WithContext(request.WithUser(req.Context(), model.User{ID: "admin", IsAdmin: true}))
+		response := httptest.NewRecorder()
+		router := chi.NewRouter()
+		router.With(adminOnlyMiddleware).Put("/song/{id}/artwork", updateMediaFileArtwork(service))
+		router.ServeHTTP(response, req)
+
+		Expect(response.Code).To(Equal(http.StatusAccepted))
+		Expect(response.Body.String()).To(ContainSubstring(`"refreshRequired":true`))
+		Expect(service.artworkID).To(Equal("song-1"))
+		Expect(service.artworkMIME).To(Equal("image/png"))
+		Expect(service.artwork).To(Equal(imageBytes.Bytes()))
+	})
+
 	It("blocks non-admin access before calling the service", func() {
 		response := newRequest(http.MethodPut, "/song/song-1/metadata", `{"title":"Updated"}`, model.User{ID: "user"})
 
@@ -91,6 +125,14 @@ var _ = Describe("Song metadata endpoints", func() {
 		Expect(response.Code).To(Equal(http.StatusOK))
 		Expect(service.updatedID).To(Equal("song-1"))
 		Expect(service.lyricsUpdate).To(Equal([3]string{".lrc", "[00:01.00]Line", "old-version"}))
+	})
+
+	It("saves embedded lyrics with optimistic version checking", func() {
+		response := newRequest(http.MethodPut, "/song/song-1/lyrics/embedded", `{"content":"[00:01.00]Line","expectedVersion":"old-version"}`, model.User{ID: "admin", IsAdmin: true})
+
+		Expect(response.Code).To(Equal(http.StatusOK))
+		Expect(service.updatedID).To(Equal("song-1"))
+		Expect(service.embeddedLyricsUpdate).To(Equal([3]string{"song-1", "[00:01.00]Line", "old-version"}))
 	})
 
 	It("rejects unknown lyrics update fields", func() {
@@ -132,14 +174,25 @@ type metadataMaintenanceMock struct {
 	result               *core.MediaFileMetadataResult
 	mediaFile            *model.MediaFile
 	lyricsUpdate         [3]string
+	embeddedLyricsUpdate [3]string
 	deletedID            string
 	lyricsDeleteVersions [2]string
+	artworkID            string
+	artworkMIME          string
+	artwork              []byte
 	err                  error
 }
 
 func (m *metadataMaintenanceMock) UpdateMediaFileMetadata(_ context.Context, id string, changes core.MediaFileMetadataChanges) (*core.MediaFileMetadataResult, error) {
 	m.updatedID = id
 	m.changes = changes
+	return m.result, m.err
+}
+
+func (m *metadataMaintenanceMock) UpdateMediaFileArtwork(_ context.Context, id string, image []byte, mimeType string) (*core.MediaFileMetadataResult, error) {
+	m.artworkID = id
+	m.artworkMIME = mimeType
+	m.artwork = image
 	return m.result, m.err
 }
 
@@ -156,6 +209,12 @@ func (m *metadataMaintenanceMock) LoadMediaFileLyrics(_ context.Context, id stri
 func (m *metadataMaintenanceMock) SaveMediaFileLyrics(_ context.Context, id, extension, content, expectedVersion string) (*core.MediaFileLyrics, error) {
 	m.updatedID = id
 	m.lyricsUpdate = [3]string{extension, content, expectedVersion}
+	return &core.MediaFileLyrics{}, m.err
+}
+
+func (m *metadataMaintenanceMock) SaveEmbeddedMediaFileLyrics(_ context.Context, id, content, expectedVersion string) (*core.MediaFileLyrics, error) {
+	m.updatedID = id
+	m.embeddedLyricsUpdate = [3]string{id, content, expectedVersion}
 	return &core.MediaFileLyrics{}, m.err
 }
 

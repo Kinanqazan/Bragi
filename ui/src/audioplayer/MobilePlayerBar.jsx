@@ -15,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
     zIndex: 1350,
     display: 'flex',
     alignItems: 'center',
-    height: 92,
+    height: 104,
     borderRadius: 18,
     overflow: 'hidden',
     color: theme.palette.text.primary,
@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
     zIndex: 1,
     display: 'flex',
     flex: 1,
-    height: '100%',
+    height: 'calc(100% - 12px)',
     minWidth: 0,
     alignItems: 'center',
     padding: 0,
@@ -49,8 +49,16 @@ const useStyles = makeStyles((theme) => ({
       opacity: 0.92,
     },
   },
-  cover: { width: 92, height: '100%', objectFit: 'cover' },
+  cover: {
+    display: 'block',
+    flex: '0 0 92px',
+    width: 92,
+    height: '100%',
+    objectFit: 'cover',
+  },
   emptyCover: {
+    display: 'block',
+    flex: '0 0 92px',
     width: 92,
     height: '100%',
     background: theme.palette.action.hover,
@@ -69,7 +77,6 @@ const useStyles = makeStyles((theme) => ({
     textDecoration: 'none',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    '&:hover': { textDecoration: 'underline' },
   },
   artist: {
     display: 'block',
@@ -79,6 +86,13 @@ const useStyles = makeStyles((theme) => ({
     fontSize: '0.85rem',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  },
+  playSlot: {
+    flex: '0 0 64px',
+    width: 64,
+    height: 64,
+    marginRight: theme.spacing(1.5),
+    visibility: 'hidden',
   },
   playButton: {
     position: 'relative',
@@ -116,24 +130,32 @@ const useStyles = makeStyles((theme) => ({
 }))
 
 const MobilePlayerBar = ({
-  snapshot,
-  commands,
   cover,
   ambientColor,
   title,
   artist,
   onOpen,
+  progress,
+  snapshot,
+  commands,
+  sharedPlayback = false,
+  sharedIdentity = false,
   rootRef,
+  artworkRef,
+  playRef,
+  titleRef,
+  artistRef,
   gestureHandlers,
   style: customStyle,
 }) => {
   const classes = useStyles()
   const playbackPress = useImmediateControlPress(
-    snapshot.playing ? commands.pause : commands.play,
+    snapshot?.playing ? commands?.pause : commands?.play,
     Boolean(gestureHandlers),
   )
-  const duration = snapshot.duration || 0
-  const progress = duration ? (snapshot.currentTime / duration) * 100 : 0
+  const duration = snapshot?.duration || 0
+  const progressPercent =
+    progress ?? (duration ? (snapshot.currentTime / duration) * 100 : 0)
 
   return (
     <aside
@@ -143,9 +165,14 @@ const MobilePlayerBar = ({
       style={customStyle}
       {...gestureHandlers}
     >
-      <AmbientBackdrop cover={cover} color={ambientColor} />
+      {!sharedPlayback && (
+        <AmbientBackdrop cover={cover} color={ambientColor} />
+      )}
       <div className={classes.progressTrack} aria-hidden="true">
-        <div className={classes.progress} style={{ width: `${progress}%` }} />
+        <div
+          className={classes.progress}
+          style={{ width: `${progressPercent}%` }}
+        />
       </div>
       <div
         role="button"
@@ -164,24 +191,60 @@ const MobilePlayerBar = ({
         }}
         aria-label={`Open full-screen player${title ? ` for ${title}` : ''}`}
       >
-        {cover ? (
+        {sharedPlayback ? (
+          cover ? (
+            <span
+              ref={artworkRef}
+              className={classes.cover}
+              style={{ visibility: 'hidden' }}
+              aria-hidden="true"
+            />
+          ) : (
+            <span
+              ref={artworkRef}
+              className={classes.emptyCover}
+              style={{ visibility: 'hidden' }}
+              aria-hidden="true"
+            />
+          )
+        ) : cover ? (
           <img className={classes.cover} src={cover} alt="" />
         ) : (
           <span className={classes.emptyCover} />
         )}
         <span className={classes.details}>
-          <span className={classes.title}>{title || 'Now playing'}</span>
-          {artist && <span className={classes.artist}>{artist}</span>}
+          <span
+            ref={titleRef}
+            className={classes.title}
+            style={sharedIdentity ? { visibility: 'hidden' } : undefined}
+            aria-hidden={sharedIdentity || undefined}
+          >
+            {title || 'Now playing'}
+          </span>
+          {artist && (
+            <span
+              ref={artistRef}
+              className={classes.artist}
+              style={sharedIdentity ? { visibility: 'hidden' } : undefined}
+              aria-hidden={sharedIdentity || undefined}
+            >
+              {artist}
+            </span>
+          )}
         </span>
       </div>
-      <IconButton
-        className={classes.playButton}
-        {...playbackPress}
-        disableRipple
-        aria-label={snapshot.playing ? 'Pause' : 'Play'}
-      >
-        {snapshot.playing ? <PauseRoundedIcon /> : <PlayArrowRoundedIcon />}
-      </IconButton>
+      {sharedPlayback ? (
+        <span ref={playRef} className={classes.playSlot} aria-hidden="true" />
+      ) : (
+        <IconButton
+          className={classes.playButton}
+          {...playbackPress}
+          disableRipple
+          aria-label={snapshot?.playing ? 'Pause' : 'Play'}
+        >
+          {snapshot?.playing ? <PauseRoundedIcon /> : <PlayArrowRoundedIcon />}
+        </IconButton>
+      )}
     </aside>
   )
 }

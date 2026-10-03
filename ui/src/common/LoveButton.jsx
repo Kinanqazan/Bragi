@@ -40,6 +40,7 @@ export const LoveButton = ({
   const record = useRecordContext({ record: recordProp }) || {}
   const classes = useStyles({ color, visible, loved: record.starred })
   const [toggleLove, loading] = useToggleLove(resource, record)
+  const loveableSong = resource === 'song' || resource === 'playlistTrack'
 
   const handleToggleLove = useCallback(
     (e) => {
@@ -50,7 +51,7 @@ export const LoveButton = ({
     [toggleLove],
   )
 
-  if (!config.enableFavourites) {
+  if (!loveableSong || !config.enableFavourites) {
     return <></>
   }
   return (
@@ -76,7 +77,7 @@ export const LoveButton = ({
 }
 
 LoveButton.propTypes = {
-  resource: PropTypes.string.isRequired,
+  resource: PropTypes.oneOf(['song', 'playlistTrack']).isRequired,
   record: PropTypes.object,
   visible: PropTypes.bool,
   color: PropTypes.string,

@@ -19,7 +19,6 @@ import {
   ArtistContextMenu,
   Artwork,
   List,
-  LoveButton,
   ModernFilterBar,
   RatingField,
   ToggleFieldsMenu,

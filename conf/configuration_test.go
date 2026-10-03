@@ -73,6 +73,94 @@ var _ = Describe("Configuration", func() {
 		})
 	})
 
+	Describe("environment variable prefixes", func() {
+		BeforeEach(func() {
+			GinkgoT().Setenv("BR_CONFIGFILE", "")
+			GinkgoT().Setenv("ND_CONFIGFILE", "")
+		})
+
+		It("prefers BR_ values over legacy ND_ and unprefixed aliases", func() {
+			GinkgoT().Setenv("BR_ADDRESS", "127.0.0.2")
+			GinkgoT().Setenv("ND_ADDRESS", "127.0.0.3")
+			GinkgoT().Setenv("BR_PORT", "4532")
+			GinkgoT().Setenv("ND_PORT", "4531")
+			GinkgoT().Setenv("PORT", "4530")
+
+			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
+			conf.Load(true)
+
+			Expect(conf.Server.Address).To(Equal("127.0.0.2"))
+			Expect(conf.Server.Port).To(Equal(4532))
+		})
+
+		It("accepts ND_ values when no BR_ value is set", func() {
+			GinkgoT().Setenv("BR_ENABLEMEDIAFILEDELETION", "")
+			GinkgoT().Setenv("ND_ENABLEMEDIAFILEDELETION", "true")
+
+			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
+			conf.Load(true)
+
+			Expect(conf.Server.EnableMediaFileDeletion).To(BeTrue())
+		})
+
+		It("uses the unprefixed PORT fallback after both supported prefixes", func() {
+			GinkgoT().Setenv("BR_PORT", "")
+			GinkgoT().Setenv("ND_PORT", "")
+			GinkgoT().Setenv("PORT", "4530")
+
+			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
+			conf.Load(true)
+
+			Expect(conf.Server.Port).To(Equal(4530))
+		})
+
+		It("prefers BR_CONFIGFILE over ND_CONFIGFILE", func() {
+			configDir := GinkgoT().TempDir()
+			brConfig := filepath.Join(configDir, "bragi.toml")
+			ndConfig := filepath.Join(configDir, "legacy.toml")
+			Expect(os.WriteFile(brConfig, []byte(`address = "127.0.0.5"`), 0600)).To(Succeed())
+			Expect(os.WriteFile(ndConfig, []byte(`address = "127.0.0.6"`), 0600)).To(Succeed())
+			GinkgoT().Setenv("BR_CONFIGFILE", brConfig)
+			GinkgoT().Setenv("ND_CONFIGFILE", ndConfig)
+
+			conf.InitConfig("", true)
+			conf.Load(true)
+
+			Expect(conf.Server.Address).To(Equal("127.0.0.5"))
+			Expect(conf.Server.ConfigFile).To(Equal(brConfig))
+
+		})
+
+		It("accepts ND_CONFIGFILE as a fallback", func() {
+			configDir := GinkgoT().TempDir()
+			ndConfig := filepath.Join(configDir, "legacy.toml")
+			Expect(os.WriteFile(ndConfig, []byte(`address = "127.0.0.6"`), 0600)).To(Succeed())
+			GinkgoT().Setenv("ND_CONFIGFILE", ndConfig)
+
+			conf.InitConfig("", true)
+			conf.Load(true)
+
+			Expect(conf.Server.Address).To(Equal("127.0.0.6"))
+			Expect(conf.Server.ConfigFile).To(Equal(ndConfig))
+		})
+
+		It("accepts BR_-prefixed config-file keys", func() {
+			filename := filepath.Join(GinkgoT().TempDir(), "br-config.toml")
+			contents := `BR_ADDRESS = "127.0.0.4"
+BR_PORT = 4534
+BR_SCANNER_SCHEDULE = "@every 2h"
+`
+			Expect(os.WriteFile(filename, []byte(contents), 0600)).To(Succeed())
+
+			conf.InitConfig(filename, false)
+			conf.Load(true)
+
+			Expect(conf.Server.Address).To(Equal("127.0.0.4"))
+			Expect(conf.Server.Port).To(Equal(4534))
+			Expect(conf.Server.Scanner.Schedule).To(Equal("@every 2h"))
+		})
+	})
+
 	Describe("media file deletion", func() {
 		It("is disabled by default", func() {
 			conf.Load(true)
@@ -96,6 +184,25 @@ var _ = Describe("Configuration", func() {
 			viper.Set("enablemediafilemetadataediting", true)
 			conf.Load(true)
 			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeTrue())
+		})
+	})
+
+	Describe("media file cover art", func() {
+		It("is enabled automatically when metadata editing is enabled", func() {
+			viper.Set("enablemediafilecoverart", false)
+			viper.Set("enablemediafilemetadataediting", true)
+			conf.Load(true)
+
+			Expect(conf.Server.EnableMediaFileCoverArt).To(BeFalse())
+			Expect(conf.MediaFileCoverArtEnabled()).To(BeTrue())
+		})
+
+		It("can be enabled without allowing metadata edits", func() {
+			viper.Set("enablemediafilecoverart", true)
+			conf.Load(true)
+
+			Expect(conf.Server.EnableMediaFileMetadataEditing).To(BeFalse())
+			Expect(conf.MediaFileCoverArtEnabled()).To(BeTrue())
 		})
 	})
 
