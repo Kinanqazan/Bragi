@@ -1,6 +1,6 @@
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { ThemeProvider, createTheme } from '@material-ui/core/styles'
 import { describe, expect, it } from 'vitest'
 import { afterEach, beforeEach, vi } from 'vitest'
@@ -127,7 +127,7 @@ const renderSurface = (
 }
 
 const dispatchPointer = (element, type, properties) => {
-  const event = new Event(type, { bubbles: true })
+  const event = new Event(type, { bubbles: true, cancelable: true })
   Object.defineProperties(
     event,
     Object.fromEntries(
@@ -135,6 +135,7 @@ const dispatchPointer = (element, type, properties) => {
     ),
   )
   element.dispatchEvent(event)
+  return event
 }
 
 describe('MobilePlayerSurface gestures', () => {
@@ -166,6 +167,7 @@ describe('MobilePlayerSurface gestures', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('provides ambient artwork color to the backdrop and mobile player bar', () => {
@@ -335,6 +337,164 @@ describe('MobilePlayerSurface gestures', () => {
     ).toHaveLength(1)
   })
 
+  it('does not invalidate layout while tracking a swipe', () => {
+    let nextFrame
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      nextFrame = callback
+      return 1
+    })
+    renderSurface()
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    dispatchPointer(surface, 'pointerdown', {
+      pointerId: 31,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    })
+    const layoutWrites = ['width', 'height', 'fontSize', 'borderWidth'].map(
+      (property) => vi.spyOn(CSSStyleDeclaration.prototype, property, 'set'),
+    )
+    const cornerWrites = vi.spyOn(
+      CSSStyleDeclaration.prototype,
+      'borderRadius',
+      'set',
+    )
+    const geometryReads = HTMLElement.prototype.getBoundingClientRect
+    geometryReads.mockClear()
+    for (const clientY of [140, 180, 220]) {
+      dispatchPointer(surface, 'pointermove', {
+        pointerId: 31,
+        pointerType: 'touch',
+        clientX: 100,
+        clientY,
+      })
+      act(() => nextFrame(performance.now()))
+    }
+    expect(geometryReads).not.toHaveBeenCalled()
+    expect(layoutWrites.map((spy) => spy.mock.calls.length)).toEqual([
+      0, 0, 0, 0,
+    ])
+    // Rebuilding the clip on each frame forces WebView to raster the large
+    // background/shadow throughout the gesture.
+    expect(cornerWrites).not.toHaveBeenCalled()
+  })
+
+  it('keeps square frame clipping static throughout resizing', () => {
+    const { rerenderSurface } = renderSurface(vi.fn(), false)
+    const frame = screen.getByTestId('shared-player-frame')
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+    const frameCorners = frame.style.borderRadius
+    expect(parseFloat(window.getComputedStyle(frame).borderRadius)).toBe(0)
+    const pointer = { pointerId: 42, pointerType: 'touch', clientX: 100 }
+    dispatchPointer(mini, 'pointerdown', { ...pointer, clientY: 300 })
+    dispatchPointer(mini, 'pointermove', { ...pointer, clientY: 240 })
+    dispatchPointer(mini, 'pointerup', { ...pointer, clientY: 240 })
+    expect(frame.style.transition).not.toContain('border-radius')
+    expect(frame.style.borderRadius).toBe(frameCorners)
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
+    rerenderSurface(true)
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    dispatchPointer(surface, 'pointerdown', { ...pointer, clientY: 100 })
+    dispatchPointer(surface, 'pointermove', { ...pointer, clientY: 160 })
+    dispatchPointer(surface, 'pointerup', { ...pointer, clientY: 160 })
+    expect(frame.style.borderRadius).toBe(frameCorners)
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
+    expect(frame.style.borderRadius).toBe(frameCorners)
+  })
+
+  it('prepares the background at full size and reuses cached gesture geometry', () => {
+    renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    expect(parseFloat(frame.style.height)).toBe(window.innerHeight)
+    const geometryReads = HTMLElement.prototype.getBoundingClientRect
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    geometryReads.mockClear()
+    dispatchPointer(surface, 'pointerdown', {
+      pointerId: 32,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    })
+    expect(geometryReads).not.toHaveBeenCalled()
+  })
+
+  it('continues from the visible position when a snap is interrupted', () => {
+    renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    dispatchPointer(surface, 'pointerdown', {
+      pointerId: 33,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    })
+    dispatchPointer(surface, 'pointermove', {
+      pointerId: 33,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 180,
+    })
+    dispatchPointer(surface, 'pointerup', {
+      pointerId: 33,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 180,
+    })
+    const destination = frame.style.transform
+    // The compositor is halfway through the snap, although the inline transform
+    // already contains its final target.
+    vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue({ height: 446 })
+    dispatchPointer(surface, 'pointerdown', {
+      pointerId: 34,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 400,
+    })
+    expect(frame.style.transform).not.toBe(destination)
+    expect(frame.style.transform).toContain('scale(0.975, 0.5575)')
+  })
+
+  it('does not clear playback when continuing an interrupted collapse', () => {
+    const { onClear, onExpandedChange } = renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    const pointer = { pointerType: 'touch', clientX: 100 }
+    dispatchPointer(surface, 'pointerdown', {
+      ...pointer,
+      pointerId: 35,
+      clientY: 100,
+    })
+    dispatchPointer(surface, 'pointermove', {
+      ...pointer,
+      pointerId: 35,
+      clientY: 200,
+    })
+    dispatchPointer(surface, 'pointerup', {
+      ...pointer,
+      pointerId: 35,
+      clientY: 200,
+    })
+    vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue({ height: 269 })
+    dispatchPointer(surface, 'pointerdown', {
+      ...pointer,
+      pointerId: 36,
+      clientY: 400,
+    })
+    dispatchPointer(surface, 'pointermove', {
+      ...pointer,
+      pointerId: 36,
+      clientY: 470,
+    })
+    dispatchPointer(surface, 'pointerup', {
+      ...pointer,
+      pointerId: 36,
+      clientY: 470,
+    })
+    dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
+    expect(onClear).not.toHaveBeenCalled()
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+  })
+
   it('keeps the dragged layer mounted until its snap animation completes', () => {
     const { onExpandedChange } = renderSurface()
     const frame = screen.getByTestId('shared-player-frame')
@@ -364,6 +524,48 @@ describe('MobilePlayerSurface gestures', () => {
 
     dispatchPointer(frame, 'transitionend', { propertyName: 'transform' })
 
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+  })
+
+  it('settles a normal-motion opening within 240 ms', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    )
+    renderSurface(vi.fn(), false)
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+    const pointer = {
+      pointerId: 40,
+      pointerType: 'touch',
+      clientX: 100,
+    }
+    vi.spyOn(performance, 'now').mockReturnValueOnce(0).mockReturnValue(200)
+    dispatchPointer(mini, 'pointerdown', { ...pointer, clientY: 300 })
+    dispatchPointer(mini, 'pointermove', { ...pointer, clientY: 240 })
+    dispatchPointer(mini, 'pointerup', { ...pointer, clientY: 240 })
+    const frame = screen.getByTestId('shared-player-frame')
+    const duration = Number(
+      frame.style.transition.match(/transform (\d+)ms/)[1],
+    )
+    expect(duration).toBeGreaterThan(0)
+    expect(duration).toBeLessThanOrEqual(240)
+  })
+
+  it('completes reduced-motion swipes without a settling delay', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: true })),
+    )
+    const { onExpandedChange } = renderSurface()
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    const pointer = {
+      pointerId: 41,
+      pointerType: 'touch',
+      clientX: 100,
+    }
+    dispatchPointer(surface, 'pointerdown', { ...pointer, clientY: 100 })
+    dispatchPointer(surface, 'pointermove', { ...pointer, clientY: 260 })
+    dispatchPointer(surface, 'pointerup', { ...pointer, clientY: 260 })
     expect(onExpandedChange).toHaveBeenCalledWith(false)
   })
 
@@ -449,6 +651,40 @@ describe('MobilePlayerSurface gestures', () => {
 
     const play = screen.getByRole('button', { name: 'Play', hidden: true })
     play.click()
+
+    expect(onPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves a play tap with small downward finger drift', () => {
+    const onPlay = vi.fn()
+    renderSurface(vi.fn(), true, {
+      play: onPlay,
+      pause: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+    })
+    const play = document.querySelector('[data-player-shared-control="true"]')
+
+    dispatchPointer(play, 'pointerdown', {
+      pointerId: 50,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 600,
+    })
+    dispatchPointer(play, 'pointermove', {
+      pointerId: 50,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 610,
+    })
+    const pointerUp = dispatchPointer(play, 'pointerup', {
+      pointerId: 50,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 610,
+    })
+
+    if (!pointerUp.defaultPrevented) play.click()
 
     expect(onPlay).toHaveBeenCalledTimes(1)
   })

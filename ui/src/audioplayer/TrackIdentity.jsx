@@ -34,6 +34,8 @@ const useStyles = makeStyles((theme) => ({
     visibility: 'hidden',
     pointerEvents: 'auto',
     touchAction: 'none',
+    transformOrigin: 'top left',
+    willChange: 'transform',
   },
   sharedArtist: {
     position: 'fixed',
@@ -44,6 +46,8 @@ const useStyles = makeStyles((theme) => ({
     visibility: 'hidden',
     pointerEvents: 'auto',
     touchAction: 'none',
+    transformOrigin: 'top left',
+    willChange: 'transform',
   },
   titleLink: {
     display: 'block',

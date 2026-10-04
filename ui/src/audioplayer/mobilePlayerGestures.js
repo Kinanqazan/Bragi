@@ -18,5 +18,7 @@ export const getSwipeProgress = (startProgress, deltaY, viewportHeight) => {
 export const getSwipeTransitionDuration = (progress, target, velocityY = 0) => {
   const distance = Math.abs(target - progress)
   const speed = Math.min(1, Math.abs(velocityY) * 2)
-  return Math.round(180 + distance * 180 - speed * 35)
+  // A short swipe should settle promptly instead of adding another third of
+  // a second after release. Longer travel still gets a little more time.
+  return Math.round(140 + distance * 100 - speed * 35)
 }

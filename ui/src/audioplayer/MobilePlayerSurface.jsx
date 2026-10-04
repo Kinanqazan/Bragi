@@ -50,7 +50,10 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     overflow: 'hidden',
     boxSizing: 'border-box',
-    border: `1px solid ${theme.palette.divider}`,
+    border: 0,
+    // Keep this clip static: rounded-frame animation rerasterizes the large
+    // background and shadow on Android WebView.
+    borderRadius: 0,
     boxShadow: theme.shadows[8],
     transformOrigin: 'top left',
     pointerEvents: 'none',
@@ -58,7 +61,7 @@ const useStyles = makeStyles((theme) => ({
     '--nd-player-surface': theme.palette.background.paper,
   },
   surface: {
-    position: 'fixed',
+    position: 'absolute',
     inset: 0,
     zIndex: 1400,
     pointerEvents: 'none',
@@ -73,7 +76,7 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     overflow: 'hidden',
     touchAction: 'none',
-    willChange: 'opacity, clip-path',
+    willChange: 'opacity',
     isolation: 'isolate',
     '--nd-player-muted': theme.palette.text.secondary,
     '--nd-player-surface': theme.palette.background.paper,
@@ -164,6 +167,7 @@ const useStyles = makeStyles((theme) => ({
     pointerEvents: 'auto',
     touchAction: 'none',
     transformOrigin: 'top left',
+    willChange: 'transform',
   },
   sharedPlay: {
     position: 'fixed',
@@ -177,6 +181,7 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.28)',
     pointerEvents: 'auto',
     transformOrigin: 'top left',
+    willChange: 'transform',
     '&:hover': {
       backgroundColor: `${theme.palette.primary.main} !important`,
       filter: 'brightness(1.08)',
@@ -251,23 +256,8 @@ const getLayerStyle = (value, full) => {
       }
 }
 
-const getElementRects = (parent, progress, full, elements) => {
+const getElementRects = (parent, elements) => {
   if (!parent) return {}
-  const properties = [
-    'transform',
-    'opacity',
-    'visibility',
-    'pointerEvents',
-    'transition',
-  ]
-  const previous = Object.fromEntries(
-    properties.map((property) => [property, parent.style[property]]),
-  )
-  Object.assign(parent.style, getLayerStyle(progress, full), {
-    opacity: '1',
-    visibility: 'visible',
-    transition: 'none',
-  })
   const parentRect = parent.getBoundingClientRect()
   const rects = {
     frame: {
@@ -292,7 +282,6 @@ const getElementRects = (parent, progress, full, elements) => {
       }),
     ),
   }
-  Object.assign(parent.style, previous)
   return rects
 }
 
@@ -389,18 +378,33 @@ const MobilePlayerSurface = ({
   }
 
   const measureSharedRects = () => {
-    const fullRects = getElementRects(fullRef.current, 1, true, {
+    // Only measure when the viewport or track identity changes. Hidden anchors
+    // still have layout, so there is no need to reveal either player to read them.
+    const frame = frameRef.current
+    const previousTransform = frame?.style.transform
+    const previousTransition = frame?.style.transition
+    if (frame) {
+      frame.style.transition = 'none'
+      frame.style.width = `${window.innerWidth}px`
+      frame.style.height = `${window.innerHeight}px`
+      frame.style.transform = 'none'
+    }
+    const fullRects = getElementRects(fullRef.current, {
       artwork: fullArtworkRef.current,
       play: fullPlayRef.current,
       title: fullTitleRef.current,
       artist: fullArtistRef.current,
     })
-    const miniRects = getElementRects(miniRef.current, 0, false, {
+    const miniRects = getElementRects(miniRef.current, {
       artwork: miniArtworkRef.current,
       play: miniPlayRef.current,
       title: miniTitleRef.current,
       artist: miniArtistRef.current,
     })
+    if (frame) {
+      frame.style.transform = previousTransform
+      frame.style.transition = previousTransition
+    }
     const fontSize = (element, fallback) =>
       element
         ? parseFloat(window.getComputedStyle(element).fontSize) || fallback
@@ -427,6 +431,70 @@ const MobilePlayerSurface = ({
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
     }
+    const bounds = sharedRects.current
+    if (sharedArtworkRef.current && bounds.miniArtwork?.width) {
+      sharedArtworkRef.current.style.borderRadius = `${(16 * bounds.fullArtwork.width) / bounds.miniArtwork.width}px`
+    }
+    for (const [element, rect] of [
+      [sharedArtworkRef.current, bounds.fullArtwork],
+      [sharedPlayRef.current, bounds.fullPlay],
+    ]) {
+      if (!element || !rect) continue
+      // Raster at the largest size and scale down, rather than enlarging a
+      // mini-player-sized artwork texture throughout the gesture.
+      element.style.width = `${rect.width}px`
+      element.style.height = `${rect.height}px`
+    }
+    for (const [element, fullSize] of [
+      [sharedTitleRef.current, bounds.fullTitleSize],
+      [sharedArtistRef.current, bounds.fullArtistSize],
+    ]) {
+      if (!element) continue
+      element.style.fontSize = `${fullSize}px`
+    }
+    syncTextLayout(progressRef.current)
+  }
+
+  const syncTextLayout = (value) => {
+    const bounds = sharedRects.current
+    if (!bounds) return
+    for (const [element, mini, full, miniSize, fullSize] of [
+      [
+        sharedTitleRef.current,
+        bounds.miniTitle,
+        bounds.fullTitle,
+        bounds.miniTitleSize,
+        bounds.fullTitleSize,
+      ],
+      [
+        sharedArtistRef.current,
+        bounds.miniArtist,
+        bounds.fullArtist,
+        bounds.miniArtistSize,
+        bounds.fullArtistSize,
+      ],
+    ]) {
+      if (!element || !mini || !full) continue
+      // Recompute ellipsis only at rest, never while the finger is moving.
+      const miniWidth = (mini.width * fullSize) / miniSize
+      const width =
+        value === 1
+          ? full.width
+          : value === 0
+            ? miniWidth
+            : Math.max(full.width, miniWidth)
+      element.style.width = `${width}px`
+    }
+  }
+
+  const ensureSharedRects = () => {
+    if (
+      !sharedRects.current ||
+      sharedRects.current.viewportWidth !== window.innerWidth ||
+      sharedRects.current.viewportHeight !== window.innerHeight
+    ) {
+      measureSharedRects()
+    }
   }
 
   const updateSharedElements = (value) => {
@@ -437,13 +505,7 @@ const MobilePlayerSurface = ({
     const update = (element, start, end) => {
       if (!element || !start || !end) return
       const rect = interpolateRect(start, end, progress)
-      const base = start
-      if (element.style.width !== `${base.width}px`) {
-        element.style.width = `${base.width}px`
-      }
-      if (element.style.height !== `${base.height}px`) {
-        element.style.height = `${base.height}px`
-      }
+      const base = end
       if (element.style.opacity !== '1') element.style.opacity = '1'
       if (element.style.visibility !== 'visible') {
         element.style.visibility = 'visible'
@@ -457,9 +519,12 @@ const MobilePlayerSurface = ({
     const updateText = (element, start, end, startSize, endSize) => {
       if (!element || !start || !end) return
       const rect = interpolateRect(start, end, progress)
-      element.style.width = `${rect.width}px`
-      element.style.fontSize = `${startSize + (endSize - startSize) * progress}px`
-      element.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0)`
+      const scale = (startSize + (endSize - startSize) * progress) / endSize
+      const width = parseFloat(element.style.width)
+      element.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0) scale(${scale})`
+      // Clip just the two text lines; do not relayout their font/width or clip
+      // a full-screen controls layer on every animation frame.
+      element.style.clipPath = `inset(0 ${Math.max(0, width - rect.width / scale)}px 0 0)`
       element.style.visibility = 'visible'
       element.style.opacity = '1'
     }
@@ -480,32 +545,12 @@ const MobilePlayerSurface = ({
     )
 
     const frame = frameRef.current
-    const base = bounds.miniFrame
-    const rect = interpolateRect(base, bounds.fullFrame, progress)
+    const base = bounds.fullFrame
+    const rect = interpolateRect(bounds.miniFrame, base, progress)
     if (!frame || !base?.width || !base?.height || !rect) return
-    const scaleX = rect.width / base.width
-    const scaleY = rect.height / base.height
-    const corner = 18 * (1 - progress)
-    const border = 1 - progress
-    frame.style.width = `${base.width}px`
-    frame.style.height = `${base.height}px`
     frame.style.transform = getSharedTransform(rect, base)
-    frame.style.borderRadius = `${corner / scaleX}px / ${corner / scaleY}px`
-    frame.style.borderWidth = `${border / scaleY}px ${border / scaleX}px`
     frame.style.visibility = 'visible'
     frame.style.opacity = '1'
-
-    if (fullRef.current) {
-      const full = bounds.fullFrame
-      const top = Math.max(0, rect.top - full.top)
-      const right = Math.max(0, full.left + full.width - rect.left - rect.width)
-      const bottom = Math.max(
-        0,
-        full.top + full.height - rect.top - rect.height,
-      )
-      const left = Math.max(0, rect.left - full.left)
-      fullRef.current.style.clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px round ${corner}px)`
-    }
   }
 
   const applyProgress = (value) => {
@@ -526,27 +571,35 @@ const MobilePlayerSurface = ({
       frameRef.current.style.transition = transition
       frameRef.current.style.transform = getSharedTransform(
         { ...bounds.miniFrame, top: bounds.miniFrame.top + offset },
-        bounds.miniFrame,
+        bounds.fullFrame,
       )
     }
-    for (const [element, rect] of [
-      [sharedArtworkRef.current, bounds.miniArtwork],
-      [sharedPlayRef.current, bounds.miniPlay],
+    for (const [element, rect, base] of [
+      [sharedArtworkRef.current, bounds.miniArtwork, bounds.fullArtwork],
+      [sharedPlayRef.current, bounds.miniPlay, bounds.fullPlay],
     ]) {
       if (!element || !rect) continue
       element.style.transition = transition
       element.style.transform = getSharedTransform(
         { ...rect, top: rect.top + offset },
-        rect,
+        base,
       )
     }
-    for (const [element, rect] of [
-      [sharedTitleRef.current, bounds.miniTitle],
-      [sharedArtistRef.current, bounds.miniArtist],
+    for (const [element, rect, scale] of [
+      [
+        sharedTitleRef.current,
+        bounds.miniTitle,
+        bounds.miniTitleSize / bounds.fullTitleSize,
+      ],
+      [
+        sharedArtistRef.current,
+        bounds.miniArtist,
+        bounds.miniArtistSize / bounds.fullArtistSize,
+      ],
     ]) {
       if (!element || !rect) continue
       element.style.transition = transition
-      element.style.transform = `translate3d(${rect.left}px, ${rect.top + offset}px, 0)`
+      element.style.transform = `translate3d(${rect.left}px, ${rect.top + offset}px, 0) scale(${scale})`
     }
   }
 
@@ -585,6 +638,7 @@ const MobilePlayerSurface = ({
       onClear?.()
       return
     }
+    syncTextLayout(activeSettle.target)
     applyProgress(activeSettle.target)
     if (activeSettle.target === 0 && lyricsOpen) setLyricsOpen(false)
     if (activeSettle.notify) {
@@ -627,11 +681,7 @@ const MobilePlayerSurface = ({
     const transition =
       `transform ${duration}ms ${snapEasing}, ` +
       `opacity ${duration}ms ${snapEasing}, ` +
-      `clip-path ${duration}ms ${snapEasing}, ` +
-      `border-radius ${duration}ms ${snapEasing}, ` +
-      `border-width ${duration}ms ${snapEasing}, ` +
-      `width ${duration}ms ${snapEasing}, ` +
-      `font-size ${duration}ms ${snapEasing}`
+      `clip-path ${duration}ms ${snapEasing}`
     setLayerTransition(transition)
     if (miniRef.current) {
       miniRef.current.style.transition = transition
@@ -657,14 +707,10 @@ const MobilePlayerSurface = ({
     const transition =
       `transform ${duration}ms ${snapEasing}, ` +
       `opacity ${duration}ms ${snapEasing}, ` +
-      `clip-path ${duration}ms ${snapEasing}, ` +
-      `border-radius ${duration}ms ${snapEasing}, ` +
-      `border-width ${duration}ms ${snapEasing}, ` +
-      `width ${duration}ms ${snapEasing}, ` +
-      `font-size ${duration}ms ${snapEasing}`
+      `clip-path ${duration}ms ${snapEasing}`
     setLayerTransition(transition)
 
-    if (Math.abs(current - nextTarget) < 0.001) {
+    if (duration === 0 || Math.abs(current - nextTarget) < 0.001) {
       finishSettle()
       return
     }
@@ -677,7 +723,7 @@ const MobilePlayerSurface = ({
   }
 
   const collapseToMiniPlayer = () => {
-    measureSharedRects()
+    ensureSharedRects()
     applyProgress(progressRef.current)
     setThemeColorActive(false)
     settleTo(0, 0, true)
@@ -686,7 +732,14 @@ const MobilePlayerSurface = ({
   const cancelSettle = () => {
     clearSettleTimer()
     if (settle.current && !settle.current.dismiss) {
-      progressRef.current = settle.current.target
+      const bounds = sharedRects.current
+      const height = frameRef.current?.getBoundingClientRect().height
+      const distance = bounds?.fullFrame.height - bounds?.miniFrame.height
+      if (height && distance > 0) {
+        progressRef.current = clamp(
+          (height - bounds.miniFrame.height) / distance,
+        )
+      }
     }
     settle.current = null
     setLayerTransition('none')
@@ -697,7 +750,7 @@ const MobilePlayerSurface = ({
     if (event.pointerType === 'mouse' && event.button !== 0) return
     flushScheduledProgress()
     cancelSettle()
-    measureSharedRects()
+    ensureSharedRects()
     const startProgress = progressRef.current
     applyProgress(startProgress)
     swipe.current = {
@@ -738,10 +791,17 @@ const MobilePlayerSurface = ({
     gesture.lastTime = now
 
     if (!gesture.mode && Math.abs(deltaY) > gestureIntentThreshold) {
-      if (gesture.startProgress < 0.5) {
+      if (gesture.startProgress <= 0.001) {
         gesture.mode = deltaY < 0 ? 'expand' : 'dismiss'
+      } else if (gesture.startProgress < 0.999) {
+        // An interrupted snap is still a resize gesture. It must never be
+        // mistaken for dismissing the settled mini player and clearing music.
+        gesture.mode = deltaY < 0 ? 'expand' : 'collapse'
       } else {
         gesture.mode = deltaY > 0 ? 'collapse' : null
+      }
+      if (gesture.mode === 'expand' || gesture.mode === 'collapse') {
+        gesture.opening = gesture.mode === 'expand'
       }
     }
 
@@ -796,6 +856,10 @@ const MobilePlayerSurface = ({
     if (gesture.mode === 'dismiss') {
       const deltaY = getVerticalSwipeOffset(gesture, event)
       const passedThreshold = gesture.moved || deltaY >= swipeThreshold
+      if (!passedThreshold && isInteractiveTarget(event?.target)) {
+        setThemeColorActive(expanded)
+        return
+      }
       if (passedThreshold) {
         event?.preventDefault?.()
         settleDismiss(gesture.velocityY)
@@ -817,6 +881,13 @@ const MobilePlayerSurface = ({
       return
     }
 
+    if (!gesture.moved && isInteractiveTarget(event?.target)) {
+      // Small finger drift is still a tap. Let the browser synthesize its click
+      // instead of settling the layer and cancelling the control activation.
+      setThemeColorActive(expanded)
+      return
+    }
+
     if (!gesture.moved && gesture.mode) {
       const target = gesture.opening ? 0 : 1
       setThemeColorActive(target === 1)
@@ -826,14 +897,6 @@ const MobilePlayerSurface = ({
     }
 
     if (!gesture.moved) {
-      // Leave taps on controls to those controls. Settling the layer here can
-      // race the browser's synthesized click on the first tap after opening
-      // or collapsing the player. Real swipes that start on a control still
-      // take the normal gesture path once they pass the movement threshold.
-      if (isInteractiveTarget(event?.target)) {
-        setThemeColorActive(expanded)
-        return
-      }
       const target = gesture.opening ? 0 : 1
       setThemeColorActive(target === 1)
       settleTo(target, 0, true)
@@ -879,7 +942,7 @@ const MobilePlayerSurface = ({
   }
 
   const handleOpenRequest = () => {
-    measureSharedRects()
+    ensureSharedRects()
     applyProgress(progressRef.current)
     setThemeColorActive(true)
     settleTo(1, 0, true)
@@ -937,7 +1000,6 @@ const MobilePlayerSurface = ({
         ref={frameRef}
         data-testid="shared-player-frame"
         className={classes.frame}
-        aria-hidden="true"
         onTransitionEnd={handleTransitionEnd}
         style={{
           visibility: 'hidden',
@@ -950,112 +1012,115 @@ const MobilePlayerSurface = ({
           color={ambientColor}
           topColor={topColor}
         />
-      </div>
-      <section
-        ref={fullRef}
-        className={classes.surface}
-        aria-label="Full-screen player"
-        aria-hidden={!expanded}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onTransitionEnd={handleTransitionEnd}
-        style={{
-          ...getLayerStyle(initialProgress, true),
-          background: 'transparent',
-          touchAction: 'none',
-          transition: 'none',
-          pointerEvents: expanded ? 'auto' : 'none',
-        }}
-      >
-        <PlayerToolbar
-          id={track.trackId}
-          isRadio={track.isRadio}
-          showLove={false}
-        />
-        <div className={classes.topSection}>
-          <div className={classes.headerInfo}>
-            <div
-              ref={fullTitleRef}
-              data-player-anchor="full-title"
-              className={classes.fullTitleAnchor}
-              aria-hidden="true"
-            >
-              {displayTitle}
-            </div>
-            {artist && (
+        <section
+          ref={fullRef}
+          className={classes.surface}
+          aria-label="Full-screen player"
+          aria-hidden={!expanded}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onTransitionEnd={handleTransitionEnd}
+          style={{
+            ...getLayerStyle(initialProgress, true),
+            background: 'transparent',
+            touchAction: 'none',
+            transition: 'none',
+            pointerEvents: expanded ? 'auto' : 'none',
+          }}
+        >
+          <PlayerToolbar
+            id={track.trackId}
+            isRadio={track.isRadio}
+            showLove={false}
+          />
+          <div className={classes.topSection}>
+            <div className={classes.headerInfo}>
               <div
-                ref={fullArtistRef}
-                data-player-anchor="full-artist"
-                className={classes.fullArtistAnchor}
+                ref={fullTitleRef}
+                data-player-anchor="full-title"
+                className={classes.fullTitleAnchor}
                 aria-hidden="true"
               >
-                {artist}
+                {displayTitle}
+              </div>
+              {artist && (
+                <div
+                  ref={fullArtistRef}
+                  data-player-anchor="full-artist"
+                  className={classes.fullArtistAnchor}
+                  aria-hidden="true"
+                >
+                  {artist}
+                </div>
+              )}
+            </div>
+            <div className={classes.artworkSlot}>
+              <div
+                ref={fullArtworkRef}
+                className={classes.artwork}
+                style={{ visibility: 'hidden' }}
+                aria-hidden="true"
+              />
+            </div>
+            <div className={classes.progress}>
+              <ProgressBar snapshot={snapshot} commands={commands} />
+            </div>
+          </div>
+          <div className={classes.bottomSection}>
+            <div className={classes.controls}>
+              <PlayerControls
+                snapshot={snapshot}
+                commands={commands}
+                onQueue={() => setQueueOpen(true)}
+                onLyrics={() => setLyricsOpen((open) => !open)}
+                lyricsActive={lyricsOpen}
+                primaryControl={
+                  <span
+                    ref={fullPlayRef}
+                    className="nd-player-primary-control nd-player-primary-placeholder"
+                    style={{ visibility: 'hidden' }}
+                    aria-hidden="true"
+                  />
+                }
+                favoriteButton={
+                  <PlayerLoveButton
+                    id={track.trackId}
+                    isRadio={track.isRadio}
+                  />
+                }
+                compact
+                isolateGestures
+              />
+            </div>
+            <div className={classes.volume}>
+              <VolumeControl value={uiVolume} onChange={commands.setVolume} />
+            </div>
+            {snapshot.error && (
+              <div className={classes.error} role="alert">
+                {snapshot.error.publicMessage || 'Unable to play this track.'}
+                <button
+                  type="button"
+                  className={classes.retry}
+                  onClick={commands.play}
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
-          <div className={classes.artworkSlot}>
-            <div
-              ref={fullArtworkRef}
-              className={classes.artwork}
-              style={{ visibility: 'hidden' }}
-              aria-hidden="true"
-            />
-          </div>
-          <div className={classes.progress}>
-            <ProgressBar snapshot={snapshot} commands={commands} />
-          </div>
-        </div>
-        <div className={classes.bottomSection}>
-          <div className={classes.controls}>
-            <PlayerControls
-              snapshot={snapshot}
+          {queueOpen && (
+            <QueueDrawer
+              queue={queue}
+              currentIndex={snapshot.currentIndex}
               commands={commands}
-              onQueue={() => setQueueOpen(true)}
-              onLyrics={() => setLyricsOpen((open) => !open)}
-              lyricsActive={lyricsOpen}
-              primaryControl={
-                <span
-                  ref={fullPlayRef}
-                  className="nd-player-primary-control nd-player-primary-placeholder"
-                  style={{ visibility: 'hidden' }}
-                  aria-hidden="true"
-                />
-              }
-              favoriteButton={
-                <PlayerLoveButton id={track.trackId} isRadio={track.isRadio} />
-              }
-              compact
-              isolateGestures
+              onClose={() => setQueueOpen(false)}
+              onClear={onClear}
             />
-          </div>
-          <div className={classes.volume}>
-            <VolumeControl value={uiVolume} onChange={commands.setVolume} />
-          </div>
-          {snapshot.error && (
-            <div className={classes.error} role="alert">
-              {snapshot.error.publicMessage || 'Unable to play this track.'}
-              <button
-                type="button"
-                className={classes.retry}
-                onClick={commands.play}
-              >
-                Retry
-              </button>
-            </div>
           )}
-        </div>
-        {queueOpen && (
-          <QueueDrawer
-            queue={queue}
-            currentIndex={snapshot.currentIndex}
-            commands={commands}
-            onClose={() => setQueueOpen(false)}
-            onClear={onClear}
-          />
-        )}
-      </section>
+        </section>
+      </div>
       <MobilePlayerBar
         rootRef={miniRef}
         artworkRef={miniArtworkRef}

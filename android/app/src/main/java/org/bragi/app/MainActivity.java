@@ -741,7 +741,9 @@ public class MainActivity extends AppCompatActivity {
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
                 .build();
 
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // Keep hardware acceleration from the window without caching the whole
+        // changing WebView in an additional off-screen texture.
+        webView.setLayerType(View.LAYER_TYPE_NONE, null);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
