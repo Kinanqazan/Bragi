@@ -1,6 +1,7 @@
 FROM alpine:3.20 AS final
-LABEL maintainer="deluan@navidrome.org"
-LABEL org.opencontainers.image.source="https://github.com/navidrome/navidrome"
+LABEL org.opencontainers.image.title="Bragi"
+LABEL org.opencontainers.image.description="Self-hosted music streaming server and web app"
+LABEL org.opencontainers.image.source="https://github.com/Kinanqaz/Bragi"
 
 # Install runtime dependencies
 # - libwebp + symlinks: enables native WebP encoding via purego/dlopen
@@ -10,7 +11,7 @@ RUN apk add -U --no-cache ffmpeg mpv sqlite libwebp libwebpdemux libwebpmux && \
         [ -n "$target" ] && ln -sf "$target" /usr/lib/$lib.so; \
     done
 
-# Copy navidrome binary (prebuilt dynamic musl binary for Alpine)
+# Copy Bragi binary (prebuilt dynamic musl binary for Alpine)
 COPY out/navidrome /app/navidrome
 
 VOLUME ["/data", "/music"]

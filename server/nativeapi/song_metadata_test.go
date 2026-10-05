@@ -29,6 +29,7 @@ var _ = Describe("Song metadata endpoints", func() {
 		router.With(adminOnlyMiddleware).Put("/song/{id}/artwork", updateMediaFileArtwork(service))
 		router.With(adminOnlyMiddleware).Post("/song/{id}/metadata/refresh", refreshMediaFileMetadata(service))
 		router.With(adminOnlyMiddleware).Get("/song/{id}/lyrics", getMediaFileLyrics(service))
+		router.With(adminOnlyMiddleware).Get("/song/{id}/lyrics/search", searchMediaFileLyrics(service))
 		router.With(adminOnlyMiddleware).Put("/song/{id}/lyrics", saveMediaFileLyrics(service))
 		router.With(adminOnlyMiddleware).Put("/song/{id}/lyrics/embedded", saveEmbeddedMediaFileLyrics(service))
 		router.With(adminOnlyMiddleware).Delete("/song/{id}/lyrics", deleteMediaFileLyrics(service))
@@ -119,6 +120,20 @@ var _ = Describe("Song metadata endpoints", func() {
 		Expect(service.refreshedID).To(Equal("song-1"))
 	})
 
+	It("searches online lyrics for the selected song without saving them", func() {
+		service.lyricsSearchResults = []core.MediaFileLyricsSearchResult{{
+			ID: 42, TrackName: "Test Song", ArtistName: "Test Artist", AlbumName: "Test Album", Duration: 180,
+			PlainLyrics: "First line", SyncedLyrics: "[00:01.00]First line",
+		}}
+		response := newRequest(http.MethodGet, "/song/song-1/lyrics/search?q=Custom+Title", "", model.User{ID: "admin", IsAdmin: true})
+
+		Expect(response.Code).To(Equal(http.StatusOK))
+		Expect(response.Body.String()).To(MatchJSON(`[{"id":42,"trackName":"Test Song","artistName":"Test Artist","albumName":"Test Album","duration":180,"plainLyrics":"First line","syncedLyrics":"[00:01.00]First line"}]`))
+		Expect(service.lyricsSearchID).To(Equal("song-1"))
+		Expect(service.lyricsSearchQuery).To(Equal("Custom Title"))
+		Expect(service.updatedID).To(BeEmpty())
+	})
+
 	It("saves a selected lyrics sidecar with its version token", func() {
 		response := newRequest(http.MethodPut, "/song/song-1/lyrics", `{"extension":".lrc","content":"[00:01.00]Line","expectedVersion":"old-version"}`, model.User{ID: "admin", IsAdmin: true})
 
@@ -180,6 +195,9 @@ type metadataMaintenanceMock struct {
 	artworkID            string
 	artworkMIME          string
 	artwork              []byte
+	lyricsSearchID       string
+	lyricsSearchQuery    string
+	lyricsSearchResults  []core.MediaFileLyricsSearchResult
 	err                  error
 }
 
@@ -204,6 +222,12 @@ func (m *metadataMaintenanceMock) RefreshMediaFileMetadata(_ context.Context, id
 func (m *metadataMaintenanceMock) LoadMediaFileLyrics(_ context.Context, id string) (*core.MediaFileLyrics, error) {
 	m.refreshedID = id
 	return &core.MediaFileLyrics{}, m.err
+}
+
+func (m *metadataMaintenanceMock) SearchMediaFileLyrics(_ context.Context, id, query string) ([]core.MediaFileLyricsSearchResult, error) {
+	m.lyricsSearchID = id
+	m.lyricsSearchQuery = query
+	return m.lyricsSearchResults, m.err
 }
 
 func (m *metadataMaintenanceMock) SaveMediaFileLyrics(_ context.Context, id, extension, content, expectedVersion string) (*core.MediaFileLyrics, error) {

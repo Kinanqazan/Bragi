@@ -2,8 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
+  Menu,
+  MenuItem,
   Paper,
+  TextField,
   Tooltip,
   Typography,
 } from '@material-ui/core'
@@ -15,7 +22,9 @@ import DeleteOutlineIcon from '@material-ui/icons/DeleteOutline'
 import EditIcon from '@material-ui/icons/Edit'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import PhotoCameraIcon from '@material-ui/icons/PhotoCamera'
+import SearchIcon from '@material-ui/icons/Search'
 import SaveIcon from '@material-ui/icons/Save'
+import StorageIcon from '@material-ui/icons/Storage'
 import {
   ShowContextProvider,
   Title as RaTitle,
@@ -32,6 +41,7 @@ import { playTracks, updateTrackMetadata } from '../actions'
 import config from '../config'
 import { httpClient } from '../dataProvider'
 import { REST_URL } from '../consts'
+import { hasTimestampedLyrics, shiftLyricsTimestamps } from './lyricsTiming'
 import {
   ArtistLinkField,
   Artwork,
@@ -288,12 +298,31 @@ const useStyles = makeStyles((theme) => ({
     font: 'inherit',
     resize: 'vertical',
   },
+  lyricsTimingButton: {
+    minWidth: 0,
+    height: 32,
+    padding: theme.spacing(0, 0.75),
+    fontSize: '0.75rem',
+    whiteSpace: 'nowrap',
+  },
   lyricsHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: theme.spacing(0.5),
+  },
+  lyricsHeaderTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: theme.spacing(1),
+    minWidth: 0,
+  },
+  lyricsTimingControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.25),
   },
   lyricsActions: {
     display: 'flex',
@@ -305,15 +334,23 @@ const useStyles = makeStyles((theme) => ({
       padding: theme.spacing(0, 1),
     },
   },
-  lyricsDestination: {
-    maxWidth: 190,
-    minHeight: 32,
-    padding: theme.spacing(0.5, 1),
+  lyricsSearchTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: theme.spacing(1),
+  },
+  lyricsSearchResults: {
+    display: 'grid',
+    gap: theme.spacing(0.5),
+    minWidth: 0,
+  },
+  lyricsSearchResult: {
+    justifyContent: 'flex-start',
+    textAlign: 'left',
+    textTransform: 'none',
+    padding: theme.spacing(1),
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.shape.borderRadius,
-    background: theme.palette.background.paper,
-    color: theme.palette.text.primary,
-    font: 'inherit',
   },
   lyricsNotice: {
     marginTop: theme.spacing(1),
@@ -398,11 +435,18 @@ const SongShowLayout = (props) => {
   const [refreshError, setRefreshError] = useState('')
   const [lyricsFiles, setLyricsFiles] = useState({ txt: {}, lrc: {}, embedded: {} })
   const [lyricsDestination, setLyricsDestination] = useState('separate')
+  const [lyricsDestinationMenuAnchor, setLyricsDestinationMenuAnchor] = useState(null)
   const [lyricsExtension, setLyricsExtension] = useState('.txt')
   const [lyricsDraft, setLyricsDraft] = useState('')
+  const [lyricsOffsetMs, setLyricsOffsetMs] = useState(0)
   const [lyricsLoading, setLyricsLoading] = useState(false)
   const [lyricsSaving, setLyricsSaving] = useState(false)
   const [lyricsDeleting, setLyricsDeleting] = useState(false)
+  const [lyricsSearching, setLyricsSearching] = useState(false)
+  const [lyricsSearchResults, setLyricsSearchResults] = useState(null)
+  const [lyricsSearchOpen, setLyricsSearchOpen] = useState(false)
+  const [lyricsSearchError, setLyricsSearchError] = useState('')
+  const [lyricsSearchQuery, setLyricsSearchQuery] = useState('')
   const [lyricsRefreshing, setLyricsRefreshing] = useState(false)
   const [lyricsRefreshRequired, setLyricsRefreshRequired] = useState(false)
   const [lyricsRefreshError, setLyricsRefreshError] = useState('')
@@ -443,7 +487,9 @@ const SongShowLayout = (props) => {
   const lyricsBaseline = lyricsDestination === 'embedded'
     ? lyricsFiles.embedded?.content || ''
     : lyricsFiles[lyricsKey]?.content || ''
-  const lyricsChanged = lyricsDraft !== lyricsBaseline
+  const lyricsHasTimestamps = hasTimestampedLyrics(lyricsDraft)
+  const lyricsTimingChanged = lyricsHasTimestamps && lyricsOffsetMs !== 0
+  const lyricsChanged = lyricsDraft !== lyricsBaseline || lyricsTimingChanged
   const hasAnyUnsavedChanges = hasUnsavedChanges || lyricsChanged || !!artworkFile
 
   useEffect(() => {
@@ -470,6 +516,7 @@ const SongShowLayout = (props) => {
         setLyricsDraft(destination === 'embedded'
           ? files.embedded.content || ''
           : files[extension.slice(1)].content || '')
+        setLyricsOffsetMs(0)
         setLyricsError('')
       })
       .catch((error) => {
@@ -678,6 +725,7 @@ const SongShowLayout = (props) => {
       const content = await file.text()
       setLyricsExtension(extension)
       setLyricsDraft(content)
+      setLyricsOffsetMs(0)
       setLyricsError('')
     } catch (error) {
       setLyricsError(error.message || 'Could not read the selected lyrics file.')
@@ -686,20 +734,74 @@ const SongShowLayout = (props) => {
     }
   }
 
+  const executeLyricsSearch = async (query) => {
+    if (!displayRecord || lyricsSearching || lyricsSaving || lyricsDeleting || lyricsLoading) return
+    const searchTerm = query.trim()
+    if (!searchTerm) {
+      setLyricsSearchResults([])
+      setLyricsSearchError('')
+      return
+    }
+    setLyricsSearching(true)
+    setLyricsSearchResults(null)
+    setLyricsSearchError('')
+    setLyricsSearchOpen(true)
+    try {
+      const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const { json } = await httpClient(`${REST_URL}/song/${id}/lyrics/search?q=${encodeURIComponent(searchTerm)}`)
+      setLyricsSearchResults(Array.isArray(json) ? json : [])
+    } catch (error) {
+      setLyricsSearchResults(null)
+      setLyricsSearchError(error.message || 'Could not search for lyrics.')
+    } finally {
+      setLyricsSearching(false)
+    }
+  }
+
+  const handleSearchLyrics = () => {
+    if (!displayRecord || lyricsSearching || lyricsSaving || lyricsDeleting || lyricsLoading) return
+    const query = [displayRecord.title, displayRecord.artist]
+      .map((part) => (typeof part === 'string' ? part.trim() : ''))
+      .filter(Boolean)
+      .join(' ')
+    setLyricsSearchQuery(query)
+    setLyricsSearchOpen(true)
+    void executeLyricsSearch(query)
+  }
+
+  const handleSubmitLyricsSearch = (event) => {
+    event.preventDefault()
+    void executeLyricsSearch(lyricsSearchQuery)
+  }
+
+  const handleUseLyricsSearchResult = (result) => {
+    const content = result.syncedLyrics || result.plainLyrics || ''
+    setLyricsDraft(content)
+    setLyricsOffsetMs(0)
+    setLyricsDestination('embedded')
+    setLyricsExtension(result.syncedLyrics ? '.lrc' : '.txt')
+    setLyricsSearchOpen(false)
+    setLyricsSearchResults(null)
+    setLyricsSearchError('')
+  }
+
   const handleSaveLyrics = async () => {
     if (!displayRecord || !lyricsChanged || lyricsSaving) return
     setLyricsSaving(true)
     setLyricsError('')
     try {
       const id = encodeURIComponent(displayRecord.mediaFileId || displayRecord.id)
+      const lyricsToSave = lyricsTimingChanged
+        ? shiftLyricsTimestamps(lyricsDraft, lyricsOffsetMs)
+        : lyricsDraft
       const endpoint = lyricsDestination === 'embedded'
         ? `${REST_URL}/song/${id}/lyrics/embedded`
         : `${REST_URL}/song/${id}/lyrics`
       const body = lyricsDestination === 'embedded'
-        ? { content: lyricsDraft, expectedVersion: lyricsFiles.embedded?.version || '' }
+        ? { content: lyricsToSave, expectedVersion: lyricsFiles.embedded?.version || '' }
         : {
             extension: lyricsExtension,
-            content: lyricsDraft,
+            content: lyricsToSave,
             expectedVersion: lyricsFiles[lyricsKey]?.version || '',
           }
       const { json } = await httpClient(endpoint, {
@@ -709,8 +811,9 @@ const SongShowLayout = (props) => {
       const files = { txt: json?.txt || {}, lrc: json?.lrc || {}, embedded: json?.embedded || {} }
       setLyricsFiles(files)
       setLyricsDraft(lyricsDestination === 'embedded'
-        ? files.embedded.content || ''
-        : files[lyricsKey].content || '')
+        ? files.embedded.content || lyricsToSave
+        : files[lyricsKey].content || lyricsToSave)
+      setLyricsOffsetMs(0)
       setLyricsRefreshRequired(Boolean(json?.refreshRequired))
       setLyricsRefreshError(json?.refreshError || '')
       setLyricsError('')
@@ -733,17 +836,24 @@ const SongShowLayout = (props) => {
 
   const handleCancelLyrics = () => {
     setLyricsDraft(lyricsBaseline)
+    setLyricsOffsetMs(0)
     setLyricsError('')
   }
 
-  const handleLyricsDestinationChange = (event) => {
-    const destination = event.target.value
+  const shiftLyricsByOneSecond = (offset) => {
+    setLyricsOffsetMs((currentOffset) => currentOffset + offset)
+    setLyricsError('')
+  }
+
+  const handleLyricsDestinationChange = (destination) => {
     if (!lyricsChanged) {
       setLyricsDraft(destination === 'embedded'
         ? lyricsFiles.embedded?.content || ''
         : lyricsFiles[lyricsKey]?.content || '')
+      setLyricsOffsetMs(0)
     }
     setLyricsDestination(destination)
+    setLyricsDestinationMenuAnchor(null)
     setLyricsError('')
   }
 
@@ -766,6 +876,7 @@ const SongShowLayout = (props) => {
       setLyricsDraft(lyricsDestination === 'embedded'
         ? files.embedded.content || ''
         : files[lyricsKey]?.content || '')
+      setLyricsOffsetMs(0)
       setLyricsRefreshRequired(false)
       dataProvider.clearCache?.()
       window.dispatchEvent(
@@ -799,6 +910,7 @@ const SongShowLayout = (props) => {
       setLyricsFiles(files)
       setLyricsExtension('.txt')
       setLyricsDraft('')
+      setLyricsOffsetMs(0)
       setLyricsError('')
       dataProvider.clearCache?.()
       window.dispatchEvent(
@@ -1118,17 +1230,80 @@ const SongShowLayout = (props) => {
           {canEdit && (
             <section className={classes.section} aria-labelledby="song-lyrics-heading">
               <div className={classes.lyricsHeader}>
-                <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
+                <div className={classes.lyricsHeaderTitle}>
+                  <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
+                  {lyricsHasTimestamps && (
+                    <div className={classes.lyricsTimingControls}>
+                      <Tooltip title="Move lyrics earlier by 1 second">
+                        <span>
+                          <Button
+                            aria-label="Shift lyrics earlier by 1 second"
+                            className={classes.lyricsTimingButton}
+                            disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
+                            onClick={() => shiftLyricsByOneSecond(-1000)}
+                            size="small"
+                          >
+                            −1s
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Move lyrics later by 1 second">
+                        <span>
+                          <Button
+                            aria-label="Shift lyrics later by 1 second"
+                            className={classes.lyricsTimingButton}
+                            disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
+                            onClick={() => shiftLyricsByOneSecond(1000)}
+                            size="small"
+                          >
+                            +1s
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      {lyricsOffsetMs !== 0 && (
+                        <Typography
+                          aria-label={`Pending lyrics shift ${lyricsOffsetMs > 0 ? '+' : ''}${lyricsOffsetMs / 1000} seconds`}
+                          component="span"
+                          variant="caption"
+                        >
+                          {lyricsOffsetMs > 0 ? '+' : ''}{lyricsOffsetMs / 1000}s
+                        </Typography>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className={classes.lyricsActions}>
-                  <select
-                    aria-label="Lyrics storage"
-                    className={classes.lyricsDestination}
-                    onChange={handleLyricsDestinationChange}
-                    value={lyricsDestination}
+                  <Tooltip title={`Lyrics storage: ${lyricsDestination === 'embedded' ? 'Inside music file' : 'Separate file'}`}>
+                    <IconButton
+                      aria-label={`Lyrics storage: ${lyricsDestination === 'embedded' ? 'Inside music file' : 'Separate file'}`}
+                      aria-controls={lyricsDestinationMenuAnchor ? 'lyrics-storage-menu' : undefined}
+                      aria-expanded={Boolean(lyricsDestinationMenuAnchor)}
+                      aria-haspopup="menu"
+                      onClick={(event) => setLyricsDestinationMenuAnchor(event.currentTarget)}
+                      size="small"
+                    >
+                      <StorageIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Menu
+                    anchorEl={lyricsDestinationMenuAnchor}
+                    id="lyrics-storage-menu"
+                    onClose={() => setLyricsDestinationMenuAnchor(null)}
+                    open={Boolean(lyricsDestinationMenuAnchor)}
                   >
-                    <option value="separate">Separate file</option>
-                    <option value="embedded">Inside music file</option>
-                  </select>
+                    <MenuItem
+                      onClick={() => handleLyricsDestinationChange('embedded')}
+                      selected={lyricsDestination === 'embedded'}
+                    >
+                      Inside music file
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => handleLyricsDestinationChange('separate')}
+                      selected={lyricsDestination === 'separate'}
+                    >
+                      Separate file
+                    </MenuItem>
+                  </Menu>
                   <Tooltip title="Choose a TXT or LRC lyrics file">
                     <IconButton aria-label="Choose lyrics file" component="label" size="small">
                       <CloudUploadIcon />
@@ -1139,6 +1314,18 @@ const SongShowLayout = (props) => {
                         onChange={handleLyricsImport}
                       />
                     </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Search online lyrics">
+                    <span>
+                      <IconButton
+                        aria-label="Search lyrics"
+                        disabled={lyricsSearching || lyricsSaving || lyricsDeleting || lyricsLoading}
+                        onClick={handleSearchLyrics}
+                        size="small"
+                      >
+                        {lyricsSearching ? <CircularProgress size={18} /> : <SearchIcon />}
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Save lyrics">
                     <span>
@@ -1197,7 +1384,11 @@ const SongShowLayout = (props) => {
                     rows={8}
                     maxLength={1 << 20}
                     value={lyricsDraft}
-                    onChange={(event) => setLyricsDraft(event.target.value)}
+                    onChange={(event) => {
+                      const content = event.target.value
+                      setLyricsDraft(content)
+                      if (!hasTimestampedLyrics(content)) setLyricsOffsetMs(0)
+                    }}
                   />
                   {lyricsError && <Typography role="alert" color="error">{lyricsError}</Typography>}
                   {lyricsRefreshRequired && (
@@ -1214,6 +1405,68 @@ const SongShowLayout = (props) => {
           )}
         </div>
       </div>
+      <Dialog
+        aria-labelledby="song-lyrics-search-title"
+        fullWidth
+        maxWidth="sm"
+        onClose={() => setLyricsSearchOpen(false)}
+        open={lyricsSearchOpen}
+        scroll="paper"
+      >
+        <DialogTitle id="song-lyrics-search-title" disableTypography className={classes.lyricsSearchTitle}>
+          <Typography variant="h6">Search lyrics</Typography>
+          <IconButton aria-label="Close lyrics search" onClick={() => setLyricsSearchOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            fullWidth
+            label="Song title"
+            inputProps={{ 'aria-label': 'Song title' }}
+            value={lyricsSearchQuery}
+            onChange={(event) => setLyricsSearchQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') handleSubmitLyricsSearch(event)
+            }}
+            autoFocus
+          />
+          {lyricsSearching ? (
+            <CircularProgress size={20} aria-label="Searching lyrics" />
+          ) : lyricsSearchError ? (
+            <Typography role="alert" color="error">{lyricsSearchError}</Typography>
+          ) : lyricsSearchResults?.length === 0 ? (
+            <Typography color="textSecondary" role="status">No lyrics found.</Typography>
+          ) : (
+            <div className={classes.lyricsSearchResults} role="group" aria-label="Lyrics search results">
+              {lyricsSearchResults?.map((result) => {
+                const label = `${result.trackName || 'Unknown track'} by ${result.artistName || 'Unknown artist'}`
+                const detail = [result.albumName, Number.isFinite(result.duration) && result.duration > 0
+                  ? `${Math.floor(result.duration / 60)}:${String(Math.floor(result.duration % 60)).padStart(2, '0')}`
+                  : '', result.syncedLyrics ? 'Synced' : 'Plain'].filter(Boolean).join(' · ')
+                return (
+                  <Button
+                    key={result.id}
+                    className={classes.lyricsSearchResult}
+                    disabled={lyricsSaving || lyricsDeleting}
+                    onClick={() => handleUseLyricsSearchResult(result)}
+                    aria-label={`Use lyrics: ${label}`}
+                  >
+                    <span>
+                      <strong>{label}</strong>
+                      {detail && <><br /><Typography component="span" variant="caption" color="textSecondary">{detail}</Typography></>}
+                    </span>
+                  </Button>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSubmitLyricsSearch} disabled={lyricsSearching || !lyricsSearchQuery.trim()}>Search</Button>
+          <Button onClick={() => setLyricsSearchOpen(false)} disabled={lyricsSearching}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

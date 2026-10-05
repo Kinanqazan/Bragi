@@ -27,7 +27,6 @@ type MockDataStore struct {
 	MockedScrobbleBuffer model.ScrobbleBufferRepository
 	MockedScrobble       model.ScrobbleRepository
 	MockedRadio          model.RadioRepository
-	MockedPlugin         model.PluginRepository
 	MockedArtwork        model.ArtworkRepository
 	MockedArtworkQueue   model.ArtworkQueueRepository
 	scrobbleBufferMu     sync.Mutex
@@ -272,19 +271,6 @@ func (db *MockDataStore) Radio(ctx context.Context) model.RadioRepository {
 	return db.MockedRadio
 }
 
-func (db *MockDataStore) Plugin(ctx context.Context) model.PluginRepository {
-	db.repoMu.Lock()
-	defer db.repoMu.Unlock()
-	if db.MockedPlugin != nil {
-		return db.MockedPlugin
-	}
-	if db.RealDS != nil {
-		return db.RealDS.Plugin(ctx)
-	}
-	db.MockedPlugin = CreateMockPluginRepo()
-	return db.MockedPlugin
-}
-
 func (db *MockDataStore) Artwork(ctx context.Context) model.ArtworkRepository {
 	db.repoMu.Lock()
 	defer db.repoMu.Unlock()
@@ -353,8 +339,6 @@ func (db *MockDataStore) Resource(ctx context.Context, m any) model.ResourceRepo
 		return db.Transcoding(ctx).(model.ResourceRepository)
 	case model.Player, *model.Player:
 		return db.Player(ctx).(model.ResourceRepository)
-	case model.Plugin, *model.Plugin:
-		return db.Plugin(ctx).(model.ResourceRepository)
 	default:
 		return struct{ model.ResourceRepository }{}
 	}

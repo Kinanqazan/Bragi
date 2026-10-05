@@ -93,10 +93,6 @@ func (s *SQLStore) Scrobble(ctx context.Context) model.ScrobbleRepository {
 	return NewScrobbleRepository(ctx, s.getDBXBuilder())
 }
 
-func (s *SQLStore) Plugin(ctx context.Context) model.PluginRepository {
-	return NewPluginRepository(ctx, s.getDBXBuilder())
-}
-
 func (s *SQLStore) Artwork(ctx context.Context) model.ArtworkRepository {
 	return NewArtworkRepository(ctx, s.getDBXBuilder())
 }
@@ -129,8 +125,6 @@ func (s *SQLStore) Resource(ctx context.Context, m any) model.ResourceRepository
 		return s.Share(ctx).(model.ResourceRepository)
 	case model.Tag:
 		return s.Tag(ctx).(model.ResourceRepository)
-	case model.Plugin:
-		return s.Plugin(ctx).(model.ResourceRepository)
 	case model.Scrobble:
 		return s.Scrobble(ctx).(model.ResourceRepository)
 	}

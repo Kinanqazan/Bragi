@@ -26,7 +26,7 @@ func init() {
 	backupCmd.Flags().StringVarP(&backupDir, "backup-dir", "d", "", "directory to manually make backup")
 	backupRoot.AddCommand(backupCmd)
 
-	pruneCmd.Flags().StringVarP(&backupDir, "backup-dir", "d", "", "directory holding Navidrome backups")
+	pruneCmd.Flags().StringVarP(&backupDir, "backup-dir", "d", "", "directory holding Bragi backups")
 	pruneCmd.Flags().IntVarP(&backupCount, "keep-count", "k", -1, "specify the number of backups to keep. 0 remove ALL backups, and negative values mean to use the default from configuration")
 	pruneCmd.Flags().BoolVarP(&force, "force", "f", false, "bypass warning when backup count is zero")
 	backupRoot.AddCommand(pruneCmd)
@@ -48,7 +48,7 @@ var (
 	backupCmd = &cobra.Command{
 		Use:   "create",
 		Short: "Create a backup database",
-		Long:  "Manually backup Navidrome database. This will ignore BackupCount",
+		Long:  "Manually back up the Bragi database. This will ignore BackupCount",
 		Run: func(cmd *cobra.Command, _ []string) {
 			runBackup(cmd.Context())
 		},
@@ -65,8 +65,8 @@ var (
 
 	restoreCommand = &cobra.Command{
 		Use:   "restore",
-		Short: "Restore Navidrome database",
-		Long:  "Restore Navidrome database from a backup. This must be done offline",
+		Short: "Restore Bragi database",
+		Long:  "Restore the Bragi database from a backup. This must be done offline",
 		Run: func(cmd *cobra.Command, _ []string) {
 			runRestore(cmd.Context())
 		},
@@ -164,7 +164,7 @@ func runRestore(ctx context.Context) {
 	}
 
 	if !force {
-		fmt.Println("Warning: restoring the Navidrome database should only be done offline, especially if your backup is very old.")
+		fmt.Println("Warning: restoring the Bragi database should only be done offline, especially if your backup is very old.")
 		fmt.Printf("Please enter YES (all caps) to continue: ")
 		var input string
 		_, err := fmt.Scanln(&input)

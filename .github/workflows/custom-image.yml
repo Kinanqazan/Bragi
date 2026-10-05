@@ -50,7 +50,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-cache-
 
-      - name: Build Navidrome binary (dynamic musl)
+      - name: Build Bragi binary (dynamic musl)
         run: |
           mkdir -p "$HOME/.cache/go-build" "$HOME/go/pkg/mod" out
 
@@ -113,8 +113,8 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=sha-
           labels: |
-            org.opencontainers.image.title=Navidrome custom fork
-            org.opencontainers.image.description=Navidrome with this fork's UI and media deletion customizations
+            org.opencontainers.image.title=Bragi
+            org.opencontainers.image.description=Self-hosted music streaming server and web app
 
       - name: Build and push image
         uses: docker/build-push-action@v7

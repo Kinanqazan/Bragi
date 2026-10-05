@@ -32,16 +32,10 @@ var _ = Describe("ItemImage JSON", func() {
 		))
 	})
 
-	It("keeps the blurhash off the native API, where nothing consumes it", func() {
-		al := model.Album{ID: "al-1", Name: "Album"}
-		al.BlurHash = "LEHV6nWB2yk8"
-		Expect(jsonOf(al)).ToNot(HaveKey("blurHash"))
-	})
-
 	It("omits every artwork field when the entity has none", func() {
 		out := jsonOf(model.Album{ID: "al-2", Name: "Album"})
 		for _, key := range []string{
-			"imageHash", "blurHash", "thumbHash", "imageAbsent", "imageWidth", "imageHeight",
+			"imageHash", "thumbHash", "imageAbsent", "imageWidth", "imageHeight",
 		} {
 			Expect(out).ToNot(HaveKey(key))
 		}

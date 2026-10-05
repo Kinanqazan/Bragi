@@ -1,6 +1,6 @@
 # Song page and metadata editing implementation plan
 
-Status: Stages 1–5 are implemented and confirmed working by the user. Stage 6 is implemented and ready for user testing.
+Status: Stages 1–6 are implemented and confirmed working by the user.
 
 ## Goal and agreed scope
 
@@ -123,7 +123,7 @@ Implement one numbered step at a time. Complete its verification, report the res
 
 **User checkpoint:** import or paste plain lyrics, save them, and confirm a matching `.txt` file appears beside the song; open the player and read them. Then import timed `.lrc` lyrics and confirm timed highlighting. Delete the sidecars and confirm embedded lyrics show again when present. If the song is currently playing, verify lyrics refresh after save or deletion. On a phone, scroll down the song page to reach the lyrics editor. Reload the page or restart the app and confirm persistence. Test Cancel and make sure lyrics changes do not save metadata drafts.
 
-**Completion condition:** the user confirms sidecar edits persist and display in the player. Automatic lyrics search/download is deferred.
+**Completion condition:** the user confirms sidecar edits persist and display in the player. On-demand online search is covered separately in Step 7; automatic/background downloads remain out of scope.
 
 ## Step 5 — Embedded lyrics
 
@@ -139,9 +139,23 @@ Implement one numbered step at a time. Complete its verification, report the res
 
 **Completion condition:** supported embedded lyrics persist and display correctly. Unsupported combinations have a clear alternative.
 
+## Step 7 — Search and load online lyrics on demand
+
+**Status:** Implemented; focused Go API/service and UI tests pass. User acceptance testing remains.
+
+**Visible result:** a Search lyrics icon beside the existing lyrics file picker searches LRCLIB for the selected song and shows candidate matches.
+
+1. Search only when requested, using the selected song's title, artist (falling back to album artist), and album. Keep the network request in the backend with a short timeout, response limits, client identification, and rate-limit handling.
+2. Show matching title, artist, album, duration, and whether synchronized or plain lyrics are available. Selecting a result fills the existing editor, preferring synchronized lyrics when present.
+3. Selection changes only the unsaved editor draft. The existing destination, Save, Cancel, and Delete controls remain the only ways to store or discard lyrics.
+
+**User checkpoint:** restart `scripts/dev.ps1`, open a song with title and artist tags, search, choose a result, review or edit it, then Cancel and confirm nothing was saved. Search again and Save using the existing destination; confirm the player displays the lyrics after refresh. Try a song with no match and confirm the page remains usable.
+
+**Completion condition:** on-demand search and result selection work without writing until the existing Save control is used.
+
 ## Step 6 — Embedded song artwork
 
-**Status:** Implemented; focused UI, storage, service, and API checks pass. Awaiting user testing.
+**Status:** Implemented; focused UI, storage, service, and API checks pass. The user confirmed the artwork changes successfully in the app.
 
 **Visible result:** preview and replace the selected song's embedded front cover on its page.
 
@@ -150,7 +164,7 @@ Implement one numbered step at a time. Complete its verification, report the res
 3. Refresh track artwork and the relevant artwork state/cache. Respect the existing per-track artwork setting and album/folder artwork priorities; explain the source shown when a shared cover takes precedence.
 4. Keep editing scoped to the selected song. Do not overwrite a shared `cover.jpg` or other songs' embedded images.
 
-**User checkpoint:** on a test-library song, choose an image with the camera icon, confirm the preview appears, and test Cancel before saving. Save another image, then confirm it persists after reload and appears on the page/list/player. Metadata editing automatically enables per-song embedded artwork; the standalone cover-art setting can still enable it for read-only libraries. Album/folder cover priorities may still supply artwork elsewhere. Check another track in the same album and verify the edited file's other tags and embedded pictures with another metadata reader. Backend changes require restarting `scripts/dev.ps1`.
+**User checkpoint:** the user tested artwork editing and confirmed the displayed artwork changes successfully. Metadata editing automatically enables per-song embedded artwork; the standalone cover-art setting can still enable it for read-only libraries. Album/folder cover priorities may still supply artwork elsewhere.
 
 **Completion condition:** stored and displayed song artwork agree under the supported configuration.
 
@@ -159,8 +173,8 @@ Implement one numbered step at a time. Complete its verification, report the res
 - Start the shared live environment with `scripts/dev.ps1` and use `/app/` URLs.
 - A debug APK already configured for Live Dev Mode can exercise shared UI changes through HMR. Packaged production APK testing requires a fresh build; backend changes require a backend restart/deployment.
 - At each handoff, report what changed, the checks actually run, any limitations, and the relevant user checklist. Build success alone is not device verification.
-- Keep batch editing, file/folder renaming, collection-wide artist renaming, album management, arbitrary tag editing, and automatic lyrics acquisition outside these stages.
+- Keep batch editing, file/folder renaming, collection-wide artist renaming, album management, arbitrary tag editing, and automatic/background lyrics acquisition outside these stages.
 
 ## Next action
 
-User-test Step 6 with a copied/test-library song. Address any issue found before moving to the next stage.
+The planned implementation is complete. Define another stage only if the user requests additional metadata features.

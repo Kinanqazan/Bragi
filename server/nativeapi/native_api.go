@@ -22,19 +22,6 @@ import (
 	"github.com/navidrome/navidrome/server"
 )
 
-// PluginManager defines the interface for plugin management operations.
-// This interface is used by the API handlers to enable/disable plugins and update configuration.
-type PluginManager interface {
-	EnablePlugin(ctx context.Context, id string) error
-	DisablePlugin(ctx context.Context, id string) error
-	ValidatePluginConfig(ctx context.Context, id, configJSON string) error
-	UpdatePluginConfig(ctx context.Context, id, configJSON string) error
-	UpdatePluginUsers(ctx context.Context, id, usersJSON string, allUsers bool) error
-	UpdatePluginLibraries(ctx context.Context, id, librariesJSON string, allLibraries, allowWriteAccess bool) error
-	RescanPlugins(ctx context.Context) error
-	UnloadDisabledPlugins(ctx context.Context)
-}
-
 type Router struct {
 	http.Handler
 	ds            model.DataStore
@@ -44,12 +31,11 @@ type Router struct {
 	libs          core.Library
 	users         core.User
 	maintenance   core.Maintenance
-	pluginManager PluginManager
 	imgUpload     artwork.Uploader
 }
 
-func New(ds model.DataStore, share core.Share, playlists playlistsvc.Playlists, insights metrics.Insights, libraryService core.Library, userService core.User, maintenance core.Maintenance, pluginManager PluginManager, imgUpload artwork.Uploader) *Router {
-	r := &Router{ds: ds, share: share, playlists: playlists, insights: insights, libs: libraryService, users: userService, maintenance: maintenance, pluginManager: pluginManager, imgUpload: imgUpload}
+func New(ds model.DataStore, share core.Share, playlists playlistsvc.Playlists, insights metrics.Insights, libraryService core.Library, userService core.User, maintenance core.Maintenance, imgUpload artwork.Uploader) *Router {
+	r := &Router{ds: ds, share: share, playlists: playlists, insights: insights, libs: libraryService, users: userService, maintenance: maintenance, imgUpload: imgUpload}
 	r.Handler = r.routes()
 	return r
 }
@@ -94,13 +80,13 @@ func (api *Router) routes() http.Handler {
 			r.Put("/song/{id}/artwork", updateMediaFileArtwork(api.maintenance))
 			r.Post("/song/{id}/metadata/refresh", refreshMediaFileMetadata(api.maintenance))
 			r.Get("/song/{id}/lyrics", getMediaFileLyrics(api.maintenance))
+			r.Get("/song/{id}/lyrics/search", searchMediaFileLyrics(api.maintenance))
 			r.Put("/song/{id}/lyrics", saveMediaFileLyrics(api.maintenance))
 			r.Put("/song/{id}/lyrics/embedded", saveEmbeddedMediaFileLyrics(api.maintenance))
 			r.Delete("/song/{id}/lyrics", deleteMediaFileLyrics(api.maintenance))
 			api.addInspectRoute(r)
 			api.addConfigRoute(r)
 			api.addUserLibraryRoute(r)
-			api.addPluginRoute(r)
 			api.addArtworkRoute(r)
 			api.RX(r, "/library", api.libs.NewRepository, true)
 		})

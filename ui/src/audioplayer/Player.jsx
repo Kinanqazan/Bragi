@@ -89,8 +89,17 @@ export const Player = () => {
         setLyricsRevision((revision) => revision + 1)
       }
     }
+    const handleLyricsUpdate = (event) => {
+      if (event.detail?.songId === currentTrackId && typeof event.detail.lyric === 'string') {
+        setResolvedLyrics({ trackId: currentTrackId, lyric: event.detail.lyric })
+      }
+    }
     window.addEventListener('bragi:refresh-song-lyrics', handleLyricsRefresh)
-    return () => window.removeEventListener('bragi:refresh-song-lyrics', handleLyricsRefresh)
+    window.addEventListener('bragi:set-song-lyrics', handleLyricsUpdate)
+    return () => {
+      window.removeEventListener('bragi:refresh-song-lyrics', handleLyricsRefresh)
+      window.removeEventListener('bragi:set-song-lyrics', handleLyricsUpdate)
+    }
   }, [currentTrackId])
 
   useEffect(() => {

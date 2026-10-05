@@ -17,7 +17,6 @@ require (
 	github.com/djherbis/stream v1.4.0
 	github.com/djherbis/times v1.6.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/extism/go-sdk v1.7.1
 	github.com/fatih/structs v1.1.0
 	github.com/gen2brain/webp v0.6.4
 	github.com/go-chi/chi/v5 v5.3.1
@@ -49,7 +48,6 @@ require (
 	github.com/rjeczalik/notify v0.9.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -73,7 +71,6 @@ require (
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
-	github.com/atombender/go-jsonschema v0.20.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/reflex v0.3.2 // indirect
@@ -81,7 +78,6 @@ require (
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
-	github.com/dylibso/observe-sdk/go v0.0.0-20240828172851-9145d8ad07e1 // indirect
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -127,7 +123,6 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tetratelabs/wabin v0.0.0-20230304001439-f6f874872834 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -143,7 +138,6 @@ require (
 )
 
 tool (
-	github.com/atombender/go-jsonschema
 	github.com/cespare/reflex
 	github.com/google/wire/cmd/wire
 	github.com/onsi/ginkgo/v2/ginkgo

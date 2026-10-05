@@ -43,7 +43,7 @@ var _ = Describe("resolveItem", func() {
 		libRepo = &tests.MockLibraryRepo{}
 		libRepo.SetData(model.Libraries{{ID: 0, Path: testFileLibPath(repoRoot)}})
 		ffm = tests.NewMockFFmpeg("")
-		ag = agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag = agents.GetAgents(&tests.MockDataStore{})
 		ds = &tests.MockDataStore{
 			MockedFolder:  folderRepo,
 			MockedLibrary: libRepo,
@@ -742,7 +742,7 @@ var _ = Describe("ExternalLookupsPerItem", func() {
 		Expect(ExternalLookupsPerItem(model.KindPlaylistArtwork, count)).To(Equal(int64(1)))
 	})
 
-	It("still bills a call when no agent is visible, which plugins never are offline", func() {
+	It("still bills a call when no configured agent is visible", func() {
 		none := ImageAgentCount{}
 		Expect(ExternalLookupsPerItem(model.KindArtistArtwork, none)).To(Equal(int64(1)))
 		Expect(ExternalLookupsPerItem(model.KindAlbumArtwork, none)).To(Equal(int64(1)))

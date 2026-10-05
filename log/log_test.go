@@ -261,8 +261,8 @@ var _ = Describe("Logger", func() {
 		})
 
 		It("redacts a whole JWT in api_key, not just up to its first dot", func() {
-			msg := "/jellyfin/Audio/abc/universal?static=true&api_key=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiJ9.c2ln-X_1&other=1"
-			Expect(Redact(msg)).To(Equal("/jellyfin/Audio/abc/universal?static=true&api_key=[REDACTED]&other=1"))
+			msg := "/api/audio/abc/stream?static=true&api_key=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiJ9.c2ln-X_1&other=1"
+			Expect(Redact(msg)).To(Equal("/api/audio/abc/stream?static=true&api_key=[REDACTED]&other=1"))
 		})
 	})
 })

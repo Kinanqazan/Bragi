@@ -14,7 +14,7 @@ body:
     attributes:
       label: "I confirm that:"
       options:
-        - label: I have searched the existing [open AND closed issues](https://github.com/navidrome/navidrome/issues?q=is%3Aissue) to see if an issue already exists for the bug I've encountered
+        - label: I have searched the existing [open and closed issues](https://github.com/Kinanqaz/Bragi/issues?q=is%3Aissue) to see if this bug has already been reported
           required: true
         - label: I'm using the latest version (your issue may have been fixed already)
           required: false
@@ -22,7 +22,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of Navidrome are you running? (please try upgrading first, as your issue may have been fixed already).
+      description: What Bragi version are you running? Please try the latest version first.
     validations:
       required: true
   - type: textarea
@@ -56,7 +56,7 @@ body:
         examples:
           - **OS**: Ubuntu 20.04
           - **Browser**: Chrome 110.0.5481.177 on Windows 11
-          - **Client**: DSub 5.5.1
+          - **Client**: Bragi web app or Android app
       value: |
         - OS:
         - Browser:
@@ -65,26 +65,25 @@ body:
   - type: dropdown
     id: distribution
     attributes:
-      label: How Navidrome is installed?
+      label: How is Bragi installed?
       multiple: false
       options:
         - Docker
-        - Binary (from downloads page)
-        - Package
-        - Built from sources
+        - Binary built from source
+        - Running from a source checkout
     validations:
       required: true
   - type: textarea
     id: config
     attributes:
       label: Configuration
-      description: Please copy and paste your `navidrome.toml` (and/or `docker-compose.yml`) configuration. This will be automatically formatted into code, so no need for backticks.
-      render: toml
+      description: Share the relevant Bragi settings, BR_ environment variables, or Docker Compose service. Remove passwords and other secrets.
+      render: yaml
   - type: textarea
     id: logs
     attributes:
       label: Relevant log output
-      description: Please copy and paste any relevant log output (change your `LogLevel` (`BR_LOGLEVEL`) to debug). This will be automatically formatted into code, so no need for backticks. ([Where I can find the logs?](https://www.navidrome.org/docs/faq/#where-are-the-logs))
+      description: Please include relevant Bragi log output. Set `BR_LOGLEVEL=debug` if more detail is needed, and remove secrets before posting.
       render: shell
   - type: textarea
     attributes:
@@ -97,7 +96,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/navidrome/navidrome/blob/master/CODE_OF_CONDUCT.md).
+      description: By submitting this issue, you agree to follow Bragi's [Code of Conduct](https://github.com/Kinanqaz/Bragi/blob/master/CODE_OF_CONDUCT.md).
       options:
-        - label: I agree to follow Navidrome's Code of Conduct
+        - label: I agree to follow Bragi's Code of Conduct
           required: true

@@ -65,7 +65,7 @@ var (
 	plsCmd = &cobra.Command{
 		Use:   "pls",
 		Short: "Export playlists",
-		Long:  "Export Navidrome playlists to M3U files",
+		Long:  "Export Bragi playlists to M3U files",
 		Run: func(cmd *cobra.Command, args []string) {
 			runExporter(cmd.Context())
 		},
@@ -82,7 +82,7 @@ var (
 	exportCommand = &cobra.Command{
 		Use:   "export",
 		Short: "Export playlists to M3U files",
-		Long:  "Export one or more Navidrome playlists to M3U files",
+		Long:  "Export one or more Bragi playlists to M3U files",
 		Run: func(cmd *cobra.Command, args []string) {
 			runExport(cmd.Context())
 		},
@@ -91,7 +91,7 @@ var (
 	importCommand = &cobra.Command{
 		Use:   "import [files...]",
 		Short: "Import M3U playlists",
-		Long:  "Import one or more M3U files as Navidrome playlists",
+		Long:  "Import one or more M3U files as Bragi playlists",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			runImport(cmd.Context(), args)

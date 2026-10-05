@@ -1,5 +1,5 @@
-// Package harness holds the pieces shared by the API e2e suites (server/subsonic/e2e and
-// server/jellyfin/e2e): golden-database lifecycle, snapshot restore, fixture-FS registration,
+// Package harness holds the pieces shared by the API e2e suites: golden-database lifecycle,
+// snapshot restore, fixture-FS registration,
 // and service doubles. Like core/storage/storagetest, it must only be imported from test code.
 package harness
 

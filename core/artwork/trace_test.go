@@ -198,7 +198,7 @@ var _ = Describe("resolveAlbum tracing", func() {
 			MockedLibrary: libRepo,
 		}
 		ffm = tests.NewMockFFmpeg("")
-		ag = agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag = agents.GetAgents(&tests.MockDataStore{})
 		t = &ChainTrace{}
 		ctx = withTrace(context.Background(), t)
 	})
@@ -288,7 +288,7 @@ var _ = Describe("resolveArtist tracing", func() {
 			MockedLibrary: libRepo,
 		}
 		ffm = tests.NewMockFFmpeg("")
-		ag = agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag = agents.GetAgents(&tests.MockDataStore{})
 		t = &ChainTrace{}
 		ctx = withTrace(context.Background(), t)
 	})

@@ -16,15 +16,13 @@ var _ = Describe("User Service", func() {
 	var service core.User
 	var ds *tests.MockDataStore
 	var userRepo *tests.MockedUserRepo
-	var pluginManager *mockPluginUnloader
 	var ctx context.Context
 
 	BeforeEach(func() {
 		ds = &tests.MockDataStore{}
 		userRepo = tests.CreateMockUserRepo()
 		ds.MockedUser = userRepo
-		pluginManager = &mockPluginUnloader{}
-		service = core.NewUser(ds, pluginManager)
+		service = core.NewUser(ds)
 		ctx = GinkgoT().Context()
 	})
 
@@ -62,25 +60,11 @@ var _ = Describe("User Service", func() {
 			Expect(err).To(Equal(model.ErrNotFound))
 		})
 
-		It("calls UnloadDisabledPlugins after successful deletion", func() {
-			err := repo.Delete("user-123")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(pluginManager.unloadCalls).To(Equal(1))
-		})
-
-		It("does not call UnloadDisabledPlugins when deletion fails", func() {
-			// Try to delete non-existent user
-			err := repo.Delete("non-existent")
-			Expect(err).To(HaveOccurred())
-			Expect(pluginManager.unloadCalls).To(Equal(0))
-		})
-
 		It("returns error when repository fails", func() {
 			userRepo.Error = errors.New("database error")
 			err := repo.Delete("user-123")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("database error"))
-			Expect(pluginManager.unloadCalls).To(Equal(0))
 		})
 	})
 })

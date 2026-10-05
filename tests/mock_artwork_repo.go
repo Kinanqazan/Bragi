@@ -164,7 +164,7 @@ func (m *MockArtworkRepo) GetInfoForItems(kind model.Kind, ids []string) (map[st
 		if ia, ok := m.ItemData[iaKey(kind.Prefix(), id, model.ImageTypePrimary)]; ok {
 			info := model.ItemArtworkInfo{ItemID: id, Hash: ia.Hash}
 			if a, ok := m.Data[ia.Hash]; ok {
-				info.BlurHash, info.ThumbHash = a.BlurHash, a.ThumbHash
+				info.ThumbHash = a.ThumbHash
 				info.DominantColor = a.DominantColor
 				info.Width, info.Height = a.Width, a.Height
 			}

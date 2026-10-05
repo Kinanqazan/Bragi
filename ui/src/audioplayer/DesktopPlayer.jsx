@@ -101,6 +101,9 @@ const DesktopPlayer = ({ bridge, queue, onClear, lyrics }) => {
             currentTime={snapshot.currentTime}
             lyric={lyrics || track.lyric || track.song?.lyrics || ''}
             cover={track.cover}
+            songId={!track.isRadio ? (track.trackId || track.song?.id || track.id) : null}
+            searchTitle={track.title || track.song?.title || ''}
+            searchArtist={track.artist || track.song?.artist || track.singer || ''}
             onClose={() => setLyricsOpen(false)}
             onSeek={commands.seek}
           />

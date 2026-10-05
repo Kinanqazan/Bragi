@@ -38,8 +38,8 @@ func init() {
 var svcCmd = &cobra.Command{
 	Use:     "service",
 	Aliases: []string{"svc"},
-	Short:   "Manage Navidrome as a service",
-	Long:    fmt.Sprintf("Manage Navidrome as a service, using the OS service manager (%s)", service.Platform()),
+	Short:   "Manage Bragi as a service",
+	Long:    fmt.Sprintf("Manage Bragi as a service, using the OS service manager (%s)", service.Platform()),
 	Run:     runServiceCmd,
 }
 
@@ -153,7 +153,7 @@ func buildInstallCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "install",
-		Short: "Install Navidrome service.",
+		Short: "Install the Bragi service.",
 		Run:   runInstallCmd,
 	}
 	cmd.Flags().StringVarP(&installUser, "user", "u", "", "user to run service")
@@ -165,7 +165,7 @@ func buildInstallCmd() *cobra.Command {
 func buildUninstallCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "uninstall",
-		Short: "Uninstall Navidrome service. Does not delete the music or data folders",
+		Short: "Uninstall the Bragi service. Does not delete the music or data folders",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := svcInstance().Uninstall()
 			if err != nil {
@@ -179,7 +179,7 @@ func buildUninstallCmd() *cobra.Command {
 func buildStartCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
-		Short: "Start Navidrome service",
+		Short: "Start the Bragi service",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := svcInstance().Start()
 			if err != nil {
@@ -193,7 +193,7 @@ func buildStartCmd() *cobra.Command {
 func buildStopCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop",
-		Short: "Stop Navidrome service",
+		Short: "Stop the Bragi service",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := svcInstance().Stop()
 			if err != nil {
@@ -207,13 +207,13 @@ func buildStopCmd() *cobra.Command {
 func buildStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Show Navidrome service status",
+		Short: "Show Bragi service status",
 		Run: func(cmd *cobra.Command, args []string) {
 			status, err := svcInstance().Status()
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("Navidrome is %s.\n", svcStatusLabels[status])
+			fmt.Printf("Bragi is %s.\n", svcStatusLabels[status])
 		},
 	}
 }
@@ -221,7 +221,7 @@ func buildStatusCmd() *cobra.Command {
 func buildExecuteCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execute",
-		Short: "Run navidrome as a service in the foreground (it is very unlikely you want to run this, you are better off running just navidrome)",
+		Short: "Run the Bragi service in the foreground (usually, run navidrome directly instead)",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := svcInstance().Run()
 			if err != nil {

@@ -17,11 +17,6 @@ func (api *Router) GetOpenSubsonicExtensions(_ *http.Request) (*responses.Subson
 		{Name: "playbackReport", Versions: []int32{1}},
 		{Name: "topSongsByArtistId", Versions: []int32{1}},
 	}
-	if api.sonic != nil && api.sonic.HasProvider() {
-		extensions = append(extensions, responses.OpenSubsonicExtension{
-			Name: "sonicSimilarity", Versions: []int32{1},
-		})
-	}
 	response.OpenSubsonicExtensions = &extensions
 	return response, nil
 }

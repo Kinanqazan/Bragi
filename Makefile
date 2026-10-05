@@ -15,11 +15,6 @@ GIT_SHA=source_archive
 GIT_TAG=$(patsubst navidrome-%,v%,$(notdir $(PWD)))-SNAPSHOT
 endif
 
-SUPPORTED_PLATFORMS ?= linux/amd64,linux/arm64,linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/386,linux/riscv64,darwin/amd64,darwin/arm64,windows/amd64,windows/386
-IMAGE_PLATFORMS ?= $(shell echo $(SUPPORTED_PLATFORMS) | tr ',' '\n' | grep "linux" | grep -v "arm/v5" | tr '\n' ',' | sed 's/,$$//')
-PLATFORMS ?= $(SUPPORTED_PLATFORMS)
-DOCKER_TAG ?= deluan/navidrome:develop
-
 GOLANGCI_LINT_VERSION ?= v2.12.0
 
 UI_SRC_FILES := $(shell find ui -type f -not -path "ui/build/*" -not -path "ui/node_modules/*")
@@ -54,11 +49,7 @@ test: ##@Development Run Go tests. Use PKG variable to specify packages to test,
 	go test -tags $(GO_BUILD_TAGS) $(PKG)
 .PHONY: test
 
-test-ndpgen: ##@Development Run tests for ndpgen plugin
-	cd plugins/cmd/ndpgen && go test ./......
-.PHONY: test-ndpgen
-
-testall: test test-ndpgen test-i18n test-js ##@Development Run Go and JS tests
+testall: test test-i18n test-js ##@Development Run Go and JS tests
 .PHONY: testall
 
 test-race: ##@Development Run Go tests with race detector
@@ -113,12 +104,6 @@ wire: check_go_env ##@Development Update Dependency Injection
 
 gen: check_go_env ##@Development Run go generate for code generation
 	go generate ./...
-	cd plugins/cmd/ndpgen && go run . -shared-types -input=../../types -output=../../pdk -go -rust
-	cd plugins/cmd/ndpgen && go run . -host-wrappers -input=../../host -package=host -shared=../../types
-	cd plugins/cmd/ndpgen && go run . -input=../../host -output=../../pdk -go -rust -shared=../../types
-	cd plugins/cmd/ndpgen && go run . -capability-only -input=../../capabilities -output=../../pdk -go -rust -shared=../../types
-	cd plugins/cmd/ndpgen && go run . -schemas -input=../../capabilities -shared=../../types
-	go mod tidy -C plugins/pdk/go
 .PHONY: gen
 
 snapshots: ##@Development Update (GoLang) Snapshot tests
@@ -158,66 +143,8 @@ debug-build: check_go_env buildjs ##@Build Build the project (with remote debug 
 buildjs: check_node_env ui/build/index.html ##@Build Build only frontend
 .PHONY: buildjs
 
-docker-buildjs: ##@Build Build only frontend using Docker
-	docker build --output "./ui" --target ui-bundle .
-.PHONY: docker-buildjs
-
 ui/build/index.html: $(UI_SRC_FILES)
 	@(cd ./ui && npm run build)
-
-docker-platforms: ##@Cross_Compilation List supported platforms
-	@echo "Supported platforms:"
-	@echo "$(SUPPORTED_PLATFORMS)" | tr ',' '\n' | sort | sed 's/^/    /'
-	@echo "\nUsage: make PLATFORMS=\"linux/amd64\" docker-build"
-	@echo "       make IMAGE_PLATFORMS=\"linux/amd64\" docker-image"
-.PHONY: docker-platforms
-
-docker-build: ##@Cross_Compilation Cross-compile for any supported platform (check `make docker-platforms`)
-	docker buildx build \
-		--platform $(PLATFORMS) \
-		--build-arg GIT_TAG=${GIT_TAG} \
-		--build-arg GIT_SHA=${GIT_SHA} \
-		--output "./binaries" --target binary .
-.PHONY: docker-build
-
-docker-image: ##@Cross_Compilation Build Docker image, tagged as `deluan/navidrome:develop`, override with DOCKER_TAG var. Use IMAGE_PLATFORMS to specify target platforms
-	@echo $(IMAGE_PLATFORMS) | grep -q "windows" && echo "ERROR: Windows is not supported for Docker builds" && exit 1 || true
-	@echo $(IMAGE_PLATFORMS) | grep -q "darwin" && echo "ERROR: macOS is not supported for Docker builds" && exit 1 || true
-	@echo $(IMAGE_PLATFORMS) | grep -q "arm/v5" && echo "ERROR: Linux ARMv5 is not supported for Docker builds" && exit 1 || true
-	docker buildx build \
-		--platform $(IMAGE_PLATFORMS) \
-		--build-arg GIT_TAG=${GIT_TAG} \
-		--build-arg GIT_SHA=${GIT_SHA} \
-		--tag $(DOCKER_TAG) .
-.PHONY: docker-image
-
-docker-msi: ##@Cross_Compilation Build MSI installer for Windows
-	make docker-build PLATFORMS=windows/386,windows/amd64
-	DOCKER_CLI_HINTS=false docker build -q -t navidrome-msi-builder -f release/wix/msitools.dockerfile .
-	@rm -rf binaries/msi
-	docker run -it --rm -v $(PWD):/workspace -v $(PWD)/binaries:/workspace/binaries -e GIT_TAG=${GIT_TAG} \
-		navidrome-msi-builder sh -c "release/wix/build_msi.sh /workspace 386 && release/wix/build_msi.sh /workspace amd64"
-	@du -h binaries/msi/*.msi
-.PHONY: docker-msi
-
-docker-run: ##@Development Run a Navidrome Docker image. Usage: make docker-run tag=<tag>
-	@if [ -z "$(tag)" ]; then echo "Usage: make docker-run tag=<tag>"; exit 1; fi
-	@TAG_DIR="tmp/$$(echo '$(tag)' | tr '/:' '_')"; mkdir -p "$$TAG_DIR"; \
-    VOLUMES="-v $(PWD)/$$TAG_DIR:/data"; \
-	if [ -f navidrome.toml ]; then \
-		VOLUMES="$$VOLUMES -v $(PWD)/navidrome.toml:/data/navidrome.toml:ro"; \
-		MUSIC_FOLDER=$$(grep '^MusicFolder' navidrome.toml | head -n1 | sed 's/.*= *"//' | sed 's/".*//'); \
-		if [ -n "$$MUSIC_FOLDER" ] && [ -d "$$MUSIC_FOLDER" ]; then \
-		  VOLUMES="$$VOLUMES -v $$MUSIC_FOLDER:/music:ro"; \
-	  	fi; \
-	fi; \
-	echo "Running: docker run --rm -p 4533:4533 $$VOLUMES $(tag)"; docker run --rm -p 4533:4533 $$VOLUMES $(tag)
-.PHONY: docker-run
-
-package: docker-build ##@Cross_Compilation Create binaries and packages for ALL supported platforms
-	@if [ -z `which goreleaser` ]; then echo "Please install goreleaser first: https://goreleaser.com/install/"; exit 1; fi
-	goreleaser release -f release/goreleaser.yml --clean --skip=publish --snapshot
-.PHONY: package
 
 ##########################################
 #### Worktrees
@@ -256,18 +183,9 @@ ls-wt: ##@Worktrees List all active git worktrees
 #### Miscellaneous
 
 clean:
-	@rm -rf ./binaries ./dist ./ui/build/*
+	@rm -rf ./dist ./ui/build/*
 	@touch ./ui/build/.gitkeep
 .PHONY: clean
-
-release:
-	@if [[ ! "${V}" =~ ^[0-9]+\.[0-9]+\.[0-9]+.*$$ ]]; then echo "Usage: make release V=X.X.X"; exit 1; fi
-	go mod tidy
-	@if [ -n "`git status -s`" ]; then echo "\n\nThere are pending changes. Please commit or stash first"; exit 1; fi
-	make pre-push
-	git tag v${V}
-	git push origin v${V} --no-verify
-.PHONY: release
 
 download-deps:
 	@echo Downloading Go dependencies...

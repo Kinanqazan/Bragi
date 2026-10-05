@@ -25,7 +25,7 @@ func TestArtwork(t *testing.T) {
 	defer goleak.VerifyNone(t,
 		goleak.IgnoreTopFunction("github.com/onsi/ginkgo/v2/internal/interrupt_handler.(*InterruptHandler).registerForInterrupts.func2"),
 		// notify's own init() starts a singleton tree the moment it's imported (via
-		// core/storage/local or plugins); recursive on darwin, nonrecursive on linux.
+		// core/storage/local); recursive on darwin, nonrecursive on linux.
 		goleak.IgnoreTopFunction("github.com/rjeczalik/notify.(*recursiveTree).dispatch"),
 		goleak.IgnoreTopFunction("github.com/rjeczalik/notify.(*nonrecursiveTree).dispatch"),
 		goleak.IgnoreTopFunction("github.com/rjeczalik/notify.(*nonrecursiveTree).internal"),

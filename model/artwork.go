@@ -9,7 +9,6 @@ type Artwork struct {
 	Width     int    `structs:"width"`
 	Height    int    `structs:"height"`
 	SizeBytes int64  `structs:"size_bytes"`
-	BlurHash  string `structs:"blur_hash"`
 	ThumbHash string `structs:"thumb_hash"`
 	// DominantColor is "#rrggbb": a flat placeholder clients can paint before any decode.
 	DominantColor string    `structs:"dominant_color"`
@@ -22,9 +21,7 @@ const ImageTypePrimary = "primary"
 type ItemImage struct {
 	ImageHash   string `structs:"-" json:"imageHash,omitempty"`
 	ImageAbsent bool   `structs:"-" json:"imageAbsent,omitempty"`
-	// BlurHash is Jellyfin's; its mappers read this field directly, so it stays off native JSON.
-	BlurHash  string `structs:"-" json:"-"`
-	ThumbHash string `structs:"-" json:"thumbHash,omitempty"`
+	ThumbHash   string `structs:"-" json:"thumbHash,omitempty"`
 	// DominantColor is the only placeholder needing no decode, so it can paint on the first frame.
 	DominantColor string `structs:"-" json:"dominantColor,omitempty"`
 	// A thumbhash's own aspect is quantised, so clients need these to shape the placeholder exactly.
@@ -60,7 +57,6 @@ type ItemArtwork struct {
 type ItemArtworkInfo struct {
 	ItemID        string
 	Hash          string
-	BlurHash      string
 	ThumbHash     string
 	DominantColor string
 	Width         int
@@ -75,7 +71,6 @@ func (i ItemArtworkInfo) Image() ItemImage {
 	return ItemImage{
 		ImageHash:     i.Hash,
 		ImageAbsent:   i.Absent(),
-		BlurHash:      i.BlurHash,
 		ThumbHash:     i.ThumbHash,
 		DominantColor: i.DominantColor,
 		ImageWidth:    i.Width,

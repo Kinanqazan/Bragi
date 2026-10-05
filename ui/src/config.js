@@ -43,7 +43,6 @@ const defaultConfig = {
   publicBaseUrl: '/share',
   separator: '/',
   enableInspect: true,
-  pluginsEnabled: true,
 }
 
 const getNativeServerConfig = () => {

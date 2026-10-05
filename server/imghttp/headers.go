@@ -1,4 +1,4 @@
-// Package imghttp holds the HTTP caching contract shared by the subsonic, public, and jellyfin
+// Package imghttp holds the HTTP caching contract shared by the subsonic and public
 // image handlers, so they apply identical headers without importing each other.
 package imghttp
 

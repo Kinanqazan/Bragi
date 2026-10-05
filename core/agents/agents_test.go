@@ -30,7 +30,7 @@ var _ = Describe("Agents", func() {
 		var ag *Agents
 		BeforeEach(func() {
 			conf.Server.Agents = ""
-			ag = createAgents(ds, nil)
+			ag = createAgents(ds)
 		})
 
 		It("calls the placeholder GetArtistImages", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Agents", func() {
 			Register("disabled", func(model.DataStore) Interface { return nil })
 			Register("empty", func(model.DataStore) Interface { return &emptyAgent{} })
 			conf.Server.Agents = "empty,fake,disabled"
-			ag = createAgents(ds, nil)
+			ag = createAgents(ds)
 			Expect(ag.AgentName()).To(Equal("agents"))
 		})
 
@@ -194,7 +194,7 @@ var _ = Describe("Agents", func() {
 
 				It("falls back to the next agent on error", func() {
 					conf.Server.Agents = "imgFail,imgOk"
-					ag = createAgents(ds, nil)
+					ag = createAgents(ds)
 
 					images, err := ag.GetArtistImages(ctx, "id", "artist", "mbid")
 					Expect(err).ToNot(HaveOccurred())
@@ -207,7 +207,7 @@ var _ = Describe("Agents", func() {
 					first.Err = nil
 					first.Images = []ExternalImage{}
 					conf.Server.Agents = "imgFail,imgOk"
-					ag = createAgents(ds, nil)
+					ag = createAgents(ds)
 
 					images, err := ag.GetArtistImages(ctx, "id", "artist", "mbid")
 					Expect(err).ToNot(HaveOccurred())
@@ -383,7 +383,7 @@ var _ = Describe("Agents", func() {
 		Describe("ArtistImageAgents", func() {
 			It("returns only ArtistImageRetriever agents, named, in configured order", func() {
 				conf.Server.Agents = "artistImg,noImages,artistImg2"
-				ag = createAgents(ds, nil)
+				ag = createAgents(ds)
 
 				result := ag.ArtistImageAgents()
 				Expect(result).To(HaveLen(2))
@@ -395,7 +395,7 @@ var _ = Describe("Agents", func() {
 
 			It("is empty when external services are disabled", func() {
 				conf.Server.Agents = "" // what disableExternalServices() sets when EnableExternalServices=false
-				ag = createAgents(ds, nil)
+				ag = createAgents(ds)
 				Expect(ag.ArtistImageAgents()).To(BeEmpty())
 			})
 		})
@@ -403,7 +403,7 @@ var _ = Describe("Agents", func() {
 		Describe("AlbumImageAgents", func() {
 			It("returns only AlbumImageRetriever agents, named, in configured order", func() {
 				conf.Server.Agents = "albumImg,noImages,albumImg2"
-				ag = createAgents(ds, nil)
+				ag = createAgents(ds)
 
 				result := ag.AlbumImageAgents()
 				Expect(result).To(HaveLen(2))
@@ -415,7 +415,7 @@ var _ = Describe("Agents", func() {
 
 			It("is empty when external services are disabled", func() {
 				conf.Server.Agents = "" // what disableExternalServices() sets when EnableExternalServices=false
-				ag = createAgents(ds, nil)
+				ag = createAgents(ds)
 				Expect(ag.AlbumImageAgents()).To(BeEmpty())
 			})
 		})

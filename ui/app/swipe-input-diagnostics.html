@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Standalone swipe input check</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 20px; font: 16px system-ui, sans-serif; color: #20232a; background: #fafafa; }
+      h1 { font-size: 22px; margin: 0 0 12px; }
+      p { line-height: 1.5; }
+      label { display: block; margin: 14px 0; }
+      button { width: 100%; min-height: 54px; font: inherit; border: 1px solid #748196; border-radius: 8px; }
+      #tap { background: #284e96; color: white; margin: 0 0 12px; }
+      #pad { height: 170px; display: grid; place-items: center; padding: 18px; background: #dce5ef; border: 1px solid #8095ad; border-radius: 8px; touch-action: none; user-select: none; }
+      #pad span { pointer-events: none; }
+      #status { min-height: 62px; white-space: pre-line; font: 14px ui-monospace, monospace; }
+      #download { min-height: 42px; margin-top: 14px; background: white; }
+    </style>
+  </head>
+  <body>
+    <h1>Standalone swipe input check</h1>
+    <p>Swipe quickly up or down inside the grey area, then immediately tap the blue button once. Repeat three times. This page loads no player or React code.</p>
+    <button id="tap" type="button">Tap after swipe — 0 clicks</button>
+    <div id="pad"><span>Swipe inside this area</span></div>
+    <label><input id="animate" type="checkbox" /> Animate the area after swiping</label>
+    <label>Native touch handling
+      <select id="native-mode">
+        <option value="default">Browser default</option>
+        <option value="observe">Listener only</option>
+        <option value="cancel">Cancel browser touch movement</option>
+      </select>
+    </label>
+    <p id="status" aria-live="polite">Button tap releases: 0
+Button clicks: 0</p>
+    <button id="download" type="button">Download swipe report</button>
+    <script type="module" src="/swipe-input-diagnostics.js"></script>
+  </body>
+</html>

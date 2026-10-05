@@ -109,7 +109,7 @@ var _ = Describe("Acquisition → serve loop", func() {
 		Eventually(func() bool { return imgCache.Available(ctx) }).Should(BeTrue())
 
 		svc = artwork.NewArtwork(ds, imgCache, store, ffm)
-		worker = artwork.NewWorker(ds, store, agents.GetAgents(ds, nil), ffm, events.NoopBroker(), imgCache)
+		worker = artwork.NewWorker(ds, store, agents.GetAgents(ds), ffm, events.NoopBroker(), imgCache)
 	})
 
 	seedFolderAlbum := func(albumID string) {
@@ -232,7 +232,7 @@ var _ = Describe("Acquisition → serve loop", func() {
 		Expect(readAll(resolved)).To(Equal(provisionalBytes))
 	})
 
-	It("stores dimensions, mime and a real blurhash alongside the acquired bytes", func() {
+	It("stores dimensions, mime and a thumbhash alongside the acquired bytes", func() {
 		seedFolderAlbum("al1")
 		bump("al", "al1")
 		runWorkerUntil(ctx, worker, itemFound(model.KindAlbumArtwork, "al1"))
@@ -245,8 +245,7 @@ var _ = Describe("Acquisition → serve loop", func() {
 		Expect(art.Width).To(BeNumerically(">", 0))
 		Expect(art.Height).To(BeNumerically(">", 0))
 		Expect(art.SizeBytes).To(BeNumerically("==", len(coverBytes)))
-		// Never a synthesized value: both hashes are encoded from the real pixels.
-		Expect(art.BlurHash).ToNot(BeEmpty())
+		// Never a synthesized value: the thumbhash is encoded from the real pixels.
 		Expect(art.ThumbHash).ToNot(BeEmpty())
 		raw, err := base64.StdEncoding.DecodeString(art.ThumbHash)
 		Expect(err).ToNot(HaveOccurred())

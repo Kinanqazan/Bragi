@@ -41,17 +41,15 @@ type libraryService struct {
 	scanner       model.Scanner
 	watcher       Watcher
 	broker        events.Broker
-	pluginManager PluginUnloader
 }
 
 // NewLibrary creates a new Library service
-func NewLibrary(ds model.DataStore, scanner model.Scanner, watcher Watcher, broker events.Broker, pluginManager PluginUnloader) Library {
+func NewLibrary(ds model.DataStore, scanner model.Scanner, watcher Watcher, broker events.Broker) Library {
 	return &libraryService{
-		ds:            ds,
-		scanner:       scanner,
-		watcher:       watcher,
-		broker:        broker,
-		pluginManager: pluginManager,
+		ds:      ds,
+		scanner: scanner,
+		watcher: watcher,
+		broker:  broker,
 	}
 }
 
@@ -143,7 +141,6 @@ func (s *libraryService) NewRepository(ctx context.Context) rest.Repository {
 		scanner:           s.scanner,
 		watcher:           s.watcher,
 		broker:            s.broker,
-		pluginManager:     s.pluginManager,
 	}
 	return wrapper
 }
@@ -156,7 +153,6 @@ type libraryRepositoryWrapper struct {
 	scanner       model.Scanner
 	watcher       Watcher
 	broker        events.Broker
-	pluginManager PluginUnloader
 }
 
 func (r *libraryRepositoryWrapper) Save(entity any) (string, error) {
@@ -279,10 +275,6 @@ func (r *libraryRepositoryWrapper) Delete(id string) error {
 		r.broker.SendBroadcastMessage(r.ctx, event.With("library", id))
 		log.Debug(r.ctx, "Library deleted - sent refresh event", "libraryID", libID, "name", lib.Name)
 	}
-
-	// After successful deletion, check if any plugins were auto-disabled
-	// and need to be unloaded from memory
-	r.pluginManager.UnloadDisabledPlugins(r.ctx)
 
 	return nil
 }

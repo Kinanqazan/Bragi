@@ -37,7 +37,7 @@ func BenchmarkParseLyrics_SRT(b *testing.B)         { benchmarkParse(b, ".srt", 
 func BenchmarkParseLyrics_TTML(b *testing.B)        { benchmarkParse(b, ".ttml", "auld-lang-syne.ttml") }
 func BenchmarkParseLyrics_YAML(b *testing.B)        { benchmarkParse(b, ".yaml", "auld-lang-syne.yaml") }
 
-// Content-sniff path (empty suffix) — what embedded tags and plugins hit.
+// Content-sniff path (empty suffix) — what embedded tags and media-file parsing use.
 func BenchmarkParseLyrics_SniffTTML(b *testing.B)  { benchmarkParse(b, "", "auld-lang-syne.ttml") }
 func BenchmarkParseLyrics_SniffSRT(b *testing.B)   { benchmarkParse(b, "", "auld-lang-syne.srt") }
 func BenchmarkParseLyrics_SniffYAML(b *testing.B)  { benchmarkParse(b, "", "auld-lang-syne.yaml") }

@@ -21,31 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type mockPluginLoader struct {
-	mu         sync.RWMutex
-	names      []string
-	scrobblers map[string]Scrobbler
-}
-
-func (m *mockPluginLoader) PluginNames(service string) []string {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.names
-}
-
-func (m *mockPluginLoader) SetNames(names []string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.names = names
-}
-
-func (m *mockPluginLoader) LoadScrobbler(name string) (Scrobbler, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	s, ok := m.scrobblers[name]
-	return s, ok
-}
-
 // slowMediaFileRepo widens the window between a report's session check and its
 // write, making check-then-write races reproducible.
 type slowMediaFileRepo struct {
@@ -82,7 +57,7 @@ var _ = Describe("PlayTracker", func() {
 			return nil
 		})
 		eventBroker = &fakeEventBroker{}
-		tracker = newPlayTracker(ds, eventBroker, nil)
+		tracker = newPlayTracker(ds, eventBroker)
 		tracker.builtinScrobblers["fake"] = fake // Bypass buffering for tests
 
 		track = model.MediaFile{
@@ -114,13 +89,6 @@ var _ = Describe("PlayTracker", func() {
 	It("does not register disabled scrobblers", func() {
 		Expect(tracker.builtinScrobblers).To(HaveKey("fake"))
 		Expect(tracker.builtinScrobblers).ToNot(HaveKey("disabled"))
-	})
-
-	Describe("IsBuiltinScrobbler", func() {
-		It("reports whether the name belongs to a registered builtin scrobbler", func() {
-			Expect(IsBuiltinScrobbler("fake")).To(BeTrue())
-			Expect(IsBuiltinScrobbler("some-plugin")).To(BeFalse())
-		})
 	})
 
 	Describe("GetNowPlaying", func() {
@@ -168,7 +136,7 @@ var _ = Describe("PlayTracker", func() {
 
 		It("does not send event when disabled", func() {
 			conf.Server.EnableNowPlaying = false
-			tracker = newPlayTracker(ds, eventBroker, nil)
+			tracker = newPlayTracker(ds, eventBroker)
 			info := PlaybackSession{MediaFile: track, Start: time.Now(), Username: "user"}
 			_ = tracker.playMap.AddWithTTL("player-2", info, 10*time.Millisecond)
 			Consistently(func() int { return len(eventBroker.getEvents()) }).Should(Equal(0))
@@ -436,7 +404,7 @@ var _ = Describe("PlayTracker", func() {
 		Describe("SSE broadcast on state change", func() {
 			BeforeEach(func() {
 				eventBroker = &fakeEventBroker{}
-				tracker = newPlayTracker(ds, eventBroker, nil)
+				tracker = newPlayTracker(ds, eventBroker)
 				tracker.builtinScrobblers["fake"] = fake
 			})
 
@@ -481,7 +449,7 @@ var _ = Describe("PlayTracker", func() {
 
 			It("does NOT broadcast when EnableNowPlaying is false", func() {
 				conf.Server.EnableNowPlaying = false
-				tracker = newPlayTracker(ds, eventBroker, nil)
+				tracker = newPlayTracker(ds, eventBroker)
 				tracker.builtinScrobblers["fake"] = fake
 
 				err := tracker.ReportPlayback(ctx, ReportPlaybackParams{
@@ -966,223 +934,6 @@ var _ = Describe("PlayTracker", func() {
 		})
 	})
 
-	Describe("Plugin scrobbler logic", func() {
-		var pluginLoader *mockPluginLoader
-		var pluginFake *fakeScrobbler
-
-		BeforeEach(func() {
-			pluginFake = &fakeScrobbler{Authorized: true}
-			pluginLoader = &mockPluginLoader{
-				names:      []string{"plugin1"},
-				scrobblers: map[string]Scrobbler{"plugin1": pluginFake},
-			}
-			tracker = newPlayTracker(ds, events.GetBroker(), pluginLoader)
-
-			// Bypass buffering for both built-in and plugin scrobblers
-			tracker.builtinScrobblers["fake"] = fake
-			tracker.pluginScrobblers["plugin1"] = pluginFake
-		})
-
-		It("registers and uses plugin scrobbler for NowPlaying", func() {
-			err := tracker.ReportPlayback(ctx, ReportPlaybackParams{
-				MediaId: "123", PositionMs: 0, State: StatePlaying, PlaybackRate: 1.0, ClientId: "player-1",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() bool { return pluginFake.GetNowPlayingCalled() }).Should(BeTrue())
-		})
-
-		It("removes plugin scrobbler if not present anymore", func() {
-			_ = tracker.ReportPlayback(ctx, ReportPlaybackParams{
-				MediaId: "123", PositionMs: 0, State: StatePlaying, PlaybackRate: 1.0, ClientId: "player-1",
-			})
-			Eventually(func() bool { return pluginFake.GetNowPlayingCalled() }).Should(BeTrue())
-			pluginFake.nowPlayingCalled.Store(false)
-			pluginLoader.SetNames([]string{})
-			_ = tracker.ReportPlayback(ctx, ReportPlaybackParams{
-				MediaId: "123", PositionMs: 0, State: StatePlaying, PlaybackRate: 1.0, ClientId: "player-1",
-			})
-			Consistently(func() bool { return pluginFake.GetNowPlayingCalled() }).Should(BeFalse())
-		})
-
-		It("calls both builtin and plugin scrobblers for NowPlaying", func() {
-			fake.nowPlayingCalled.Store(false)
-			pluginFake.nowPlayingCalled.Store(false)
-			err := tracker.ReportPlayback(ctx, ReportPlaybackParams{
-				MediaId: "123", PositionMs: 0, State: StatePlaying, PlaybackRate: 1.0, ClientId: "player-1",
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() bool { return fake.GetNowPlayingCalled() }).Should(BeTrue())
-			Eventually(func() bool { return pluginFake.GetNowPlayingCalled() }).Should(BeTrue())
-		})
-
-		It("calls plugin scrobbler for Submit", func() {
-			ts := time.Now()
-			err := tracker.Submit(ctx, []Submission{{TrackID: "123", Timestamp: ts}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(pluginFake.ScrobbleCalled.Load()).To(BeTrue())
-		})
-	})
-
-	Describe("Plugin Scrobbler Management", func() {
-		var pluginScr *fakeScrobbler
-		var mockPlugin *mockPluginLoader
-		var pTracker *playTracker
-		var mockedBS *mockBufferedScrobbler
-
-		BeforeEach(func() {
-			ctx = GinkgoT().Context()
-			ctx = request.WithUser(ctx, model.User{ID: "u-1"})
-			ctx = request.WithPlayer(ctx, model.Player{ScrobbleEnabled: true})
-			ds = &tests.MockDataStore{}
-
-			// Setup plugin scrobbler
-			pluginScr = &fakeScrobbler{Authorized: true}
-			mockPlugin = &mockPluginLoader{
-				names:      []string{"plugin1"},
-				scrobblers: map[string]Scrobbler{"plugin1": pluginScr},
-			}
-
-			// Create a tracker with the mock plugin loader
-			pTracker = newPlayTracker(ds, events.GetBroker(), mockPlugin)
-
-			// Create a mock buffered scrobbler and explicitly cast it to Scrobbler
-			mockedBS = &mockBufferedScrobbler{
-				wrapped: pluginScr,
-			}
-			// Make sure the instance is added with its concrete type preserved
-			pTracker.pluginScrobblers["plugin1"] = mockedBS
-		})
-
-		It("calls Stop on scrobblers when removing them", func() {
-			// Change the plugin names to simulate a plugin being removed
-			mockPlugin.SetNames([]string{})
-
-			// Call refreshPluginScrobblers which should detect the removed plugin
-			pTracker.refreshPluginScrobblers()
-
-			// Verify the Stop method was called
-			Expect(mockedBS.stopCalled).To(BeTrue())
-
-			// Verify the scrobbler was removed from the map
-			Expect(pTracker.pluginScrobblers).NotTo(HaveKey("plugin1"))
-		})
-	})
-
-	Describe("Plugin reload (config update) behavior", func() {
-		var mockPlugin *mockPluginLoader
-		var pTracker *playTracker
-		var originalScrobbler *fakeScrobbler
-		var reloadedScrobbler *fakeScrobbler
-
-		BeforeEach(func() {
-			ctx = GinkgoT().Context()
-			ctx = request.WithUser(ctx, model.User{ID: "u-1"})
-			ctx = request.WithPlayer(ctx, model.Player{ScrobbleEnabled: true})
-			ds = &tests.MockDataStore{}
-
-			// Setup initial plugin scrobbler
-			originalScrobbler = &fakeScrobbler{Authorized: true}
-			reloadedScrobbler = &fakeScrobbler{Authorized: true}
-
-			mockPlugin = &mockPluginLoader{
-				names:      []string{"plugin1"},
-				scrobblers: map[string]Scrobbler{"plugin1": originalScrobbler},
-			}
-
-			// Create tracker - this will create buffered scrobblers with loaders
-			pTracker = newPlayTracker(ds, events.GetBroker(), mockPlugin)
-
-			// Trigger initial plugin registration
-			pTracker.refreshPluginScrobblers()
-		})
-
-		AfterEach(func() {
-			pTracker.stopBackgroundWorkers()
-		})
-
-		It("uses the new plugin instance after reload (simulating config update)", func() {
-			// First call should use the original scrobbler
-			scrobblers := pTracker.getActiveScrobblers()
-			pluginScr := scrobblers["plugin1"]
-			Expect(pluginScr).ToNot(BeNil())
-
-			err := pluginScr.NowPlaying(ctx, "u-1", &track, 0)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(originalScrobbler.GetNowPlayingCalled()).To(BeTrue())
-			Expect(reloadedScrobbler.GetNowPlayingCalled()).To(BeFalse())
-
-			// Simulate plugin reload (config update): replace the scrobbler in the loader
-			// This is what happens when UpdatePluginConfig is called - the plugin manager
-			// unloads the old plugin and loads a new instance
-			mockPlugin.mu.Lock()
-			mockPlugin.scrobblers["plugin1"] = reloadedScrobbler
-			mockPlugin.mu.Unlock()
-
-			// Reset call tracking
-			originalScrobbler.nowPlayingCalled.Store(false)
-
-			// Get scrobblers again - should still return the same buffered scrobbler
-			// but subsequent calls should use the new plugin instance via the loader
-			scrobblers = pTracker.getActiveScrobblers()
-			pluginScr = scrobblers["plugin1"]
-
-			err = pluginScr.NowPlaying(ctx, "u-1", &track, 0)
-			Expect(err).ToNot(HaveOccurred())
-
-			// The new scrobbler should be called, not the old one
-			Expect(reloadedScrobbler.GetNowPlayingCalled()).To(BeTrue())
-			Expect(originalScrobbler.GetNowPlayingCalled()).To(BeFalse())
-		})
-
-		It("handles plugin becoming unavailable temporarily", func() {
-			// First verify plugin works
-			scrobblers := pTracker.getActiveScrobblers()
-			pluginScr := scrobblers["plugin1"]
-
-			err := pluginScr.NowPlaying(ctx, "u-1", &track, 0)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(originalScrobbler.GetNowPlayingCalled()).To(BeTrue())
-
-			// Simulate plugin becoming unavailable (e.g., during reload)
-			mockPlugin.mu.Lock()
-			delete(mockPlugin.scrobblers, "plugin1")
-			mockPlugin.mu.Unlock()
-
-			originalScrobbler.nowPlayingCalled.Store(false)
-
-			// NowPlaying should return error when plugin unavailable
-			err = pluginScr.NowPlaying(ctx, "u-1", &track, 0)
-			Expect(err).To(HaveOccurred())
-			Expect(originalScrobbler.GetNowPlayingCalled()).To(BeFalse())
-
-			// Simulate plugin becoming available again
-			mockPlugin.mu.Lock()
-			mockPlugin.scrobblers["plugin1"] = reloadedScrobbler
-			mockPlugin.mu.Unlock()
-
-			// Should work again with new instance
-			err = pluginScr.NowPlaying(ctx, "u-1", &track, 0)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(reloadedScrobbler.GetNowPlayingCalled()).To(BeTrue())
-		})
-
-		It("IsAuthorized uses the current plugin instance", func() {
-			scrobblers := pTracker.getActiveScrobblers()
-			pluginScr := scrobblers["plugin1"]
-
-			// Original is authorized
-			Expect(pluginScr.IsAuthorized(ctx, "u-1")).To(BeTrue())
-
-			// Replace with unauthorized scrobbler
-			unauthorizedScrobbler := &fakeScrobbler{Authorized: false}
-			mockPlugin.mu.Lock()
-			mockPlugin.scrobblers["plugin1"] = unauthorizedScrobbler
-			mockPlugin.mu.Unlock()
-
-			// Should reflect the new scrobbler's authorization status
-			Expect(pluginScr.IsAuthorized(ctx, "u-1")).To(BeFalse())
-		})
-	})
 })
 
 var _ = DescribeTable("remainingTTL",
@@ -1249,7 +1000,7 @@ func (f *fakeScrobbler) NowPlaying(ctx context.Context, userId string, track *mo
 		return f.Error
 	}
 	f.userID.Store(&userId)
-	// Capture username from context (this is what plugin scrobblers do)
+	// Capture username from context for the external scrobbler adapter.
 	username, _ := request.UsernameFrom(ctx)
 	if username == "" {
 		if u, ok := request.UserFrom(ctx); ok {
@@ -1266,7 +1017,7 @@ func (f *fakeScrobbler) NowPlaying(ctx context.Context, userId string, track *mo
 
 func (f *fakeScrobbler) Scrobble(ctx context.Context, userId string, s Scrobble) error {
 	f.userID.Store(&userId)
-	// Capture username from context (this is what plugin scrobblers do)
+	// Capture username from context for the external scrobbler adapter.
 	username, _ := request.UsernameFrom(ctx)
 	if username == "" {
 		if u, ok := request.UserFrom(ctx); ok {

@@ -372,12 +372,12 @@ const useStyles = makeStyles((theme) => {
     artwork: {
       width: 56,
       height: 56,
-      borderRadius: 8,
+      borderRadius: 4,
       background: theme.palette.action.hover,
       [theme.breakpoints.down('sm')]: {
         width: 56,
         height: 56,
-        borderRadius: 8,
+        borderRadius: 4,
       },
     },
     titleCell: {

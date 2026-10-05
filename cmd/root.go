@@ -36,9 +36,9 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:   "navidrome",
-		Short: "Navidrome is a self-hosted music server and streamer",
-		Long: `Navidrome is a self-hosted music server and streamer.
-Complete documentation is available at https://www.navidrome.org/docs`,
+		Short: "Bragi is a self-hosted music server and streamer",
+		Long: `Bragi is a self-hosted music server and streamer.
+Project information is available at https://github.com/Kinanqaz/Bragi`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			preRun()
 		},
@@ -71,7 +71,7 @@ func preRun() {
 }
 
 func postRun() {
-	log.Info("Navidrome stopped, bye.")
+	log.Info("Bragi stopped, bye.")
 }
 
 // runNavidrome is the main entry point for the Navidrome server. It starts all the services and blocks.
@@ -88,7 +88,6 @@ func runNavidrome(ctx context.Context) {
 	g.Go(schedulePeriodicBackup(ctx))
 	g.Go(startInsightsCollector(ctx))
 	g.Go(scheduleDBAnalyzer(ctx))
-	g.Go(startPluginManager(ctx))
 	artworkWorker := CreateArtworkWorker()
 	g.Go(startArtworkWorker(ctx, artworkWorker))
 	g.Go(scheduleArtworkHousekeeping(ctx, artworkWorker))
@@ -101,7 +100,7 @@ func runNavidrome(ctx context.Context) {
 	}
 
 	if err := g.Wait(); err != nil {
-		log.Error("Fatal error in Navidrome. Aborting", err)
+		log.Error("Fatal error in Bragi. Aborting", err)
 	}
 }
 
@@ -129,9 +128,6 @@ func startServer(ctx context.Context) func() error {
 		}
 		if conf.Server.ListenBrainz.Enabled {
 			a.MountRouter("ListenBrainz Auth", consts.URLPathNativeAPI+"/listenbrainz", CreateListenBrainzRouter())
-		}
-		if conf.Server.Jellyfin.Enabled {
-			a.MountRouter("Jellyfin API", consts.URLPathJellyfinAPI, CreateJellyfinAPIRouter(ctx))
 		}
 		if conf.Server.Prometheus.Enabled {
 			p := CreatePrometheus()
@@ -412,19 +408,6 @@ func scheduleArtworkHousekeeping(ctx context.Context, worker *artwork.Worker) fu
 	}
 }
 
-// startPluginManager starts the plugin manager, if configured.
-func startPluginManager(ctx context.Context) func() error {
-	return func() error {
-		manager := GetPluginManager(ctx)
-		if !conf.Server.Plugins.Enabled {
-			log.Debug("Plugin system is DISABLED")
-			return nil
-		}
-		log.Info(ctx, "Starting plugin manager")
-		return manager.Start(ctx)
-	}
-}
-
 // TODO: Implement some struct tags to map flags to viper
 func init() {
 	cobra.OnInitialize(func() {
@@ -446,13 +429,13 @@ func init() {
 	_ = viper.BindPFlag("logfile", rootCmd.PersistentFlags().Lookup("logfile"))
 
 	rootCmd.Flags().StringP("address", "a", viper.GetString("address"), "IP address to bind to")
-	rootCmd.Flags().IntP("port", "p", viper.GetInt("port"), "HTTP port Navidrome will listen to")
-	rootCmd.Flags().String("baseurl", viper.GetString("baseurl"), "base URL to configure Navidrome behind a proxy (ex: /music or http://my.server.com)")
+	rootCmd.Flags().IntP("port", "p", viper.GetInt("port"), "HTTP port Bragi will listen to")
+	rootCmd.Flags().String("baseurl", viper.GetString("baseurl"), "base URL to configure Bragi behind a proxy (ex: /music or http://my.server.com)")
 	rootCmd.Flags().String("tlscert", viper.GetString("tlscert"), "optional path to a TLS cert file (enables HTTPS listening)")
 	rootCmd.Flags().String("unixsocketperm", viper.GetString("unixsocketperm"), "optional file permission for the unix socket")
 	rootCmd.Flags().String("tlskey", viper.GetString("tlskey"), "optional path to a TLS key file (enables HTTPS listening)")
 
-	rootCmd.Flags().Duration("sessiontimeout", viper.GetDuration("sessiontimeout"), "how long Navidrome will wait before closing web ui idle sessions")
+	rootCmd.Flags().Duration("sessiontimeout", viper.GetDuration("sessiontimeout"), "how long Bragi will wait before closing web UI idle sessions")
 	rootCmd.Flags().Duration("scaninterval", viper.GetDuration("scaninterval"), "how frequently to scan for changes in your music library")
 	rootCmd.Flags().String("uiloginbackgroundurl", viper.GetString("uiloginbackgroundurl"), "URL to a backaground image used in the Login page")
 	rootCmd.Flags().Bool("enabletranscodingconfig", viper.GetBool("enabletranscodingconfig"), "enables transcoding configuration in the UI")

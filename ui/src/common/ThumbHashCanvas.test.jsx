@@ -59,7 +59,7 @@ describe('ThumbHashCanvas', () => {
     expect(ctxMock.createImageData).toHaveBeenCalledWith(32, 1)
   })
 
-  // Unlike a blurhash, a thumbhash carries its own approximate aspect, so an unknown ratio
+  // A thumbhash carries its own approximate aspect, so an unknown ratio
   // falls back to that rather than to a square.
   it('falls back to the hash own aspect when the ratio is unknown', () => {
     render(<ThumbHashCanvas hash={LANDSCAPE} ratio={0} />)

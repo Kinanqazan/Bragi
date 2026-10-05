@@ -105,7 +105,7 @@ var _ = Describe("matcher internals", func() {
 	})
 
 	It("treats an ID-only artist (no name/MBID) as an identity match, unlocking album tiers", func() {
-		// A plugin that supplies only a Navidrome artist ID: name and mbid are empty. The ID is the
+		// An external metadata provider may supply only a Navidrome artist ID: name and mbid are empty. The ID is the
 		// strongest identity signal, so the track's album still elevates specificity above 0.
 		q := songQuery{
 			title:     "song",
@@ -113,7 +113,7 @@ var _ = Describe("matcher internals", func() {
 			album:     "violator",
 			albumMBID: "album-mbid-1",
 		}
-		// Track credits the owned artist ID; no MBID anywhere (untagged library / ID-only plugin).
+		// Track credits the owned artist ID; no MBID anywhere (untagged library / ID-only provider).
 		mf := model.MediaFile{Title: "Song", Album: "Violator", MbzAlbumID: "album-mbid-1"}
 		t := newSanitizedTrack(&mf, map[string]struct{}{"artist-1": {}}, nil)
 		// Album MBID matches → level 5 via the ID identity, where the old code scored 0.

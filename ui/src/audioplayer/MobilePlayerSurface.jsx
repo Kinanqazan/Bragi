@@ -148,7 +148,7 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     aspectRatio: '1',
     margin: '0 auto',
-    borderRadius: 16,
+    borderRadius: 4,
     overflow: 'hidden',
     boxShadow:
       '0 8px 24px -4px rgba(0, 0, 0, 0.22), 0 16px 40px -2px rgba(0, 0, 0, 0.32)',
@@ -160,7 +160,7 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     left: 0,
     overflow: 'hidden',
-    borderRadius: 16,
+    borderRadius: 4,
     boxShadow:
       '0 8px 24px -4px rgba(0, 0, 0, 0.22), 0 16px 40px -2px rgba(0, 0, 0, 0.32)',
     background: theme.palette.action.hover,
@@ -433,7 +433,7 @@ const MobilePlayerSurface = ({
     }
     const bounds = sharedRects.current
     if (sharedArtworkRef.current && bounds.miniArtwork?.width) {
-      sharedArtworkRef.current.style.borderRadius = `${(16 * bounds.fullArtwork.width) / bounds.miniArtwork.width}px`
+      sharedArtworkRef.current.style.borderRadius = `${(4 * bounds.fullArtwork.width) / bounds.miniArtwork.width}px`
     }
     for (const [element, rect] of [
       [sharedArtworkRef.current, bounds.fullArtwork],
@@ -1176,6 +1176,9 @@ const MobilePlayerSurface = ({
             lyric={lyric}
             cover={track.cover}
             glowColor={ambientColor}
+            songId={!track.isRadio ? (track.trackId || track.song?.id || track.id) : null}
+            searchTitle={displayTitle || track.song?.title || ''}
+            searchArtist={artist || ''}
             onClose={() => setLyricsOpen(false)}
             onSeek={commands.seek}
           />

@@ -25,7 +25,6 @@ import (
 	"github.com/navidrome/navidrome/model/request"
 	"github.com/navidrome/navidrome/server"
 	"github.com/navidrome/navidrome/server/subsonic/responses"
-	. "github.com/navidrome/navidrome/utils/gg"
 	"github.com/navidrome/navidrome/utils/req"
 )
 
@@ -49,23 +48,15 @@ func postFormToQueryParams(next http.Handler) http.Handler {
 	})
 }
 
-func fromInternalOrProxyAuth(r *http.Request) (string, bool) {
-	username := server.InternalAuth(r)
-
-	// If the username comes from internal auth, do not also do reverse proxy auth, as
-	// the request will have no reverse proxy IP
-	if username != "" {
-		return username, true
-	}
-
-	return server.UsernameFromExtAuthHeader(r), false
+func fromReverseProxyAuth(r *http.Request) string {
+	return server.UsernameFromExtAuthHeader(r)
 }
 
 func checkRequiredParameters(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var requiredParameters []string
 
-		username, _ := fromInternalOrProxyAuth(r)
+		username := fromReverseProxyAuth(r)
 		if username != "" {
 			requiredParameters = []string{"v", "c"}
 		} else {
@@ -105,9 +96,9 @@ func authenticate(ds model.DataStore) func(next http.Handler) http.Handler {
 			var usr *model.User
 			var err error
 
-			username, isInternalAuth := fromInternalOrProxyAuth(r)
+			username := fromReverseProxyAuth(r)
 			if username != "" {
-				authType := If(isInternalAuth, "internal", "reverse-proxy")
+				authType := "reverse-proxy"
 				usr, err = ds.User(ctx).FindByUsername(username)
 				if errors.Is(err, context.Canceled) {
 					log.Debug(ctx, "API: Request canceled when authenticating", "auth", authType, "username", username, "remoteAddr", r.RemoteAddr, err)

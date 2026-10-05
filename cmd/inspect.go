@@ -25,7 +25,7 @@ func init() {
 var inspectCmd = &cobra.Command{
 	Use:   "inspect [files to inspect]",
 	Short: "Inspect tags",
-	Long:  "Show file tags as seen by Navidrome",
+	Long:  "Show file tags as read by Bragi",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runInspector(args)

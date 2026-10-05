@@ -58,8 +58,8 @@ func AlbumsByArtistID(artistId string) Options {
 }
 
 // AlbumsByContributingArtistID matches albums where the artist performs on a track but is not the
-// album artist — Jellyfin's "Featured On". The disjoint complement of AlbumsByArtistID, so an
-// artist's own discography never leaks into it.
+// album artist. The disjoint complement of AlbumsByArtistID, so an artist's own discography never
+// leaks into it.
 func AlbumsByContributingArtistID(artistId string) Options {
 	return addDefaultFilters(Options{
 		Sort: "max_year",

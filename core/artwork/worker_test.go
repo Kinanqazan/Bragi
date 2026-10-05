@@ -133,7 +133,7 @@ var _ = Describe("Worker", func() {
 		libRepo = &tests.MockLibraryRepo{}
 		libRepo.SetData(model.Libraries{{ID: 0, Path: testFileLibPath(repoRoot)}})
 		ffm = tests.NewMockFFmpeg("")
-		ag = agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag = agents.GetAgents(&tests.MockDataStore{})
 		artRepo = tests.CreateMockArtworkRepo()
 		queueRepo = tests.CreateMockArtworkQueueRepo()
 		ds = &tests.MockDataStore{
@@ -803,7 +803,7 @@ var _ = Describe("Worker", func() {
 			DeferCleanup(func() { goleak.VerifyNone(GinkgoT(), ignore) })
 
 			localDS := &tests.MockDataStore{MockedArtworkQueue: tests.CreateMockArtworkQueueRepo()}
-			lw := NewWorker(localDS, NewImageStore(GinkgoT().TempDir()), agents.GetAgents(localDS, nil), tests.NewMockFFmpeg(""), &fakeEventBroker{}, imgCache)
+			lw := NewWorker(localDS, NewImageStore(GinkgoT().TempDir()), agents.GetAgents(localDS), tests.NewMockFFmpeg(""), &fakeEventBroker{}, imgCache)
 
 			runCtx, cancel := context.WithCancel(ctx)
 			done := make(chan error, 1)

@@ -91,7 +91,6 @@ func serveIndex(ds model.DataStore, fsys fs.FS, shareInfo *model.Share) http.Han
 			"defaultDownsamplingFormat": conf.Server.DefaultDownsamplingFormat,
 			"separator":                 string(os.PathSeparator),
 			"enableInspect":             conf.Server.Inspect.Enabled,
-			"pluginsEnabled":            conf.Server.Plugins.Enabled,
 			"extAuthLogoutURL":          conf.Server.ExtAuth.LogoutURL,
 		}
 		appConfig["enableMediaFileMetadataEditing"] = conf.Server.EnableMediaFileMetadataEditing

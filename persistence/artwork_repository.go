@@ -33,7 +33,8 @@ func NewArtworkRepository(ctx context.Context, db dbx.Builder) model.ArtworkRepo
 }
 
 func (r *artworkRepository) GetImage(hash string) (*model.Artwork, error) {
-	sel := Select("*").From(r.tableName).Where(Eq{"hash": hash})
+	sel := Select("hash", "mime", "width", "height", "size_bytes", "thumb_hash", "dominant_color", "created_at").
+		From(r.tableName).Where(Eq{"hash": hash})
 	var res model.Artwork
 	if err := r.queryOne(sel, &res); err != nil {
 		return nil, err
@@ -50,7 +51,7 @@ func (r *artworkRepository) PutImage(a *model.Artwork) error {
 	}
 	// created_at=excluded.created_at: reacquiring an orphan must reset the prune grace window.
 	ins := Insert(r.tableName).SetMap(values).Suffix(`ON CONFLICT (hash) DO UPDATE SET mime=excluded.mime, width=excluded.width,
-		height=excluded.height, size_bytes=excluded.size_bytes, blur_hash=excluded.blur_hash,
+		height=excluded.height, size_bytes=excluded.size_bytes,
 		thumb_hash=excluded.thumb_hash, dominant_color=excluded.dominant_color,
 		created_at=excluded.created_at`)
 	_, err = r.executeSQL(ins)
@@ -151,8 +152,7 @@ func (r *artworkRepository) DeleteForItems(kind model.Kind, ids []string) error 
 func (r *artworkRepository) GetInfoForItems(kind model.Kind, ids []string) (map[string]model.ItemArtworkInfo, error) {
 	res := map[string]model.ItemArtworkInfo{}
 	for chunk := range slices.Chunk(ids, artworkBatchSize) {
-		sel := Select("ia.item_id", "ia.hash", "COALESCE(a.blur_hash, '') as blur_hash",
-			"COALESCE(a.thumb_hash, '') as thumb_hash",
+		sel := Select("ia.item_id", "ia.hash", "COALESCE(a.thumb_hash, '') as thumb_hash",
 			"COALESCE(a.dominant_color, '') as dominant_color",
 			"COALESCE(a.width, 0) as width", "COALESCE(a.height, 0) as height").
 			From(itemArtworkTable + " ia").

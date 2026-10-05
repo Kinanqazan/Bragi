@@ -133,7 +133,7 @@ var _ = Describe("Artwork Serving", Ordered, func() {
 		imgCache := newDummyImageCache(ctx)
 		ffm := harness.NoopFFmpeg{}
 		artSvc = artwork.NewArtwork(ds, imgCache, store, ffm)
-		worker = artwork.NewWorker(ds, store, agents.GetAgents(ds, nil), ffm, events.NoopBroker(), imgCache)
+		worker = artwork.NewWorker(ds, store, agents.GetAgents(ds), ffm, events.NoopBroker(), imgCache)
 
 		artRouter = buildArtworkRouter(artSvc)
 		router = artRouter // so the shared doReq/doRawReq helpers hit the artwork-wired router
@@ -256,8 +256,8 @@ func buildArtworkRouter(art artwork.Artwork) *subsonic.Router {
 	return subsonic.New(
 		ds, art, streamerSpy, noopArchiver{}, core.NewPlayers(ds), noopProvider{}, s,
 		events.NoopBroker(), playlists.NewPlaylists(ds, artwork.NewUploader(ds)),
-		scrobbler.NewPlayTracker(ds, events.NoopBroker(), nil), core.NewShare(ds),
-		playback.PlaybackServer(nil), metrics.NewNoopInstance(), lyrics.NewLyrics(ds, nil), decider, nil,
+		scrobbler.NewPlayTracker(ds, events.NoopBroker()), core.NewShare(ds),
+		playback.PlaybackServer(nil), metrics.NewNoopInstance(), lyrics.NewLyrics(ds), decider,
 	)
 }
 

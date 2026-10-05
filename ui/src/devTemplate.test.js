@@ -16,7 +16,7 @@ describe('Vite development template configuration', () => {
     expect(html).toContain('http://192.168.1.20:4533')
   })
 
-  it('continues to accept legacy Navidrome-prefixed settings', () => {
+  it('ignores former Navidrome-prefixed settings', () => {
     const plugin = devTemplatePlugin(false, {
       ND_ENABLEMEDIAFILEMETADATAEDITING: 'true',
       ND_CASTMEDIABASEURL: 'http://192.168.1.21:4533',
@@ -25,20 +25,7 @@ describe('Vite development template configuration', () => {
       '<script>window.__APP_CONFIG__ = {{ .AppConfig }}</script>',
     )
 
-    expect(html).toContain('true')
-    expect(html).toContain('http://192.168.1.21:4533')
-  })
-
-  it('prefers Bragi-prefixed settings when both prefixes are set', () => {
-    const plugin = devTemplatePlugin(false, {
-      BR_ENABLEMEDIAFILEMETADATAEDITING: 'false',
-      ND_ENABLEMEDIAFILEMETADATAEDITING: 'true',
-    })
-    const html = plugin.transformIndexHtml(
-      '<script>window.__APP_CONFIG__ = {{ .AppConfig }}</script>',
-    )
-
-    expect(html).toContain('false}')
     expect(html).not.toContain('true}')
+    expect(html).not.toContain('http://192.168.1.21:4533')
   })
 })

@@ -3,7 +3,7 @@
 
 -- Covering index for the title-sorted, library-scoped song listing:
 --   WHERE missing = ? AND library_id = ? ORDER BY order_title LIMIT n OFFSET m
--- (Jellyfin clients page through the whole library this way; non-admin native and
+-- (Clients page through the whole library this way; non-admin native and
 -- Subsonic song lists produce the same shape.)
 --
 -- Without it, SQLite walks media_file_order_title and must fetch the table row for

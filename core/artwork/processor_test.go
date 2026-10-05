@@ -67,7 +67,7 @@ var _ = Describe("processor.acquire", func() {
 		libRepo = &tests.MockLibraryRepo{}
 		libRepo.SetData(model.Libraries{{ID: 0, Path: testFileLibPath(repoRoot)}})
 		ffm = tests.NewMockFFmpeg("")
-		ag = agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag = agents.GetAgents(&tests.MockDataStore{})
 		artRepo = tests.CreateMockArtworkRepo()
 		ds = &tests.MockDataStore{
 			MockedFolder:  folderRepo,
@@ -102,8 +102,7 @@ var _ = Describe("processor.acquire", func() {
 
 		art, err := artRepo.GetImage(ia.Hash)
 		Expect(err).ToNot(HaveOccurred())
-		// Every placeholder is derived from the one shared thumbnail, so all three land together.
-		Expect(art.BlurHash).ToNot(BeEmpty())
+		// Both placeholder values are derived from the same shared thumbnail.
 		Expect(art.ThumbHash).ToNot(BeEmpty())
 		Expect(art.DominantColor).To(MatchRegexp(`^#[0-9a-f]{6}$`))
 		_, err = store.Open(ia.Hash, art.Mime)
@@ -147,7 +146,7 @@ var _ = Describe("processor.acquire", func() {
 		})
 	})
 
-	It("found-embedded: writes a store file and computes a non-empty blurhash from a real fixture", func() {
+	It("found-embedded: writes a store file and computes a thumbhash from a real fixture", func() {
 		ds.MockedAlbum.(*tests.MockAlbumRepo).SetData(model.Albums{
 			{ID: "al2", Name: "Album", EmbedArtPath: "tests/fixtures/artist/an-album/test.mp3", FolderIDs: []string{"f1"}},
 		})
@@ -163,7 +162,7 @@ var _ = Describe("processor.acquire", func() {
 
 		art, err := artRepo.GetImage(ia.Hash)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(art.BlurHash).ToNot(BeEmpty())
+		Expect(art.ThumbHash).ToNot(BeEmpty())
 
 		rc, err := store.Open(ia.Hash, art.Mime)
 		Expect(err).ToNot(HaveOccurred())
@@ -280,7 +279,7 @@ var _ = Describe("processor.acquire", func() {
 		art, err := artRepo.GetImage(ia.Hash)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(art.Width).To(BeZero())
-		Expect(art.BlurHash).To(BeEmpty())
+		Expect(art.ThumbHash).To(BeEmpty())
 	})
 
 	It("empty local file: fails without writing state", func() {
@@ -360,7 +359,7 @@ var _ = Describe("processor.acquire", func() {
 
 		// A re-decode instead of a hash dedup would overwrite this sentinel.
 		poisoned := artRepo.Data[ia1.Hash]
-		poisoned.BlurHash = "SENTINEL"
+		poisoned.ThumbHash = "SENTINEL"
 		artRepo.Data[ia1.Hash] = poisoned
 
 		out2, _ := proc.acquire(ctx, model.ArtworkQueueItem{ItemKind: "al", ItemID: "al6"})
@@ -371,7 +370,7 @@ var _ = Describe("processor.acquire", func() {
 
 		reused, err := artRepo.GetImage(ia1.Hash)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(reused.BlurHash).To(Equal("SENTINEL"))
+		Expect(reused.ThumbHash).To(Equal("SENTINEL"))
 	})
 
 	It("two items, two files, identical bytes: each item keeps its own provenance; the shared artwork row is written once", func() {
@@ -403,7 +402,7 @@ var _ = Describe("processor.acquire", func() {
 
 		// A re-decode instead of a hash dedup would overwrite this sentinel.
 		poisoned := artRepo.Data[iaA.Hash]
-		poisoned.BlurHash = "SENTINEL"
+		poisoned.ThumbHash = "SENTINEL"
 		artRepo.Data[iaA.Hash] = poisoned
 
 		folderRepo.result = []model.Folder{{Path: "album-b", ImageFiles: []string{"cover.jpg"}}}
@@ -423,7 +422,7 @@ var _ = Describe("processor.acquire", func() {
 		Expect(artRepo.Data).To(HaveLen(1))
 		reused, err := artRepo.GetImage(iaA.Hash)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(reused.BlurHash).To(Equal("SENTINEL"))
+		Expect(reused.ThumbHash).To(Equal("SENTINEL"))
 	})
 
 	It("decode failure on found bytes: fails without writing state", func() {
@@ -497,7 +496,6 @@ var _ = Describe("processor.acquire", func() {
 		Expect(art.Mime).To(Equal("application/octet-stream"))
 		Expect(art.Width).To(BeZero())
 		Expect(art.Height).To(BeZero())
-		Expect(art.BlurHash).To(BeEmpty())
 		Expect(art.ThumbHash).To(BeEmpty())
 		Expect(art.DominantColor).To(BeEmpty())
 	})
@@ -531,7 +529,7 @@ var _ = Describe("processor.acquire", func() {
 		upgraded, err := artRepo.GetImage(hash)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(upgraded.Width).To(BeNumerically(">", 0))
-		Expect(upgraded.BlurHash).ToNot(BeEmpty())
+		Expect(upgraded.ThumbHash).ToNot(BeEmpty())
 	})
 
 	It("store write failure: fails without writing state", func() {

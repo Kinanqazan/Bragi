@@ -1098,12 +1098,11 @@ var _ = Describe("MediaRepository", func() {
 		It("carries the parent album's artwork state onto each track", func() {
 			mfs := model.MediaFiles{{ID: "mf-1", AlbumID: "al-1"}}
 			infos := map[string]model.ItemArtworkInfo{
-				"al-1": {ItemID: "al-1", Hash: "0123456789abcdef", BlurHash: "LEHV6nWB2yk8"},
+				"al-1": {ItemID: "al-1", Hash: "0123456789abcdef"},
 			}
 			applyItemImage(infos, mfs[0].AlbumID, &mfs[0].AlbumImage)
 
 			Expect(mfs[0].AlbumImage.ImageHash).To(Equal("0123456789abcdef"))
-			Expect(mfs[0].AlbumImage.BlurHash).To(Equal("LEHV6nWB2yk8"))
 			Expect(mfs[0].AlbumImage.ImageAbsent).To(BeFalse())
 		})
 

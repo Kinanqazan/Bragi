@@ -326,22 +326,21 @@ func reprocessConfirm(yes bool, in io.Reader) confirmFunc {
 	return promptConfirm(in)
 }
 
-// externalEstimate claims no bound: a local hit ends the walk before any agent is asked, and plugin
-// agents are unregistered in a CLI that never starts the plugin manager.
+// externalEstimate may overstate the work because a local hit ends the walk early.
 func externalEstimate(n int64) string {
 	if n == 0 {
 		return "none"
 	}
-	return fmt.Sprintf("~%d estimated (plugin agents not counted; local hits may need fewer)", n)
+	return fmt.Sprintf("~%d estimated (local hits may need fewer)", n)
 }
 
 func externalLookupLine(n int64) string {
 	return fmt.Sprintf("External lookups: %s.", externalEstimate(n))
 }
 
-// imageAgentCount counts only the built-in image agents, for the same reason.
+// imageAgentCount counts the built-in image agents configured for this server.
 func imageAgentCount(ds model.DataStore) artwork.ImageAgentCount {
-	ag := agents.GetAgents(ds, getPluginManager())
+	ag := agents.GetAgents(ds)
 	return artwork.ImageAgentCount{Artist: len(ag.ArtistImageAgents()), Album: len(ag.AlbumImageAgents())}
 }
 
@@ -510,8 +509,7 @@ func parseArtworkKind(s string, valid []model.Kind) (model.Kind, error) {
 	return kind, fmt.Errorf("invalid kind %q, expected one of: %s", s, kindPrefixes(valid))
 }
 
-// explainAgents accounts for every configured agent: one the CLI cannot construct (a plugin, or a
-// built-in missing its credentials) never reaches the Chain, so the raw list alone overstates it.
+// explainAgents marks configured agents unavailable in this CLI process, so the raw list may overstate the chain.
 func explainAgents(configured string, available []string) string {
 	if strings.TrimSpace(configured) == "" {
 		return "(none)"
@@ -534,7 +532,7 @@ func explainAgents(configured string, available []string) string {
 
 // availableImageAgents names the agents that can actually supply an image for kind.
 func availableImageAgents(ds model.DataStore, kind model.Kind) []string {
-	ag := agents.GetAgents(ds, getPluginManager())
+	ag := agents.GetAgents(ds)
 	if kind == model.KindArtistArtwork {
 		return slice.Map(ag.ArtistImageAgents(), func(a agents.ArtistImageAgent) string { return a.Name })
 	}

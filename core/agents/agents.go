@@ -14,59 +14,31 @@ import (
 	"github.com/navidrome/navidrome/utils/singleton"
 )
 
-// PluginLoader defines an interface for loading plugins
-type PluginLoader interface {
-	// PluginNames returns the names of all plugins that implement a particular service
-	PluginNames(capability string) []string
-	// LoadMediaAgent loads and returns a media agent plugin
-	LoadMediaAgent(name string) (Interface, bool)
-}
-
-// Agents is a meta-agent that aggregates multiple built-in and plugin agents. It tries each enabled agent in order
+// Agents is a meta-agent that aggregates the enabled built-in agents in order
 // until one returns valid data.
 type Agents struct {
-	ds           model.DataStore
-	pluginLoader PluginLoader
+	ds model.DataStore
 }
 
 // GetAgents returns the singleton instance of Agents
-func GetAgents(ds model.DataStore, pluginLoader PluginLoader) *Agents {
+func GetAgents(ds model.DataStore) *Agents {
 	return singleton.GetInstance(func() *Agents {
-		return createAgents(ds, pluginLoader)
+		return createAgents(ds)
 	})
 }
 
 // createAgents creates a new Agents instance. Used in tests
-func createAgents(ds model.DataStore, pluginLoader PluginLoader) *Agents {
-	return &Agents{
-		ds:           ds,
-		pluginLoader: pluginLoader,
-	}
+func createAgents(ds model.DataStore) *Agents {
+	return &Agents{ds: ds}
 }
 
-// enabledAgent represents an enabled agent with its type information
-type enabledAgent struct {
-	name     string
-	isPlugin bool
-}
-
-// getEnabledAgentNames returns the current list of enabled agents, including:
-// 1. Built-in agents and plugins from config (in the specified order)
-// 2. Always include LocalAgentName
-// 3. If config is empty, include ONLY LocalAgentName
-// Each enabledAgent contains the name and whether it's a plugin (true) or built-in (false)
-func (a *Agents) getEnabledAgentNames() []enabledAgent {
+// getEnabledAgentNames returns configured built-in agents in order and always
+// includes the local agent. If no agents are configured, only the local agent runs.
+func (a *Agents) getEnabledAgentNames() []string {
 	// If no agents configured, ONLY use the local agent
 	if conf.Server.Agents == "" {
-		return []enabledAgent{{name: LocalAgentName, isPlugin: false}}
+		return []string{LocalAgentName}
 	}
-
-	// Get all available plugin names
-	var availablePlugins []string
-	if a.pluginLoader != nil {
-		availablePlugins = a.pluginLoader.PluginNames("MetadataAgent")
-	}
-	log.Trace("Available MetadataAgent plugins", "plugins", availablePlugins)
 
 	configuredAgents := strings.Split(conf.Server.Agents, ",")
 
@@ -76,19 +48,11 @@ func (a *Agents) getEnabledAgentNames() []enabledAgent {
 		configuredAgents = append(configuredAgents, LocalAgentName)
 	}
 
-	// Filter to only include valid agents (built-in or plugins)
-	var validAgents []enabledAgent
+	// Ignore unknown names, retaining only built-in agents.
+	var validAgents []string
 	for _, name := range configuredAgents {
-		// Check if it's a built-in agent
-		isBuiltIn := Map[name] != nil
-
-		// Check if it's a plugin
-		isPlugin := slices.Contains(availablePlugins, name)
-
-		if isBuiltIn {
-			validAgents = append(validAgents, enabledAgent{name: name, isPlugin: false})
-		} else if isPlugin {
-			validAgents = append(validAgents, enabledAgent{name: name, isPlugin: true})
+		if Map[name] != nil {
+			validAgents = append(validAgents, name)
 		} else {
 			log.Debug("Unknown agent ignored", "name", name)
 		}
@@ -96,27 +60,15 @@ func (a *Agents) getEnabledAgentNames() []enabledAgent {
 	return validAgents
 }
 
-func (a *Agents) getAgent(ea enabledAgent) Interface {
-	if ea.isPlugin {
-		// Try to load WASM plugin agent (if plugin loader is available)
-		if a.pluginLoader != nil {
-			agent, ok := a.pluginLoader.LoadMediaAgent(ea.name)
-			if ok && agent != nil {
-				return agent
-			}
+func (a *Agents) getAgent(name string) Interface {
+	constructor, ok := Map[name]
+	if ok {
+		agent := constructor(a.ds)
+		if agent != nil {
+			return agent
 		}
-	} else {
-		// Try to get built-in agent
-		constructor, ok := Map[ea.name]
-		if ok {
-			agent := constructor(a.ds)
-			if agent != nil {
-				return agent
-			}
-			log.Debug("Built-in agent not available. Missing configuration?", "name", ea.name)
-		}
+		log.Debug("Built-in agent not available. Missing configuration?", "name", name)
 	}
-
 	return nil
 }
 
@@ -140,9 +92,9 @@ type AlbumImageAgent struct {
 // in conf.Server.Agents order (same order the aggregate dispatch uses).
 func (a *Agents) ArtistImageAgents() []ArtistImageAgent {
 	var result []ArtistImageAgent
-	for _, ea := range a.getEnabledAgentNames() {
-		if retriever, ok := a.getAgent(ea).(ArtistImageRetriever); ok {
-			result = append(result, ArtistImageAgent{Name: ea.name, Retriever: retriever})
+	for _, name := range a.getEnabledAgentNames() {
+		if retriever, ok := a.getAgent(name).(ArtistImageRetriever); ok {
+			result = append(result, ArtistImageAgent{Name: name, Retriever: retriever})
 		}
 	}
 	return result
@@ -152,9 +104,9 @@ func (a *Agents) ArtistImageAgents() []ArtistImageAgent {
 // in conf.Server.Agents order (same order the aggregate dispatch uses).
 func (a *Agents) AlbumImageAgents() []AlbumImageAgent {
 	var result []AlbumImageAgent
-	for _, ea := range a.getEnabledAgentNames() {
-		if retriever, ok := a.getAgent(ea).(AlbumImageRetriever); ok {
-			result = append(result, AlbumImageAgent{Name: ea.name, Retriever: retriever})
+	for _, name := range a.getEnabledAgentNames() {
+		if retriever, ok := a.getAgent(name).(AlbumImageRetriever); ok {
+			result = append(result, AlbumImageAgent{Name: name, Retriever: retriever})
 		}
 	}
 	return result
@@ -224,8 +176,8 @@ func (a *Agents) GetSimilarArtists(ctx context.Context, id, name, mbid string, l
 	overLimit := int(float64(limit) * conf.Server.DevExternalArtistFetchMultiplier)
 
 	start := time.Now()
-	for _, enabledAgent := range a.getEnabledAgentNames() {
-		ag := a.getAgent(enabledAgent)
+	for _, name := range a.getEnabledAgentNames() {
+		ag := a.getAgent(name)
 		if ag == nil {
 			continue
 		}
@@ -358,8 +310,8 @@ func (a *Agents) GetSimilarSongsByArtist(ctx context.Context, id, name, mbid str
 func callAgentMethod[T comparable](ctx context.Context, agents *Agents, methodName string, fn func(Interface) (T, error)) (T, error) {
 	var zero T
 	start := time.Now()
-	for _, enabledAgent := range agents.getEnabledAgentNames() {
-		ag := agents.getAgent(enabledAgent)
+	for _, name := range agents.getEnabledAgentNames() {
+		ag := agents.getAgent(name)
 		if ag == nil {
 			continue
 		}
@@ -382,8 +334,8 @@ func callAgentMethod[T comparable](ctx context.Context, agents *Agents, methodNa
 
 func callAgentSliceMethod[T any](ctx context.Context, agents *Agents, methodName string, fn func(Interface) ([]T, error)) ([]T, error) {
 	start := time.Now()
-	for _, enabledAgent := range agents.getEnabledAgentNames() {
-		ag := agents.getAgent(enabledAgent)
+	for _, name := range agents.getEnabledAgentNames() {
+		ag := agents.getAgent(name)
 		if ag == nil {
 			continue
 		}

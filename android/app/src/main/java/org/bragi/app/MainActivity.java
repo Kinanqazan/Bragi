@@ -60,6 +60,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -1143,54 +1144,31 @@ public class MainActivity extends AppCompatActivity {
                     reader.close();
 
                     String body = sb.toString();
-                    int startIdx = body.indexOf("window.__APP_CONFIG__");
-                    if (startIdx != -1) {
-                        int eqIdx = body.indexOf("=", startIdx);
-                        int scriptEnd = body.indexOf("</script>", startIdx);
-                        if (eqIdx != -1 && (scriptEnd == -1 || eqIdx < scriptEnd)) {
-                            int firstQuote = body.indexOf("\"", eqIdx);
-                            int firstBrace = body.indexOf("{", eqIdx);
-                            String jsonStr = null;
-                            if (firstQuote != -1 && (firstBrace == -1 || firstQuote < firstBrace)) {
-                                // Quoted JSON string: window.__APP_CONFIG__ = "{\"baseURL\"...}";
-                                int lastQuote = scriptEnd != -1 ? body.lastIndexOf("\"", scriptEnd) : body.lastIndexOf("\"");
-                                if (lastQuote > firstQuote) {
-                                    String rawVal = body.substring(firstQuote + 1, lastQuote);
-                                    jsonStr = rawVal.replace("\\\"", "\"").replace("\\\\", "\\");
-                                }
-                            } else if (firstBrace != -1) {
-                                // Raw JSON object: window.__APP_CONFIG__ = {"baseURL"...};
-                                int lastBrace = scriptEnd != -1 ? body.lastIndexOf("}", scriptEnd) : body.lastIndexOf("}");
-                                if (lastBrace > firstBrace) {
-                                    jsonStr = body.substring(firstBrace, lastBrace + 1);
-                                }
-                            }
-                            if (jsonStr != null) {
-                                try {
-                                    JSONObject json = new JSONObject(jsonStr);
-                                    currentServerConfigJson = json.toString();
-                                    if (json.has("castMediaBaseURL")) {
-                                        String castBase = json.optString("castMediaBaseURL", "").trim();
-                                        if (!TextUtils.isEmpty(castBase)) {
-                                            currentCastMediaBaseUrl = castBase;
-                                            prefs.edit().putString("cast_media_base_url", castBase).apply();
-                                            Log.i("BragiCast", "Discovered server castMediaBaseURL: " + castBase);
-                                            runOnUiThread(() -> {
-                                                if (webView != null) {
-                                                    String script = String.format(Locale.US,
-                                                            "window.__BRAGI_CAST_MEDIA_BASE_URL__ = '%s'; if (window.__bragiSetCastMediaBaseUrl) { window.__bragiSetCastMediaBaseUrl('%s'); }",
-                                                            castBase.replace("'", "\\'"), castBase.replace("'", "\\'"));
-                                                    webView.evaluateJavascript(script, null);
-                                                }
-                                            });
-                                        }
+                    JSONObject json = parseServerAppConfig(body);
+                    if (json != null) {
+                        currentServerConfigJson = json.toString();
+                        if (json.has("castMediaBaseURL")) {
+                            String castBase = json.optString("castMediaBaseURL", "").trim();
+                            if (!TextUtils.isEmpty(castBase)) {
+                                currentCastMediaBaseUrl = castBase;
+                                prefs.edit().putString("cast_media_base_url", castBase).apply();
+                                Log.i("BragiCast", "Discovered server castMediaBaseURL: " + castBase);
+                                runOnUiThread(() -> {
+                                    if (webView != null) {
+                                        String script = String.format(Locale.US,
+                                                "window.__BRAGI_CAST_MEDIA_BASE_URL__ = '%s'; if (window.__bragiSetCastMediaBaseUrl) { window.__bragiSetCastMediaBaseUrl('%s'); }",
+                                                castBase.replace("'", "\\'"), castBase.replace("'", "\\'"));
+                                        webView.evaluateJavascript(script, null);
                                     }
-                                } catch (Exception e) {
-                                    Log.w("BragiCast", "Failed to parse __APP_CONFIG__ JSON: " + e.getMessage());
-                                }
+                                });
                             }
                         }
+                        Log.i("BragiNative", "Loaded server feature configuration from " + cleanUrl);
+                    } else {
+                        Log.w("BragiNative", "Server response did not contain a valid __APP_CONFIG__: " + cleanUrl);
                     }
+                } else {
+                    Log.w("BragiNative", "Could not load server configuration; HTTP " + code + " from " + cleanUrl);
                 }
             } catch (Exception e) {
                 Log.w("BragiCast", "Failed to fetch remote server config: " + e.getMessage());
@@ -1203,6 +1181,30 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }).start();
+    }
+
+    /**
+     * Reads the same JSON value rendered into the server's index.html, whether
+     * html/template emitted it as a JavaScript string or as a raw object.
+     */
+    static JSONObject parseServerAppConfig(String html) {
+        String marker = "window.__APP_CONFIG__";
+        int assignment = html.indexOf(marker);
+        if (assignment < 0) return null;
+        int equals = html.indexOf('=', assignment + marker.length());
+        if (equals < 0) return null;
+        int scriptEnd = html.indexOf("</script>", equals);
+        if (scriptEnd < 0) return null;
+
+        String expression = html.substring(equals + 1, scriptEnd).trim();
+        try {
+            Object value = new JSONTokener(expression).nextValue();
+            if (value instanceof JSONObject) return (JSONObject) value;
+            if (value instanceof String) return new JSONObject((String) value);
+        } catch (Exception e) {
+            Log.w("BragiNative", "Invalid server __APP_CONFIG__ value: " + e.getMessage());
+        }
+        return null;
     }
 
     private void saveAndLoadServer(String url) {

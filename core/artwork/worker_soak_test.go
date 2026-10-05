@@ -37,7 +37,7 @@ var _ = Describe("Worker soak", func() {
 			ImageFiles: []string{"cover.jpg"},
 		}}}
 		ffm := tests.NewMockFFmpeg("")
-		ag := agents.GetAgents(&tests.MockDataStore{}, nil)
+		ag := agents.GetAgents(&tests.MockDataStore{})
 		artRepo := tests.CreateMockArtworkRepo()
 		albumRepo := tests.CreateMockAlbumRepo()
 		albumRepo.SetData(model.Albums{

@@ -30,24 +30,22 @@ var _ = Describe("ArtworkRepository", func() {
 
 	Context("image identity", func() {
 		It("stores and retrieves an artwork by hash", func() {
-			a := &model.Artwork{Hash: "abc123", Mime: "image/jpeg", Width: 500, Height: 500, SizeBytes: 1234, BlurHash: "LKO2?U%2Tw=w"}
+			a := &model.Artwork{Hash: "abc123", Mime: "image/jpeg", Width: 500, Height: 500, SizeBytes: 1234}
 			Expect(repo.PutImage(a)).To(Succeed())
 
 			got, err := repo.GetImage("abc123")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(got.Mime).To(Equal("image/jpeg"))
-			Expect(got.BlurHash).To(Equal("LKO2?U%2Tw=w"))
 			Expect(got.CreatedAt).ToNot(BeZero())
 		})
 
-		It("round-trips the thumbhash alongside the blurhash", func() {
-			a := &model.Artwork{Hash: "both1", Mime: "image/jpeg", BlurHash: "LKO2?U%2Tw=w",
+		It("round-trips the thumbhash and dominant color", func() {
+			a := &model.Artwork{Hash: "both1", Mime: "image/jpeg",
 				ThumbHash: "1QcSHQRnh493V4dIh4eXh1h4kJUI", DominantColor: "#336699"}
 			Expect(repo.PutImage(a)).To(Succeed())
 
 			got, err := repo.GetImage("both1")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(got.BlurHash).To(Equal("LKO2?U%2Tw=w"))
 			Expect(got.ThumbHash).To(Equal("1QcSHQRnh493V4dIh4eXh1h4kJUI"))
 			Expect(got.DominantColor).To(Equal("#336699"))
 		})
@@ -60,15 +58,6 @@ var _ = Describe("ArtworkRepository", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(got.ThumbHash).To(Equal("second"))
 			Expect(got.DominantColor).To(Equal("#222222"))
-		})
-
-		It("is idempotent on Put (upsert by hash)", func() {
-			a := &model.Artwork{Hash: "dup1", Mime: "image/png"}
-			Expect(repo.PutImage(a)).To(Succeed())
-			a.BlurHash = "XYZ"
-			Expect(repo.PutImage(a)).To(Succeed())
-			got, _ := repo.GetImage("dup1")
-			Expect(got.BlurHash).To(Equal("XYZ"))
 		})
 
 		It("refreshes created_at when reacquiring an existing hash", func() {
@@ -197,8 +186,8 @@ var _ = Describe("ArtworkRepository", func() {
 			Expect(got.Hash).To(BeEmpty())
 		})
 
-		It("hydrates a page in one batch, including blurhash, dimensions and absence", func() {
-			Expect(repo.PutImage(&model.Artwork{Hash: "h9", Mime: "image/jpeg", BlurHash: "BH9",
+		It("hydrates a page in one batch, including placeholder metadata, dimensions and absence", func() {
+			Expect(repo.PutImage(&model.Artwork{Hash: "h9", Mime: "image/jpeg", ThumbHash: "TH9",
 				DominantColor: "#abcdef", Width: 1200, Height: 800})).To(Succeed())
 			Expect(repo.PutItemArtwork(&model.ItemArtwork{ItemKind: "al", ItemID: "x1", ImageType: model.ImageTypePrimary, Hash: "h9", Source: "folder"})).To(Succeed())
 			Expect(repo.PutItemArtwork(&model.ItemArtwork{ItemKind: "al", ItemID: "x2", ImageType: model.ImageTypePrimary, Hash: "", Source: ""})).To(Succeed())
@@ -207,7 +196,7 @@ var _ = Describe("ArtworkRepository", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(info).To(HaveLen(2))
 			Expect(info["x1"].Hash).To(Equal("h9"))
-			Expect(info["x1"].BlurHash).To(Equal("BH9"))
+			Expect(info["x1"].ThumbHash).To(Equal("TH9"))
 			Expect(info["x1"].DominantColor).To(Equal("#abcdef"))
 			Expect(info["x1"].Width).To(Equal(1200))
 			Expect(info["x1"].Height).To(Equal(800))

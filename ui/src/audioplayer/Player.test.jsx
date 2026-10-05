@@ -154,6 +154,32 @@ describe('Player mobile surface state', () => {
     expect(subsonic.getLyricsBySongId.mock.calls.length).toBeGreaterThan(callsBeforeSave)
   })
 
+  it('applies player-selected lyrics immediately without refetching them', async () => {
+    fixtures.lyricsResponse = { json: {} }
+    fixtures.bridge = makeBridge({
+      currentTrack: { trackId: 'song-player-save', title: 'Lyrics song' },
+      error: null,
+      playing: true,
+      currentTime: 0,
+      duration: 100,
+      volume: 1,
+    })
+    render(<Player />)
+    await waitFor(() => expect(subsonic.getLyricsBySongId).toHaveBeenCalledWith('song-player-save'))
+    const callsAfterInitialLoad = subsonic.getLyricsBySongId.mock.calls.length
+
+    window.dispatchEvent(
+      new CustomEvent('bragi:set-song-lyrics', {
+        detail: { songId: 'song-player-save', lyric: 'Loaded directly' },
+      }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('resolved-lyrics')).toHaveTextContent('Loaded directly'),
+    )
+    expect(subsonic.getLyricsBySongId.mock.calls.length).toBe(callsAfterInitialLoad)
+  })
+
   it('keeps the fullscreen player expanded while the next song loads', () => {
     fixtures.bridge = makeBridge({
       currentTrack: { trackId: 'song-a', title: 'Song A' },

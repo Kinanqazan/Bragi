@@ -196,7 +196,7 @@ const useStyles = makeStyles((theme) => ({
     height: 'auto',
     aspectRatio: '1 / 1',
     overflow: 'hidden',
-    borderRadius: 12,
+    borderRadius: 4,
     backgroundColor: theme.palette.action.hover,
     boxShadow: theme.palette.type === 'dark'
       ? '0 7px 20px rgba(0,0,0,0.25)'
@@ -269,7 +269,7 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: -6,
     flexShrink: 0,
     overflow: 'hidden',
-    borderRadius: '50%',
+    borderRadius: 4,
     backgroundColor: theme.palette.action.hover,
     boxShadow: theme.palette.type === 'dark'
       ? '0 7px 20px rgba(0,0,0,0.25)'

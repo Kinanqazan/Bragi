@@ -86,12 +86,6 @@ type Data struct {
 		HasCustomPID             bool   `json:"hasCustomPID,omitempty"`
 		HasCustomTags            bool   `json:"hasCustomTags,omitempty"`
 	} `json:"config"`
-	Plugins map[string]PluginInfo `json:"plugins,omitempty"`
-}
-
-type PluginInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
 }
 
 type FSInfo struct {

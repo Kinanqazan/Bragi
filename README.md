@@ -60,7 +60,7 @@
 
 Pushes to `master` automatically build and publish the container image to GitHub Container Registry:
 
-Use `BR_` for Bragi environment variables. Before using an image with these defaults, rename any `ND_` variables in your Compose service to `BR_`; legacy `ND_` variables remain accepted when no corresponding `BR_` value is set.
+Use the `BR_` prefix for Bragi environment variables. For example, `BR_ENABLEMEDIAFILEDELETION` enables administrator file deletion.
 
 ```yaml
 services:

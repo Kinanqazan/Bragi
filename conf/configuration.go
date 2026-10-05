@@ -114,7 +114,6 @@ type configOptions struct {
 	AuthWindowLength                time.Duration
 	PasswordEncryptionKey           string
 	ExtAuth                         extAuthOptions
-	Plugins                         pluginsOptions
 	HTTPHeaders                     httpHeaderOptions   `json:",omitzero"`
 	Prometheus                      prometheusOptions   `json:",omitzero"`
 	Scanner                         scannerOptions      `json:",omitzero"`
@@ -127,7 +126,6 @@ type configOptions struct {
 	LastFM                          lastfmOptions       `json:",omitzero"`
 	Deezer                          deezerOptions       `json:",omitzero"`
 	ListenBrainz                    listenBrainzOptions `json:",omitzero"`
-	Jellyfin                        jellyfinOptions     `json:",omitzero"`
 	EnableScrobbleHistory           bool
 	Tags                            map[string]TagConf `json:",omitempty"`
 	Agents                          string
@@ -158,8 +156,6 @@ type configOptions struct {
 	DevSelectiveWatcher               bool
 	DevInsightsInitialDelay           time.Duration
 	DevEnablePlayerInsights           bool
-	DevEnablePluginsInsights          bool
-	DevPluginCompilationTimeout       time.Duration
 	DevExternalArtistFetchMultiplier  float64
 	DevPreserveUnicodeInExternalCalls bool
 	DevEnableMediaFileProbe           bool
@@ -231,18 +227,6 @@ type listenBrainzOptions struct {
 	TrackAlgorithm  string
 }
 
-type jellyfinOptions struct {
-	Enabled    bool
-	ServerName string
-	// ExposedPublicUsers is a comma-separated list of usernames to advertise on the unauthenticated
-	// GET /Users/Public, so Jellyfin clients can show a login user-picker. Empty exposes no users.
-	ExposedPublicUsers string
-	// MaxConcurrentStreams bounds how many collection responses can stream at once. Each holds a DB
-	// cursor — and its pooled connection — for the whole client-paced response, so without a bound
-	// enough slow clients would take the entire pool and stall the scanner, scrobbles and the UI.
-	MaxConcurrentStreams int
-}
-
 type httpHeaderOptions struct {
 	FrameOptions string
 }
@@ -278,14 +262,6 @@ type inspectOptions struct {
 	MaxRequests    int
 	BacklogLimit   int
 	BacklogTimeout int
-}
-
-type pluginsOptions struct {
-	Enabled    bool
-	Folder     Dir
-	CacheSize  string
-	AutoReload bool
-	LogLevel   string
 }
 
 type extAuthOptions struct {
@@ -385,14 +361,6 @@ func Load(noConfigDump bool) {
 		Server.CacheFolder = NewDir(filepath.Join(Server.DataFolder.String(), "cache"))
 	}
 
-	if Server.Plugins.Enabled {
-		if Server.Plugins.Folder.String() == "" {
-			Server.Plugins.Folder = NewDirWithPerm(filepath.Join(Server.DataFolder.String(), "plugins"), 0700)
-		} else {
-			Server.Plugins.Folder = NewDirWithPerm(Server.Plugins.Folder.String(), 0700)
-		}
-	}
-
 	Server.ConfigFile = viper.GetViper().ConfigFileUsed()
 	if Server.DbPath == "" {
 		Server.DbPath = filepath.Join(Server.DataFolder.String(), consts.DefaultDbPath)
@@ -462,7 +430,7 @@ func Load(noConfigDump bool) {
 	} else if hasConfigEnvironmentVariables() {
 		log.Info("No configuration file found. Loaded configuration only from environment variables")
 	} else {
-		log.Warn("No configuration file found. Using default values. To specify a config file, use the --configfile flag or set BR_CONFIGFILE (legacy ND_CONFIGFILE is also accepted).")
+		log.Warn("No configuration file found. Using default values. To specify a config file, use the --configfile flag or set BR_CONFIGFILE.")
 	}
 
 	// Print current configuration if log level is Debug
@@ -578,7 +546,7 @@ func remapEnvVarKeysFromConfig() {
 		if viper.InConfig(canonicalKey) {
 			logFatal(fmt.Sprintf(
 				"Config file contains both '%s' and '%s'. Remove the environment-prefixed version. "+
-					"The 'BR_' or legacy 'ND_' prefix is only needed for environment variables, not config file keys.",
+					"The 'BR_' prefix is only needed for environment variables, not config file keys.",
 				displayEnvKey, cmp.Or(canonicalName, toPascalCase(canonicalKey)),
 			))
 			return
@@ -588,7 +556,7 @@ func remapEnvVarKeysFromConfig() {
 		// Unknown keys get no advice here, logUnknownOptions reports them instead
 		if canonicalName != "" {
 			_, _ = fmt.Fprintf(os.Stderr, "WARNING: Config key '%s' uses environment variable naming. Use '%s' instead. "+
-				"The 'BR_' or legacy 'ND_' prefix is only needed for environment variables.\n",
+				"The 'BR_' prefix is only needed for environment variables.\n",
 				displayEnvKey, canonicalName,
 			)
 		}
@@ -626,18 +594,11 @@ func envVarName(option string) string {
 	return prefixedEnvVarName("BR", option)
 }
 
-func legacyEnvVarName(option string) string {
-	if option == "" {
-		return ""
-	}
-	return prefixedEnvVarName("ND", option)
-}
-
 func envVarNames(option string) []string {
 	if option == "" {
 		return nil
 	}
-	return []string{envVarName(option), legacyEnvVarName(option)}
+	return []string{envVarName(option)}
 }
 
 func environmentValue(option string) string {
@@ -710,10 +671,8 @@ func unknownConfigKeys() []string {
 
 func configEnvKeyParts(key string) (prefix, stripped string, ok bool) {
 	lower := strings.ToLower(key)
-	for _, candidate := range []string{"br_", "nd_"} {
-		if strings.HasPrefix(lower, candidate) {
-			return strings.ToUpper(candidate), strings.TrimPrefix(lower, candidate), true
-		}
+	if strings.HasPrefix(lower, "br_") {
+		return "BR_", strings.TrimPrefix(lower, "br_"), true
 	}
 	return "", "", false
 }
@@ -982,12 +941,12 @@ func AddHook(hook func()) {
 	hooks = append(hooks, hook)
 }
 
-// hasConfigEnvironmentVariables checks whether config values came from either supported prefix.
+// hasConfigEnvironmentVariables checks whether config values came from Bragi-prefixed variables.
 func hasConfigEnvironmentVariables() bool {
 	for _, env := range os.Environ() {
 		name, _, _ := strings.Cut(env, "=")
 		upperName := strings.ToUpper(name)
-		if (strings.HasPrefix(upperName, "BR_") || strings.HasPrefix(upperName, "ND_")) && upperName != "BR_CONFIGFILE" && upperName != "ND_CONFIGFILE" {
+		if strings.HasPrefix(upperName, "BR_") && upperName != "BR_CONFIGFILE" {
 			return true
 		}
 	}
@@ -1118,8 +1077,6 @@ func setViperDefaults() {
 	viper.SetDefault("listenbrainz.baseurl", consts.DefaultListenBrainzBaseURL)
 	viper.SetDefault("listenbrainz.artistalgorithm", consts.DefaultListenBrainzArtistAlgorithm)
 	viper.SetDefault("listenbrainz.trackalgorithm", consts.DefaultListenBrainzTrackAlgorithm)
-	viper.SetDefault("jellyfin.enabled", false)
-	viper.SetDefault("jellyfin.servername", "")
 	viper.SetDefault("enablescrobblehistory", true)
 	viper.SetDefault("httpheaders.frameoptions", "DENY")
 	viper.SetDefault("backup.path", "")
@@ -1131,11 +1088,6 @@ func setViperDefaults() {
 	viper.SetDefault("inspect.maxrequests", 1)
 	viper.SetDefault("inspect.backloglimit", consts.RequestThrottleBacklogLimit)
 	viper.SetDefault("inspect.backlogtimeout", consts.RequestThrottleBacklogTimeout)
-	viper.SetDefault("plugins.folder", "")
-	viper.SetDefault("plugins.enabled", false)
-	viper.SetDefault("plugins.cachesize", "200MB")
-	viper.SetDefault("plugins.autoreload", false)
-	viper.SetDefault("plugins.loglevel", "")
 
 	// DevFlags. These are used to enable/disable debugging and incomplete features
 	viper.SetDefault("devlogsourceline", false)
@@ -1149,9 +1101,6 @@ func setViperDefaults() {
 	viper.SetDefault("devuishowconfig", true)
 	viper.SetDefault("devneweventstream", true)
 	viper.SetDefault("devoffsetoptimize", 50000)
-	// Half the pool: streams may take up to this many connections, leaving the rest for the scanner,
-	// scrobbles and the UI. See MaxOpenConns.
-	viper.SetDefault("jellyfin.maxconcurrentstreams", max(2, MaxOpenConns()/2))
 	viper.SetDefault("devartworkmaxrequests", max(2, runtime.NumCPU()/2))
 	viper.SetDefault("devartworkthrottlebackloglimit", consts.RequestThrottleBacklogLimit)
 	viper.SetDefault("devartworkthrottlebacklogtimeout", consts.RequestThrottleBacklogTimeout)
@@ -1169,8 +1118,6 @@ func setViperDefaults() {
 	viper.SetDefault("devselectivewatcher", true)
 	viper.SetDefault("devinsightsinitialdelay", consts.InsightsInitialDelay)
 	viper.SetDefault("devenableplayerinsights", true)
-	viper.SetDefault("devenablepluginsinsights", true)
-	viper.SetDefault("devplugincompilationtimeout", time.Minute)
 	viper.SetDefault("devexternalartistfetchmultiplier", 1.5)
 	viper.SetDefault("devpreserveunicodeinexternalcalls", false)
 	viper.SetDefault("devenablemediafileprobe", true)
@@ -1232,19 +1179,17 @@ func getConfigFile(cfgFile string) string {
 	if cfgFile != "" {
 		return cfgFile
 	}
-	for _, envVar := range []string{"BR_CONFIGFILE", "ND_CONFIGFILE"} {
-		cfgFile = os.Getenv(envVar)
-		if cfgFile != "" {
-			if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
-				return cfgFile
-			}
+	cfgFile = os.Getenv("BR_CONFIGFILE")
+	if cfgFile != "" {
+		if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
+			return cfgFile
 		}
 	}
 	return ""
 }
 
 // MaxOpenConns is the size of the shared SQLite connection pool, used by every subsystem (scanner,
-// Subsonic, Jellyfin, native API, UI).
+// Subsonic, native API, UI).
 //
 // It bounds concurrent *readers*: SQLite serializes writers on a single database-wide write lock, so
 // more connections buy no write parallelism. A connection is held while blocked on disk I/O or on a

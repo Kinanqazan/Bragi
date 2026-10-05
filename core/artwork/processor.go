@@ -15,7 +15,6 @@ import (
 
 	"github.com/navidrome/navidrome/conf"
 	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/artwork/blurhash"
 	"github.com/navidrome/navidrome/core/artwork/dominant"
 	"github.com/navidrome/navidrome/core/artwork/thumbhash"
 	"github.com/navidrome/navidrome/log"
@@ -77,8 +76,8 @@ type processor struct {
 	pruneLock sync.Locker
 }
 
-// acquire resolves one queue item end to end: find an image, hash/decode/
-// blurhash it, place its bytes, and persist the resulting state.
+// acquire resolves one queue item end to end: find an image, hash/decode it, place its bytes, and
+// persist the resulting state.
 func (p *processor) acquire(ctx context.Context, item model.ArtworkQueueItem) (out outcome, got *acquired) {
 	repo := p.ds.Artwork(ctx)
 	start := time.Now()
@@ -248,8 +247,8 @@ func undecodedArtwork(hash string) *model.Artwork {
 	return &model.Artwork{Hash: hash, Mime: mimeForFormat("")}
 }
 
-// decodeArtwork builds a new Artwork row from raw bytes: dimensions, mime and the two
-// placeholder hashes, both encoded from one shared downscaled thumbnail.
+// decodeArtwork builds a new Artwork row from raw bytes: dimensions, mime, a ThumbHash and a
+// dominant color, both derived from one shared downscaled thumbnail.
 func decodeArtwork(ctx context.Context, hash string, data []byte) (*model.Artwork, error) {
 	img, format, err := decodeCapped(data)
 	if err != nil {
@@ -257,12 +256,6 @@ func decodeArtwork(ctx context.Context, hash string, data []byte) (*model.Artwor
 	}
 
 	thumb := makeThumbnail(img, thumbnailSize)
-	bh, err := blurhash.Encode(thumb)
-	if err != nil {
-		log.Warn(ctx, "Artwork: Blurhash encoding failed", "hash", hash, err)
-		bh = ""
-	}
-
 	var th string
 	if raw, err := thumbhash.Encode(thumb); err != nil {
 		log.Warn(ctx, "Artwork: Thumbhash encoding failed", "hash", hash, err)
@@ -275,7 +268,6 @@ func decodeArtwork(ctx context.Context, hash string, data []byte) (*model.Artwor
 		Mime:          mimeForFormat(format),
 		Width:         img.Bounds().Dx(),
 		Height:        img.Bounds().Dy(),
-		BlurHash:      bh,
 		ThumbHash:     th,
 		DominantColor: dominant.Color(thumb),
 	}, nil
@@ -289,8 +281,8 @@ func makeThumbnail(img image.Image, maxSize int) image.Image {
 		return toFastScaleType(img)
 	}
 	scale := float64(maxSize) / float64(max(w, h))
-	// NRGBA, not RGBA: thumbhash requires straight alpha, and blurhash reads this type without
-	// converting, so neither encoder allocates a second copy of the thumbnail.
+	// NRGBA, not RGBA: ThumbHash requires straight alpha, so the encoder can use the thumbnail
+	// without allocating a converted copy.
 	dst := image.NewNRGBA(image.Rect(0, 0, max(1, int(float64(w)*scale)), max(1, int(float64(h)*scale))))
 	xdraw.CatmullRom.Scale(dst, dst.Bounds(), toFastScaleType(img), b, draw.Src, nil)
 	return dst

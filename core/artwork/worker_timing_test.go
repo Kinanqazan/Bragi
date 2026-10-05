@@ -45,7 +45,7 @@ func TestArtworkGatePerAgentBreakerIsolation(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		g := NewWithT(t)
 		w := NewWorker(&tests.MockDataStore{}, NewImageStore(t.TempDir()),
-			agents.GetAgents(&tests.MockDataStore{}, nil), tests.NewMockFFmpeg(""), &fakeEventBroker{}, nil)
+			agents.GetAgents(&tests.MockDataStore{}), tests.NewMockFFmpeg(""), &fakeEventBroker{}, nil)
 
 		fail := func() (io.ReadCloser, string, error) { return nil, "", errors.New("boom") }
 		for range breakerThreshold {

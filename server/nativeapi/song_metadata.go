@@ -80,6 +80,29 @@ func getMediaFileLyrics(maintenance core.Maintenance) http.HandlerFunc {
 	}
 }
 
+func searchMediaFileLyrics(maintenance core.Maintenance) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		matches, err := maintenance.SearchMediaFileLyrics(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("q"))
+		if err != nil {
+			var rateLimitErr *core.MediaFileLyricsSearchRateLimitError
+			if errors.As(err, &rateLimitErr) {
+				if rateLimitErr.RetryAfter != "" {
+					w.Header().Set("Retry-After", rateLimitErr.RetryAfter)
+				}
+				http.Error(w, "Lyrics service is rate limited. Try again later.", http.StatusTooManyRequests)
+				return
+			}
+			if errors.Is(err, core.ErrMediaFileLyricsSearchUnavailable) {
+				http.Error(w, "Lyrics search is temporarily unavailable.", http.StatusBadGateway)
+				return
+			}
+			writeMetadataError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, matches)
+	}
+}
+
 func saveMediaFileLyrics(maintenance core.Maintenance) http.HandlerFunc {
 	type lyricsUpdate struct {
 		Extension       string `json:"extension"`

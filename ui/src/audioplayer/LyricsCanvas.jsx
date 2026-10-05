@@ -1,8 +1,19 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CircularProgress,
+  IconButton,
+  Tooltip,
+  Typography,
+} from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
+import CloseIcon from '@material-ui/icons/Close'
 import MusicNoteIcon from '@material-ui/icons/MusicNote'
+import SaveIcon from '@material-ui/icons/Save'
 import clsx from 'clsx'
 import { useArtworkColor } from './artworkColor'
+import PlayerLyricsSearch from './PlayerLyricsSearch'
+import { REST_URL } from '../consts'
+import { httpClient } from '../dataProvider'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -52,6 +63,24 @@ const useStyles = makeStyles((theme) => ({
     gap: '10px',
     color: 'rgba(255, 255, 255, 0.7)',
   },
+  emptySearch: {
+    marginTop: 0,
+  },
+  draftActions: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 8,
+    right: 8,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
+    pointerEvents: 'auto',
+  },
+  actionButton: {
+    color: '#fff',
+    background: 'rgba(255, 255, 255, 0.12)',
+    '&:hover': { background: 'rgba(255, 255, 255, 0.2)' },
+  },
   emptyIcon: {
     fontSize: '36px',
     color: 'rgba(255, 255, 255, 0.4)',
@@ -61,10 +90,6 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
     color: '#ffffff',
     letterSpacing: '0.02em',
-  },
-  emptySubtext: {
-    fontSize: '0.92rem',
-    color: 'rgba(255, 255, 255, 0.65)',
   },
   line: {
     fontSize: '1.4rem',
@@ -124,14 +149,26 @@ export const LyricsCanvas = ({
   glowColor,
   onClose,
   onSeek,
+  songId,
+  searchTitle,
+  searchArtist,
 }) => {
   const classes = useStyles()
   const scrollRef = useRef(null)
   const activeLineRef = useRef(null)
+  const [lyricsDraft, setLyricsDraft] = useState(null)
+  const [lyricsSaving, setLyricsSaving] = useState(false)
+  const [lyricsSaveError, setLyricsSaveError] = useState('')
   const extractedColor = useArtworkColor(cover)
   const activeGlowColor = glowColor || extractedColor || undefined
+  const displayedLyric = lyricsDraft ?? lyric
 
-  const parsedLines = useMemo(() => parseLrc(lyric), [lyric])
+  useEffect(() => {
+    setLyricsDraft(null)
+    setLyricsSaveError('')
+  }, [songId])
+
+  const parsedLines = useMemo(() => parseLrc(displayedLyric), [displayedLyric])
   const isSynced = useMemo(
     () => parsedLines.some((l) => l.time >= 0),
     [parsedLines],
@@ -186,6 +223,40 @@ export const LyricsCanvas = ({
     }
   }
 
+  const handleSaveLyrics = async (event) => {
+    event.stopPropagation()
+    if (!songId || lyricsDraft === null || lyricsSaving) return
+    setLyricsSaving(true)
+    setLyricsSaveError('')
+    try {
+      const id = encodeURIComponent(songId)
+      const { json: current } = await httpClient(`${REST_URL}/song/${id}/lyrics`)
+      await httpClient(`${REST_URL}/song/${id}/lyrics/embedded`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          content: lyricsDraft,
+          expectedVersion: current?.embedded?.version || '',
+        }),
+      })
+      window.dispatchEvent(
+        new CustomEvent('bragi:set-song-lyrics', {
+          detail: { songId, lyric: lyricsDraft },
+        }),
+      )
+      setLyricsDraft(null)
+    } catch (error) {
+      setLyricsSaveError(error.message || 'Could not save lyrics to the song file.')
+    } finally {
+      setLyricsSaving(false)
+    }
+  }
+
+  const handleCancelLyrics = (event) => {
+    event.stopPropagation()
+    setLyricsDraft(null)
+    setLyricsSaveError('')
+  }
+
   if (parsedLines.length === 0) {
     return (
       <div
@@ -202,9 +273,15 @@ export const LyricsCanvas = ({
         <div className={classes.emptyContainer}>
           <MusicNoteIcon className={classes.emptyIcon} />
           <span className={classes.emptyText}>No lyrics available</span>
-          <span className={classes.emptySubtext}>
-            Tap to view album artwork
-          </span>
+          <PlayerLyricsSearch
+            songId={songId}
+            searchTitle={searchTitle}
+            searchArtist={searchArtist}
+            onLyricsPreview={(content) => {
+              setLyricsDraft(content)
+              setLyricsSaveError('')
+            }}
+          />
         </div>
       </div>
     )
@@ -223,6 +300,21 @@ export const LyricsCanvas = ({
       tabIndex={0}
       aria-label="Lyrics canvas, tap to return to artwork"
     >
+      {lyricsDraft !== null && (
+        <div className={classes.draftActions}>
+          {lyricsSaveError && <Typography role="alert" color="error" variant="caption">{lyricsSaveError}</Typography>}
+          <Tooltip title="Cancel lyrics">
+            <IconButton aria-label="Cancel lyrics selection" className={classes.actionButton} onClick={handleCancelLyrics} size="small" disabled={lyricsSaving}>
+              <CloseIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Save lyrics to song file">
+            <IconButton aria-label="Save lyrics to song file" className={classes.actionButton} onClick={handleSaveLyrics} size="small" disabled={lyricsSaving}>
+              {lyricsSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+            </IconButton>
+          </Tooltip>
+        </div>
+      )}
       <div className={classes.contentContainer}>
         {parsedLines.map((line, idx) => {
           const isActive = idx === activeIndex

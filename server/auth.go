@@ -217,15 +217,6 @@ func UsernameFromExtAuthHeader(r *http.Request) string {
 	return username
 }
 
-func InternalAuth(r *http.Request) string {
-	username, ok := request.InternalAuthFrom(r.Context())
-	if !ok {
-		return ""
-	}
-	log.Trace(r, "Found username in InternalAuth", "username", username)
-	return username
-}
-
 func UsernameFromConfig(*http.Request) string {
 	return conf.Server.DevAutoLoginUsername
 }

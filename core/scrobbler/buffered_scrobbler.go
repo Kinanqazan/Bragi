@@ -34,27 +34,13 @@ func backoffDelay(failures int) time.Duration {
 	return d
 }
 
-// Loader is a function that loads a scrobbler by name.
-// It returns the scrobbler and true if found, or nil and false if not available.
-// This allows the buffered scrobbler to always get the current plugin instance.
-type Loader func() (Scrobbler, bool)
-
 // newBufferedScrobbler creates a buffered scrobbler that wraps a static scrobbler instance.
 // Use this for builtin scrobblers that don't change.
 func newBufferedScrobbler(ds model.DataStore, s Scrobbler, service string) *bufferedScrobbler {
-	return newBufferedScrobblerWithLoader(ds, service, func() (Scrobbler, bool) {
-		return s, true
-	})
-}
-
-// newBufferedScrobblerWithLoader creates a buffered scrobbler that dynamically loads
-// the underlying scrobbler on each call. Use this for plugin scrobblers that may be
-// reloaded (e.g., after configuration changes).
-func newBufferedScrobblerWithLoader(ds model.DataStore, service string, loader Loader) *bufferedScrobbler {
 	ctx, cancel := context.WithCancel(context.Background())
 	b := &bufferedScrobbler{
 		ds:         ds,
-		loader:     loader,
+		wrapped:    s,
 		service:    service,
 		wakeSignal: make(chan struct{}, 1),
 		ctx:        ctx,
@@ -66,7 +52,7 @@ func newBufferedScrobblerWithLoader(ds model.DataStore, service string, loader L
 
 type bufferedScrobbler struct {
 	ds         model.DataStore
-	loader     Loader
+	wrapped    Scrobbler
 	service    string
 	wakeSignal chan struct{}
 	ctx        context.Context
@@ -80,19 +66,11 @@ func (b *bufferedScrobbler) Stop() {
 }
 
 func (b *bufferedScrobbler) IsAuthorized(ctx context.Context, userId string) bool {
-	s, ok := b.loader()
-	if !ok {
-		return false
-	}
-	return s.IsAuthorized(ctx, userId)
+	return b.wrapped.IsAuthorized(ctx, userId)
 }
 
 func (b *bufferedScrobbler) NowPlaying(ctx context.Context, userId string, track *model.MediaFile, position int) error {
-	s, ok := b.loader()
-	if !ok {
-		return errors.New("scrobbler not available")
-	}
-	return s.NowPlaying(ctx, userId, track, position)
+	return b.wrapped.NowPlaying(ctx, userId, track, position)
 }
 
 func (b *bufferedScrobbler) Scrobble(ctx context.Context, userId string, s Scrobble) error {
@@ -106,11 +84,7 @@ func (b *bufferedScrobbler) Scrobble(ctx context.Context, userId string, s Scrob
 }
 
 func (b *bufferedScrobbler) PlaybackReport(ctx context.Context, info PlaybackSession) error {
-	s, ok := b.loader()
-	if !ok {
-		return errors.New("scrobbler not available")
-	}
-	return s.PlaybackReport(ctx, info)
+	return b.wrapped.PlaybackReport(ctx, info)
 }
 
 func (b *bufferedScrobbler) sendWakeSignal() {
@@ -164,7 +138,7 @@ func (b *bufferedScrobbler) processQueue(ctx context.Context) bool {
 func (b *bufferedScrobbler) processUserQueue(ctx context.Context, userId string) bool {
 	// Scrobbles are drained on a background context that no longer carries the
 	// request's authenticated user. Restore it from the buffered userId so that
-	// scrobblers relying on the user in the context (e.g. plugins) still get it.
+	// external scrobblers still receive the correct user's context.
 	if user, err := b.ds.User(ctx).Get(userId); err != nil {
 		log.Warn(ctx, "Could not load user for buffered scrobble", "userId", userId, "scrobbler", b.service, err)
 	} else {
@@ -180,13 +154,8 @@ func (b *bufferedScrobbler) processUserQueue(ctx context.Context, userId string)
 		if entry == nil {
 			return true
 		}
-		s, ok := b.loader()
-		if !ok {
-			log.Warn(ctx, "Scrobbler not available, will retry later", "scrobbler", b.service)
-			return false
-		}
 		log.Debug(ctx, "Sending scrobble", "scrobbler", b.service, "track", entry.Title, "artist", entry.Artist)
-		err = s.Scrobble(ctx, entry.UserID, Scrobble{
+		err = b.wrapped.Scrobble(ctx, entry.UserID, Scrobble{
 			MediaFile: entry.MediaFile,
 			TimeStamp: entry.PlayTime,
 		})

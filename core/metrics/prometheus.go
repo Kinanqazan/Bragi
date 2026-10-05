@@ -21,7 +21,6 @@ type Metrics interface {
 	WriteInitialMetrics(ctx context.Context)
 	WriteAfterScanMetrics(ctx context.Context, success bool)
 	RecordRequest(ctx context.Context, endpoint, method, client string, status int32, elapsed int64)
-	RecordPluginRequest(ctx context.Context, plugin, method string, ok bool, elapsed int64)
 	GetHandler() http.Handler
 }
 
@@ -73,21 +72,6 @@ func (m *metrics) RecordRequest(_ context.Context, endpoint, method, client stri
 	getPrometheusMetrics().httpRequestDuration.With(httpLatencyLabel).Observe(float64(elapsed))
 }
 
-func (m *metrics) RecordPluginRequest(_ context.Context, plugin, method string, ok bool, elapsed int64) {
-	pluginLabel := prometheus.Labels{
-		"plugin": plugin,
-		"method": method,
-		"ok":     strconv.FormatBool(ok),
-	}
-	getPrometheusMetrics().pluginRequestCounter.With(pluginLabel).Inc()
-
-	pluginLatencyLabel := prometheus.Labels{
-		"plugin": plugin,
-		"method": method,
-	}
-	getPrometheusMetrics().pluginRequestDuration.With(pluginLatencyLabel).Observe(float64(elapsed))
-}
-
 func (m *metrics) GetHandler() http.Handler {
 	r := chi.NewRouter()
 
@@ -113,8 +97,6 @@ type prometheusMetrics struct {
 	mediaScansCounter     *prometheus.CounterVec
 	httpRequestCounter    *prometheus.CounterVec
 	httpRequestDuration   *prometheus.SummaryVec
-	pluginRequestCounter  *prometheus.CounterVec
-	pluginRequestDuration *prometheus.SummaryVec
 }
 
 // Prometheus' metrics requires initialization. But not more than once
@@ -165,21 +147,6 @@ var getPrometheusMetrics = sync.OnceValue(func() *prometheusMetrics {
 			},
 			[]string{"endpoint", "method", "client"},
 		),
-		pluginRequestCounter: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "plugin_request_count",
-				Help: "Plugin requests by method/status",
-			},
-			[]string{"plugin", "method", "ok"},
-		),
-		pluginRequestDuration: prometheus.NewSummaryVec(
-			prometheus.SummaryOpts{
-				Name:       "plugin_request_latency",
-				Help:       "Latency (in ms) of plugin requests",
-				Objectives: quartilesToEstimate,
-			},
-			[]string{"plugin", "method"},
-		),
 	}
 
 	prometheus.DefaultRegisterer.MustRegister(
@@ -189,8 +156,6 @@ var getPrometheusMetrics = sync.OnceValue(func() *prometheusMetrics {
 		instance.mediaScansCounter,
 		instance.httpRequestCounter,
 		instance.httpRequestDuration,
-		instance.pluginRequestCounter,
-		instance.pluginRequestDuration,
 	)
 
 	return instance
@@ -234,7 +199,5 @@ func (n noopMetrics) WriteInitialMetrics(context.Context) {}
 func (n noopMetrics) WriteAfterScanMetrics(context.Context, bool) {}
 
 func (n noopMetrics) RecordRequest(context.Context, string, string, string, int32, int64) {}
-
-func (n noopMetrics) RecordPluginRequest(context.Context, string, string, bool, int64) {}
 
 func (n noopMetrics) GetHandler() http.Handler { return nil }

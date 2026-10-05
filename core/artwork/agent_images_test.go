@@ -64,7 +64,7 @@ func imageAgents(fakes ...*fakeImageAgent) *agents.Agents {
 		names = append(names, fake.name)
 	}
 	conf.Server.Agents = strings.Join(names, ",")
-	return agents.GetAgents(&tests.MockDataStore{}, nil)
+	return agents.GetAgents(&tests.MockDataStore{})
 }
 
 var _ = Describe("agent images", func() {
@@ -111,7 +111,7 @@ var _ = Describe("agent images", func() {
 			Expect(bestImageURL([]agents.ExternalImage{{URL: "", Size: 5}})).To(BeNil())
 		})
 
-		// Plugins hand these over as free-form strings, and url.Parse accepts them all. An
+		// External providers hand these over as free-form strings, and url.Parse accepts them all. An
 		// unfetchable candidate that wins here ends the agent's turn before its valid images run.
 		DescribeTable("skips a candidate that cannot be fetched",
 			func(badURL string) {

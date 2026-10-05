@@ -31,12 +31,6 @@ var _ = Describe("installedPackage", func() {
 
 		Expect(installedPackage()).To(Equal("msi"))
 	})
-
-	It("ignores ND_PLATFORM", func() {
-		GinkgoT().Setenv("ND_PLATFORM", "zimaos")
-
-		Expect(installedPackage()).To(BeEmpty())
-	})
 })
 
 var _ = Describe("hostingPlatform", func() {
@@ -44,29 +38,20 @@ var _ = Describe("hostingPlatform", func() {
 		// Setenv registers the restore, then unset so an inherited value can't leak in
 		GinkgoT().Setenv("BR_PLATFORM", "")
 		Expect(os.Unsetenv("BR_PLATFORM")).To(Succeed())
-		GinkgoT().Setenv("ND_PLATFORM", "")
-		Expect(os.Unsetenv("ND_PLATFORM")).To(Succeed())
 	})
 
-	It("returns empty when neither prefix is set", func() {
+	It("returns empty when BR_PLATFORM is unset", func() {
 		Expect(hostingPlatform()).To(BeEmpty())
 	})
 
-	It("accepts ND_PLATFORM as a legacy fallback", func() {
-		GinkgoT().Setenv("ND_PLATFORM", "zimaos")
-
-		Expect(hostingPlatform()).To(Equal("zimaos"))
-	})
-
-	It("prefers BR_PLATFORM when both prefixes are set", func() {
+	It("reads BR_PLATFORM", func() {
 		GinkgoT().Setenv("BR_PLATFORM", "bragi-host")
-		GinkgoT().Setenv("ND_PLATFORM", "legacy-host")
 
 		Expect(hostingPlatform()).To(Equal("bragi-host"))
 	})
 
 	It("trims surrounding whitespace", func() {
-		GinkgoT().Setenv("ND_PLATFORM", "  pikapods\n")
+		GinkgoT().Setenv("BR_PLATFORM", "  pikapods\n")
 
 		Expect(hostingPlatform()).To(Equal("pikapods"))
 	})

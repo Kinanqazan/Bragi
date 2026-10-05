@@ -16,8 +16,7 @@ import (
 // matches without turning it into an unbounded table scan.
 const maxLegacyLyricsCandidates = 10
 
-// Provider fetches lyrics for a single media file. It is the contract
-// implemented by individual lyrics sources, such as plugins.
+// Provider fetches lyrics for a single media file.
 type Provider interface {
 	GetLyrics(ctx context.Context, mf *model.MediaFile) (model.LyricList, error)
 }
@@ -29,20 +28,13 @@ type Lyrics interface {
 	GetLyricsByArtistTitle(ctx context.Context, artist, title string) (model.LyricList, error)
 }
 
-// PluginLoader discovers and loads lyrics provider plugins.
-type PluginLoader interface {
-	LoadLyricsProvider(name string) (Provider, bool)
-}
-
 type lyricsService struct {
-	ds           model.DataStore
-	pluginLoader PluginLoader
+	ds model.DataStore
 }
 
-// NewLyrics creates a new lyrics service. pluginLoader may be nil if no plugin
-// system is available.
-func NewLyrics(ds model.DataStore, pluginLoader PluginLoader) Lyrics {
-	return &lyricsService{ds: ds, pluginLoader: pluginLoader}
+// NewLyrics creates a new lyrics service.
+func NewLyrics(ds model.DataStore) Lyrics {
+	return &lyricsService{ds: ds}
 }
 
 // GetLyrics returns lyrics for the given media file, trying sources in the
@@ -120,6 +112,7 @@ func (l *lyricsService) getLyricsFromSource(ctx context.Context, mf *model.Media
 	case strings.HasPrefix(pattern, "."):
 		return fromExternalFile(ctx, mf, pattern)
 	default:
-		return l.fromPlugin(ctx, mf, pattern)
+		log.Debug(ctx, "Unknown lyrics source ignored", "source", pattern)
+		return nil, nil
 	}
 }

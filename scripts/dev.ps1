@@ -35,7 +35,9 @@ if (Test-Path $portableFfmpegPath) {
 
 # Keep the development compiler cache inside the project. This avoids stale or
 # locked entries in a user-wide Go cache when the script is restarted quickly.
-$env:GOCACHE = Join-Path $projectRoot 'tmp\go-build-cache'
+if ([string]::IsNullOrWhiteSpace($env:GOCACHE)) {
+    $env:GOCACHE = Join-Path $projectRoot 'tmp\go-build-cache'
+}
 if (-not (Test-Path $env:GOCACHE)) {
     New-Item -ItemType Directory -Path $env:GOCACHE -Force | Out-Null
 }
@@ -257,9 +259,6 @@ $env:BACKEND_PORT = "$BackendPort"
 
 if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
     $CastMediaBaseURL = $env:BR_CASTMEDIABASEURL
-}
-if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
-    $CastMediaBaseURL = $env:ND_CASTMEDIABASEURL
 }
 if ([string]::IsNullOrWhiteSpace($CastMediaBaseURL)) {
     $lanAddress = @(Get-LanIPv4Addresses) | Select-Object -First 1

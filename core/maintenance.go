@@ -44,6 +44,7 @@ type Maintenance interface {
 	UpdateMediaFileArtwork(ctx context.Context, id string, image []byte, mimeType string) (*MediaFileMetadataResult, error)
 	RefreshMediaFileMetadata(ctx context.Context, id string) (*model.MediaFile, error)
 	LoadMediaFileLyrics(ctx context.Context, id string) (*MediaFileLyrics, error)
+	SearchMediaFileLyrics(ctx context.Context, id, query string) ([]MediaFileLyricsSearchResult, error)
 	SaveMediaFileLyrics(ctx context.Context, id, extension, content, expectedVersion string) (*MediaFileLyrics, error)
 	SaveEmbeddedMediaFileLyrics(ctx context.Context, id, content, expectedVersion string) (*MediaFileLyrics, error)
 	DeleteMediaFileLyrics(ctx context.Context, id, expectedTxtVersion, expectedLrcVersion string) (*MediaFileLyrics, error)
@@ -62,6 +63,16 @@ type MediaFileLyrics struct {
 	RefreshRequired bool             `json:"refreshRequired,omitempty"`
 	RefreshError    string           `json:"refreshError,omitempty"`
 	MediaFile       *model.MediaFile `json:"mediaFile,omitempty"`
+}
+
+type MediaFileLyricsSearchResult struct {
+	ID           int64   `json:"id"`
+	TrackName    string  `json:"trackName"`
+	ArtistName   string  `json:"artistName"`
+	AlbumName    string  `json:"albumName"`
+	Duration     float64 `json:"duration"`
+	PlainLyrics  string  `json:"plainLyrics,omitempty"`
+	SyncedLyrics string  `json:"syncedLyrics,omitempty"`
 }
 
 type MediaFileMetadataChanges struct {
@@ -199,10 +210,11 @@ func (s *maintenanceService) DeleteMediaFile(ctx context.Context, id string) err
 }
 
 type maintenanceService struct {
-	ds         model.DataStore
-	scanner    model.Scanner
-	metadataMu sync.Mutex
-	wg         sync.WaitGroup
+	ds           model.DataStore
+	scanner      model.Scanner
+	lyricsSearch lrclibSearchClient
+	metadataMu   sync.Mutex
+	wg           sync.WaitGroup
 }
 
 func NewMaintenance(ds model.DataStore, scanners ...model.Scanner) Maintenance {
@@ -211,8 +223,9 @@ func NewMaintenance(ds model.DataStore, scanners ...model.Scanner) Maintenance {
 		scan = scanners[0]
 	}
 	return &maintenanceService{
-		ds:      ds,
-		scanner: scan,
+		ds:           ds,
+		scanner:      scan,
+		lyricsSearch: newLRCLIBSearchClient(),
 	}
 }
 

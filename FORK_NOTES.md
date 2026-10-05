@@ -1,7 +1,7 @@
-# Fork customizations
+# Bragi project notes
 
-This fork keeps its changes deliberately small so updates from the Navidrome
-`upstream` remote remain straightforward to merge.
+Bragi began as a fork of Navidrome and is now maintained as its own project.
+These notes document Bragi-specific behavior and deployment.
 
 ## Permanent music-file deletion
 
@@ -24,42 +24,30 @@ local storage opts into mutation. Removal uses Go's rooted filesystem API to
 reject path traversal and symlink escapes, refuses directories and special
 files, and records the administrator, media ID, and relative path in the log.
 
-Deletion is permanent. It removes the audio file and Navidrome's associated
+Deletion is permanent. It removes the audio file and Bragi's associated
 database references, including playlist entries, ratings, bookmarks, and play
 history. Artwork and lyric sidecar files are not removed.
 
-## Updating from Navidrome
+## Container image
 
-```bash
-git fetch upstream
-git merge upstream/master
-```
-
-Resolve conflicts if Git reports any, run the backend and UI test suites, then
-build and deploy a new image from this fork. Pulling an official Navidrome image
-will not contain these customizations.
-
-Pushes to `master` automatically compile the UI, build the dynamic musl
-binary with GitHub Actions caching, and package the final Alpine image using
-`Dockerfile.custom` for `linux/amd64`, publishing two tags to GitHub Container
-Registry:
+Pushes to `master` build the UI, compile the dynamic musl binary, and package
+the final Alpine image with `Dockerfile.custom` for `linux/amd64`. The workflow
+publishes `latest` and commit-specific tags to GitHub Container Registry:
 
 ```text
-ghcr.io/<github-owner>/<repository>:latest
-ghcr.io/<github-owner>/<repository>:sha-<short-commit>
+ghcr.io/kinanqaz/bragi:latest
+ghcr.io/kinanqaz/bragi:sha-<short-commit>
 ```
 
 The workflow uses the repository-scoped `GITHUB_TOKEN`; no Docker Hub password
-or additional repository secret is required. GitHub Packages may initially mark
-the image private. Either make the package public or configure the Proxmox
-container host to authenticate to GHCR before pulling it.
+or additional repository secret is required. GitHub Packages may initially
+mark the image private. Make the package public or authenticate the host that
+pulls it.
 
 ## Local development dependencies
 
-- `ui/node_modules` is required for frontend tests and builds.
+- `ui/node_modules` is required for frontend builds and tests.
 - Go 1.26 is required for backend builds.
-- A C compiler is required by SQLite/CGO. The Windows setup uses a portable Zig
-  toolchain instead of installing GCC/MinGW system-wide.
-- Go's module cache avoids repeatedly downloading locked dependencies.
-- `ui/build` and compiler/test caches are generated output and can be removed
-  after verification.
+- A C compiler is required by SQLite/CGO. The Windows development setup uses a
+  portable Zig toolchain.
+- `ui/build` and compiler/test caches are generated output.

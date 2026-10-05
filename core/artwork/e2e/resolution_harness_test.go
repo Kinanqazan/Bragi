@@ -120,7 +120,7 @@ func setupResolutionHarness() {
 	Eventually(func() bool { return imgCache.Available(rctx) }).Should(BeTrue())
 
 	rsvc = artwork.NewArtwork(rds, imgCache, rstore, ffm)
-	rworker = artwork.NewWorker(rds, rstore, agents.GetAgents(rds, nil), ffm, events.NoopBroker(), imgCache)
+	rworker = artwork.NewWorker(rds, rstore, agents.GetAgents(rds), ffm, events.NoopBroker(), imgCache)
 }
 
 // setLayout paths must be relative and forward-slash.

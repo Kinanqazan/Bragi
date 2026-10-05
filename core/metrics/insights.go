@@ -24,8 +24,6 @@ import (
 	"github.com/navidrome/navidrome/log"
 	"github.com/navidrome/navidrome/model"
 	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/plugins"
-	"github.com/navidrome/navidrome/server/events"
 	"github.com/navidrome/navidrome/utils/singleton"
 )
 
@@ -162,11 +160,7 @@ func installedPackage() string {
 
 // hostingPlatform is env-based, not a file, as app stores can only inject env vars into our image.
 func hostingPlatform() string {
-	platform := os.Getenv("BR_PLATFORM")
-	if platform == "" {
-		platform = os.Getenv("ND_PLATFORM")
-	}
-	return strings.TrimSpace(platform)
+	return strings.TrimSpace(os.Getenv("BR_PLATFORM"))
 }
 
 var staticData = sync.OnceValue(func() insights.Data {
@@ -295,11 +289,6 @@ func (c *insightsCollector) collect(ctx context.Context) []byte {
 		log.Trace(ctx, "Error checking for smart playlists", err)
 	}
 
-	// Collect plugins if permitted and enabled
-	if conf.Server.DevEnablePluginsInsights && conf.Server.Plugins.Enabled {
-		data.Plugins = c.collectPlugins(ctx)
-	}
-
 	// Collect active players if permitted
 	if conf.Server.DevEnablePlayerInsights {
 		data.Library.ActivePlayers, err = c.ds.Player(ctx).CountByClient(model.QueryOptions{
@@ -333,20 +322,4 @@ func (c *insightsCollector) hasSmartPlaylists(ctx context.Context) (bool, error)
 		Filters: squirrel.And{squirrel.NotEq{"rules": ""}, squirrel.NotEq{"rules": nil}},
 	})
 	return count > 0, err
-}
-
-// collectPlugins collects information about installed plugins
-func (c *insightsCollector) collectPlugins(_ context.Context) map[string]insights.PluginInfo {
-	// TODO Fix import/inject cycles
-	manager := plugins.GetManager(c.ds, events.GetBroker(), nil)
-	info := manager.GetPluginInfo()
-
-	result := make(map[string]insights.PluginInfo, len(info))
-	for name, p := range info {
-		result[name] = insights.PluginInfo{
-			Name:    p.Name,
-			Version: p.Version,
-		}
-	}
-	return result
 }

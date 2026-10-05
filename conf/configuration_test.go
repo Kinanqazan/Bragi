@@ -76,14 +76,11 @@ var _ = Describe("Configuration", func() {
 	Describe("environment variable prefixes", func() {
 		BeforeEach(func() {
 			GinkgoT().Setenv("BR_CONFIGFILE", "")
-			GinkgoT().Setenv("ND_CONFIGFILE", "")
 		})
 
-		It("prefers BR_ values over legacy ND_ and unprefixed aliases", func() {
+		It("uses BR_ values and preserves the unprefixed PORT fallback", func() {
 			GinkgoT().Setenv("BR_ADDRESS", "127.0.0.2")
-			GinkgoT().Setenv("ND_ADDRESS", "127.0.0.3")
 			GinkgoT().Setenv("BR_PORT", "4532")
-			GinkgoT().Setenv("ND_PORT", "4531")
 			GinkgoT().Setenv("PORT", "4530")
 
 			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
@@ -93,19 +90,18 @@ var _ = Describe("Configuration", func() {
 			Expect(conf.Server.Port).To(Equal(4532))
 		})
 
-		It("accepts ND_ values when no BR_ value is set", func() {
+		It("ignores former ND_ values", func() {
 			GinkgoT().Setenv("BR_ENABLEMEDIAFILEDELETION", "")
 			GinkgoT().Setenv("ND_ENABLEMEDIAFILEDELETION", "true")
 
 			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
 			conf.Load(true)
 
-			Expect(conf.Server.EnableMediaFileDeletion).To(BeTrue())
+			Expect(conf.Server.EnableMediaFileDeletion).To(BeFalse())
 		})
 
-		It("uses the unprefixed PORT fallback after both supported prefixes", func() {
+		It("uses the unprefixed PORT fallback when BR_PORT is unset", func() {
 			GinkgoT().Setenv("BR_PORT", "")
-			GinkgoT().Setenv("ND_PORT", "")
 			GinkgoT().Setenv("PORT", "4530")
 
 			conf.InitConfig(filepath.Join("testdata", "cfg.toml"), true)
@@ -114,14 +110,11 @@ var _ = Describe("Configuration", func() {
 			Expect(conf.Server.Port).To(Equal(4530))
 		})
 
-		It("prefers BR_CONFIGFILE over ND_CONFIGFILE", func() {
+		It("loads the config file named by BR_CONFIGFILE", func() {
 			configDir := GinkgoT().TempDir()
 			brConfig := filepath.Join(configDir, "bragi.toml")
-			ndConfig := filepath.Join(configDir, "legacy.toml")
 			Expect(os.WriteFile(brConfig, []byte(`address = "127.0.0.5"`), 0600)).To(Succeed())
-			Expect(os.WriteFile(ndConfig, []byte(`address = "127.0.0.6"`), 0600)).To(Succeed())
 			GinkgoT().Setenv("BR_CONFIGFILE", brConfig)
-			GinkgoT().Setenv("ND_CONFIGFILE", ndConfig)
 
 			conf.InitConfig("", true)
 			conf.Load(true)
@@ -130,20 +123,6 @@ var _ = Describe("Configuration", func() {
 			Expect(conf.Server.ConfigFile).To(Equal(brConfig))
 
 		})
-
-		It("accepts ND_CONFIGFILE as a fallback", func() {
-			configDir := GinkgoT().TempDir()
-			ndConfig := filepath.Join(configDir, "legacy.toml")
-			Expect(os.WriteFile(ndConfig, []byte(`address = "127.0.0.6"`), 0600)).To(Succeed())
-			GinkgoT().Setenv("ND_CONFIGFILE", ndConfig)
-
-			conf.InitConfig("", true)
-			conf.Load(true)
-
-			Expect(conf.Server.Address).To(Equal("127.0.0.6"))
-			Expect(conf.Server.ConfigFile).To(Equal(ndConfig))
-		})
-
 		It("accepts BR_-prefixed config-file keys", func() {
 			filename := filepath.Join(GinkgoT().TempDir(), "br-config.toml")
 			contents := `BR_ADDRESS = "127.0.0.4"
@@ -304,7 +283,7 @@ BR_SCANNER_SCHEDULE = "@every 2h"
 		Entry("empty string", "", ""),
 	)
 
-	Describe("remapEnvVarKeysFromConfig", func() {
+	Describe("remapPrefixedKeysFromConfig", func() {
 		BeforeEach(func() {
 			viper.Reset()
 			conf.SetViperDefaults()
@@ -313,8 +292,8 @@ BR_SCANNER_SCHEDULE = "@every 2h"
 			conf.ResetConf()
 		})
 
-		It("remaps ND_-prefixed keys to canonical keys", func() {
-			filename := filepath.Join("testdata", "cfg_nd_keys.toml")
+		It("remaps BR_-prefixed keys to canonical keys", func() {
+			filename := filepath.Join("testdata", "cfg_br_keys.toml")
 			conf.InitConfig(filename, false)
 			conf.Load(true)
 
@@ -323,18 +302,18 @@ BR_SCANNER_SCHEDULE = "@every 2h"
 			Expect(conf.Server.Scanner.Schedule).To(Equal("@every 1h"))
 		})
 
-		It("exits with fatal error when both ND_ and canonical key exist", func() {
-			filename := filepath.Join("testdata", "cfg_nd_conflict.toml")
+		It("exits with fatal error when both BR_ and canonical key exist", func() {
+			filename := filepath.Join("testdata", "cfg_br_conflict.toml")
 			conf.InitConfig(filename, false)
 
 			Expect(func() { conf.Load(true) }).To(PanicWith(And(
-				ContainSubstring("ND_ADDRESS"),
+				ContainSubstring("BR_ADDRESS"),
 				ContainSubstring("Address"),
 				ContainSubstring("only needed for environment variables"),
 			)))
 		})
 
-		It("does nothing when no ND_ keys are present", func() {
+		It("does nothing when no BR_-prefixed keys are present", func() {
 			filename := filepath.Join("testdata", "cfg.toml")
 			conf.InitConfig(filename, false)
 			conf.Load(true)
@@ -402,18 +381,18 @@ BR_SCANNER_SCHEDULE = "@every 2h"
 			Entry("suggests nothing for a typo", "enabledownlods", nil),
 		)
 
-		It("does not report ND_-prefixed keys, as they are remapped", func() {
-			conf.InitConfig(filepath.Join("testdata", "cfg_nd_keys.toml"), false)
+		It("does not report BR_-prefixed keys, as they are remapped", func() {
+			conf.InitConfig(filepath.Join("testdata", "cfg_br_keys.toml"), false)
 			conf.Load(true)
 
 			Expect(conf.UnknownConfigKeys()).To(BeEmpty())
 		})
 
-		It("reports ND_-prefixed keys that remap to no known option", func() {
-			conf.InitConfig(filepath.Join("testdata", "cfg_nd_bogus.toml"), false)
+		It("reports BR_-prefixed keys that remap to no known option", func() {
+			conf.InitConfig(filepath.Join("testdata", "cfg_br_bogus.toml"), false)
 			conf.Load(true)
 
-			Expect(conf.UnknownConfigKeys()).To(ConsistOf("ND_TOTALLY_BOGUS_OPTION"))
+			Expect(conf.UnknownConfigKeys()).To(ConsistOf("BR_TOTALLY_BOGUS_OPTION"))
 			Expect(conf.Server.Scanner.Schedule).To(Equal("@every 1h"))
 		})
 

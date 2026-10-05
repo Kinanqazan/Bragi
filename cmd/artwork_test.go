@@ -591,13 +591,12 @@ var _ = Describe("reprocessArtwork", func() {
 		Expect(out.String()).To(ContainSubstring("External lookups: ~10 estimated"))
 	})
 
-	It("names the estimate's blind spots instead of claiming a bound it cannot hold", func() {
+	It("explains why the estimate may be higher than the actual lookup count", func() {
 		Expect(reprocessArtwork(ctx, ds, kinds, nil, imageAgents, true, accept, &out)).To(Succeed())
 
-		Expect(out.String()).To(ContainSubstring("plugin agents not counted"))
 		Expect(out.String()).To(ContainSubstring("local hits may need fewer"))
-		Expect(out.String()).ToNot(ContainSubstring("up to"), "plugin agents make any ceiling false")
-		Expect(out.String()).ToNot(ContainSubstring("at least"), "a local hit makes any floor false")
+		Expect(out.String()).ToNot(ContainSubstring("up to"), "a local hit can end the walk early")
+		Expect(out.String()).ToNot(ContainSubstring("at least"), "a local hit can end the walk early")
 	})
 
 	It("says so when the selection needs no external lookup", func() {

@@ -38,7 +38,7 @@ const useStyles = makeStyles(
       flex: '0 0 auto',
       width: 42,
       height: 42,
-      borderRadius: 6,
+      borderRadius: 4,
       marginRight: theme.spacing(1.25),
       objectFit: 'cover',
       boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',

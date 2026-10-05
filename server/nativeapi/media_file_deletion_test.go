@@ -93,6 +93,10 @@ func (*mediaDeletionMaintenanceMock) LoadMediaFileLyrics(context.Context, string
 	return nil, nil
 }
 
+func (*mediaDeletionMaintenanceMock) SearchMediaFileLyrics(context.Context, string, string) ([]core.MediaFileLyricsSearchResult, error) {
+	return nil, nil
+}
+
 func (*mediaDeletionMaintenanceMock) SaveMediaFileLyrics(context.Context, string, string, string, string) (*core.MediaFileLyrics, error) {
 	return nil, nil
 }

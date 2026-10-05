@@ -169,7 +169,7 @@ var _ = Describe("Artwork hydration", func() {
 		})
 
 		It("hydrates the tracks reached through a playlist", func() {
-			Expect(aw.PutImage(&model.Artwork{Hash: "pltrackhash1234", Mime: "image/jpeg", BlurHash: "LPLBLURhash"})).To(Succeed())
+			Expect(aw.PutImage(&model.Artwork{Hash: "pltrackhash1234", Mime: "image/jpeg"})).To(Succeed())
 			putInfo("al", songDayInALife.AlbumID, "pltrackhash1234")
 
 			pls, err := repo.GetWithTracks(plsBest.ID, true, false)
@@ -179,7 +179,6 @@ var _ = Describe("Artwork hydration", func() {
 			byID := slice.ToMap(tracks, func(t model.PlaylistTrack) (string, model.PlaylistTrack) { return t.MediaFile.ID, t })
 			Expect(byID).To(HaveKey(songDayInALife.ID))
 			Expect(byID[songDayInALife.ID].AlbumImage.ImageHash).To(Equal("pltrackhash1234"))
-			Expect(byID[songDayInALife.ID].BlurHash).To(Equal("LPLBLURhash"))
 
 			cursor, err := repo.Tracks(plsBest.ID, true).GetCursor()
 			Expect(err).ToNot(HaveOccurred())
@@ -192,7 +191,7 @@ var _ = Describe("Artwork hydration", func() {
 			}
 			Expect(streamed).ToNot(BeNil())
 			Expect(streamed.AlbumImage.ImageHash).To(Equal("pltrackhash1234"),
-				"the streamed cursor Jellyfin uses must hydrate too")
+				"streamed cursors must hydrate artwork too")
 		})
 	})
 
@@ -289,25 +288,23 @@ var _ = Describe("Artwork hydration", func() {
 			Expect(byID["2002"].AlbumImage.ImageAbsent).To(BeTrue())
 		})
 
-		It("carries both hashes and the dimensions alongside the hash in the own-art and inherited branches", func() {
+		It("carries the thumbhash and dimensions in the own-art and inherited branches", func() {
 			setCover("1001", true) // eligible, resolves its own art -> own-art-wins branch
 			DeferCleanup(func() { setCover("1001", false) })
 
-			Expect(aw.PutImage(&model.Artwork{Hash: "mfh1001blurxxxxx", Mime: "image/jpeg", BlurHash: "LTRACKblur", ThumbHash: "THtrack", Width: 640, Height: 480})).To(Succeed())
-			Expect(aw.PutImage(&model.Artwork{Hash: "alh102blurxxxxxx", Mime: "image/jpeg", BlurHash: "LALBUMblur", ThumbHash: "THalbum", Width: 1200, Height: 800})).To(Succeed())
+			Expect(aw.PutImage(&model.Artwork{Hash: "mfh1001blurxxxxx", Mime: "image/jpeg", ThumbHash: "THtrack", Width: 640, Height: 480})).To(Succeed())
+			Expect(aw.PutImage(&model.Artwork{Hash: "alh102blurxxxxxx", Mime: "image/jpeg", ThumbHash: "THalbum", Width: 1200, Height: 800})).To(Succeed())
 			putInfo("mf", "1001", "mfh1001blurxxxxx")
 			putInfo("al", "102", "alh102blurxxxxxx") // 1002's album: single-disc inheritance branch
 
 			byID := getByID()
 
 			Expect(byID["1001"].ImageHash).To(Equal("mfh1001blurxxxxx"))
-			Expect(byID["1001"].BlurHash).To(Equal("LTRACKblur"))
 			Expect(byID["1001"].ThumbHash).To(Equal("THtrack"))
 			Expect(byID["1001"].ImageWidth).To(Equal(640))
 			Expect(byID["1001"].ImageHeight).To(Equal(480))
 
 			Expect(byID["1002"].ImageHash).To(Equal("alh102blurxxxxxx"))
-			Expect(byID["1002"].BlurHash).To(Equal("LALBUMblur"))
 			Expect(byID["1002"].ThumbHash).To(Equal("THalbum"))
 			Expect(byID["1002"].ImageWidth).To(Equal(1200))
 			Expect(byID["1002"].ImageHeight).To(Equal(800))
@@ -418,7 +415,7 @@ var _ = Describe("Artwork hydration", func() {
 			seedAnnotations("artist", artistKraftwerk.ID, artistCJK.ID)
 
 			Expect(aw.PutImage(&model.Artwork{
-				Hash: "curhash11111111", Mime: "image/jpeg", BlurHash: "LEHV6nWB2yk8",
+				Hash: "curhash11111111", Mime: "image/jpeg",
 			})).To(Succeed())
 			putInfo("al", albumSgtPeppers.ID, "curhash11111111")
 			putInfo("al", albumAbbeyRoad.ID, "")
@@ -439,7 +436,6 @@ var _ = Describe("Artwork hydration", func() {
 				byID[al.ID] = al
 			}
 			Expect(byID[albumSgtPeppers.ID].ImageHash).To(Equal("curhash11111111"))
-			Expect(byID[albumSgtPeppers.ID].BlurHash).To(Equal("LEHV6nWB2yk8"))
 			Expect(byID[albumAbbeyRoad.ID].ImageAbsent).To(BeTrue())
 			Expect(byID[albumRadioactivity.ID].ImageHash).To(BeEmpty())
 			Expect(byID[albumRadioactivity.ID].ImageAbsent).To(BeFalse())
@@ -481,7 +477,7 @@ var _ = Describe("Artwork hydration", func() {
 				To(Equal(slice.Map(want, func(a model.Album) string { return a.ID })))
 		})
 
-		// The sorts the Jellyfin list endpoints issue; comparing sort keys, not ids, keeps ties out.
+		// Compare sort keys, not ids, to keep ties out.
 		DescribeTable("orders albums like GetAll",
 			func(opts model.QueryOptions, key func(model.Album) string) {
 				opts = scoped(opts, onlyAlbums)
@@ -624,7 +620,6 @@ var _ = Describe("Artwork hydration", func() {
 				Expect(got[i].ImageHash).To(Equal(want[i].ImageHash))
 				Expect(got[i].ImageAbsent).To(Equal(want[i].ImageAbsent))
 				Expect(got[i].AlbumImage.ImageHash).To(Equal(want[i].AlbumImage.ImageHash))
-				Expect(got[i].AlbumImage.BlurHash).To(Equal(want[i].AlbumImage.BlurHash))
 			}
 			Expect(want).To(ContainElement(HaveField("AlbumImage.ImageHash", Not(BeEmpty()))),
 				"fixture must include at least one track with album artwork, or this proves nothing")
@@ -739,26 +734,24 @@ var _ = Describe("Artwork hydration", func() {
 	})
 
 	Describe("applyItemImage", func() {
-		It("copies hash, absence, blurhash and dimensions onto the item", func() {
+		It("copies hash, absence, thumbhash and dimensions onto the item", func() {
 			infos := map[string]model.ItemArtworkInfo{
-				"al-1": {ItemID: "al-1", Hash: "0123456789abcdef", BlurHash: "LEHV6nWB2yk8", ThumbHash: "1QcSHQRn", Width: 1200, Height: 800},
+				"al-1": {ItemID: "al-1", Hash: "0123456789abcdef", ThumbHash: "1QcSHQRn", Width: 1200, Height: 800},
 			}
 			var img model.ItemImage
 			applyItemImage(infos, "al-1", &img)
 			Expect(img.ImageHash).To(Equal("0123456789abcdef"))
 			Expect(img.ImageAbsent).To(BeFalse())
-			Expect(img.BlurHash).To(Equal("LEHV6nWB2yk8"))
 			Expect(img.ThumbHash).To(Equal("1QcSHQRn"))
 			Expect(img.ImageWidth).To(Equal(1200))
 			Expect(img.ImageHeight).To(Equal(800))
 		})
 
-		It("marks a hashless entry absent and carries no blurhash", func() {
+		It("marks a hashless entry absent and carries no thumbhash", func() {
 			infos := map[string]model.ItemArtworkInfo{"al-2": {ItemID: "al-2"}}
 			var img model.ItemImage
 			applyItemImage(infos, "al-2", &img)
 			Expect(img.ImageAbsent).To(BeTrue())
-			Expect(img.BlurHash).To(BeEmpty())
 			Expect(img.ThumbHash).To(BeEmpty())
 		})
 
@@ -767,7 +760,6 @@ var _ = Describe("Artwork hydration", func() {
 			applyItemImage(map[string]model.ItemArtworkInfo{}, "al-3", &img)
 			Expect(img.ImageHash).To(BeEmpty())
 			Expect(img.ImageAbsent).To(BeFalse())
-			Expect(img.BlurHash).To(BeEmpty())
 		})
 	})
 })

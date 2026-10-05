@@ -420,12 +420,11 @@ func setupTestDB() {
 		s,
 		events.NoopBroker(),
 		playlists.NewPlaylists(ds, artwork.NewUploader(ds)),
-		scrobbler.NewPlayTracker(ds, events.NoopBroker(), nil),
+		scrobbler.NewPlayTracker(ds, events.NoopBroker()),
 		core.NewShare(ds),
 		playback.PlaybackServer(nil),
 		metrics.NewNoopInstance(),
-		lyrics.NewLyrics(ds, nil),
+		lyrics.NewLyrics(ds),
 		decider,
-		nil,
 	)
 }
