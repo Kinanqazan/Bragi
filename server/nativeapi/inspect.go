@@ -6,10 +6,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/req"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/req"
 )
 
 func doInspect(ctx context.Context, ds model.DataStore, id string) (*core.InspectOutput, error) {

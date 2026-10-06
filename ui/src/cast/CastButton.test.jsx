@@ -69,6 +69,19 @@ describe('CastButton', () => {
     await waitFor(() => expect(button).not.toBeDisabled())
   })
 
+  it('starts Cast discovery on touch release without issuing a second request', () => {
+    mockedCastState.connected = false
+    mockedRequestCastSession.mockReturnValue(new Promise(() => {}))
+
+    render(<CastButton />)
+    const button = screen.getByRole('button', { name: /cast to device/i })
+
+    fireEvent.pointerUp(button, { pointerType: 'touch' })
+    fireEvent.click(button)
+
+    expect(mockedRequestCastSession).toHaveBeenCalledOnce()
+  })
+
   it('does not warn when the Cast picker returns lowercase cancel', async () => {
     mockedCastState.connected = false
     mockedRequestCastSession.mockRejectedValue({ code: 'cancel' })

@@ -12,10 +12,10 @@ describe('Cast diagnostics', () => {
 
   it('removes authentication and transcode tokens from media URLs', () => {
     const url =
-      'https://navidrome.lan/rest/getTranscodeStream?u=alice&t=secret&s=salt&transcodeParams=jwt-token&mediaId=song-1'
+      'https://bragi.lan/rest/getTranscodeStream?u=alice&t=secret&s=salt&transcodeParams=jwt-token&mediaId=song-1'
 
     expect(sanitizeCastMediaUrl(url)).toBe(
-      'https://navidrome.lan/rest/getTranscodeStream',
+      'https://bragi.lan/rest/getTranscodeStream',
     )
   })
 
@@ -24,7 +24,7 @@ describe('Cast diagnostics', () => {
       { code: 'LOAD_MEDIA_FAILED', message: 'receiver rejected media' },
       {
         mediaUrl:
-          'https://navidrome.lan/rest/stream?u=alice&t=secret&s=salt&id=song-1',
+          'https://bragi.lan/rest/stream?u=alice&t=secret&s=salt&id=song-1',
         contentType: 'audio/mpeg',
         deviceName: 'Kitchen Nest',
       },
@@ -32,7 +32,7 @@ describe('Cast diagnostics', () => {
 
     expect(error.code).toBe('LOAD_MEDIA_FAILED')
     expect(error.publicMessage).toContain('Kitchen Nest')
-    expect(error.publicMessage).toContain('https://navidrome.lan/rest/stream')
+    expect(error.publicMessage).toContain('https://bragi.lan/rest/stream')
     expect(error.publicMessage).not.toContain('secret')
     expect(error.publicMessage).not.toContain('salt')
     expect(error.publicMessage).not.toContain('song-1')

@@ -11,7 +11,7 @@ import (
 	"github.com/djherbis/atime"
 	"github.com/djherbis/fscache"
 	"github.com/djherbis/stream"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 const completeMarkerSuffix = ".complete"

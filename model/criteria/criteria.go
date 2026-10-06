@@ -8,8 +8,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/utils"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/utils"
 )
 
 type Expression interface {

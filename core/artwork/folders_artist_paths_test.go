@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/tests"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useImmediateLinkPress } from '../audioplayer/controlPress'
 import PropTypes from 'prop-types'
 import { Link } from 'react-admin'
 import { withWidth } from '@material-ui/core'
@@ -12,18 +13,29 @@ const ALink = withWidth({ noSSR: true })((props) => {
   const { artist, width, onArtistClick, ...rest } = props
   const artistLink = useGetHandleArtistClick(width)
   const dispatch = useDispatch()
+  const activateArtist = React.useCallback(
+    (event) => {
+      dispatch(closeExtendedInfoDialog())
+      onArtistClick?.(event)
+    },
+    [dispatch, onArtistClick],
+  )
+  const immediatePress = useImmediateLinkPress(activateArtist)
 
   return (
     <Link
       key={artist.id}
       to={artistLink(artist.id)}
+      {...(onArtistClick ? immediatePress : {})}
       onClick={(e) => {
-        e.stopPropagation()
-        dispatch(closeExtendedInfoDialog())
         if (onArtistClick) {
-          onArtistClick(e)
+          immediatePress.onClick(e)
           e.currentTarget.blur()
+        } else {
+          e.stopPropagation()
+          dispatch(closeExtendedInfoDialog())
         }
+        e.stopPropagation()
       }}
       {...rest}
     >

@@ -56,7 +56,7 @@
 //	Level 1: Title + Artist name
 //	Level 0: Title only
 //
-// "Artist identity" is a match on the artist's Navidrome ID (the strongest signal,
+// "Artist identity" is a match on the artist's Bragi ID (the strongest signal,
 // when a source supplies one) or its MBID. A plain name match is the weaker fallback
 // used for an artist with no identity match (e.g. a cover credited to a different
 // artist of the same name).
@@ -68,7 +68,7 @@
 //
 // A song may carry several artists, and the title phase scopes candidate tracks by
 // ANY of them: a track credited to at least one shared artist is considered. When a
-// source supplies a Navidrome artist ID, that artist is matched directly, skipping
+// source supplies a Bragi artist ID, that artist is matched directly, skipping
 // name/MBID resolution. Among equally specific candidates, the one sharing more of
 // the song's artists wins, so a track crediting every collaborator outranks one
 // crediting only a single artist.

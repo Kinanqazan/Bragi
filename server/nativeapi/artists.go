@@ -11,10 +11,10 @@ import (
 
 	"github.com/deluan/rest"
 	"github.com/go-chi/chi/v5"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/server"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/server"
 )
 
 func (api *Router) addArtistRoute(r chi.Router) {

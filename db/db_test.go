@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/tests"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

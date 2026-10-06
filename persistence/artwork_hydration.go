@@ -6,9 +6,9 @@ import (
 	"slices"
 
 	. "github.com/Masterminds/squirrel"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 	"github.com/pocketbase/dbx"
 )
 

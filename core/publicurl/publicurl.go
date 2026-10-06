@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/auth"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/auth"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 )
 
 // ImageURL generates a public URL for artwork images.

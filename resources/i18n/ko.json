@@ -328,7 +328,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Navidrome을 설치해 주셔서 감사합니다!",
+      "welcome1": "Bragi을 설치해 주셔서 감사합니다!",
       "welcome2": "관리자를 만들고 시작해 보세요",
       "confirmPassword": "비밀번호 확인",
       "buttonCreateAdmin": "관리자 만들기",
@@ -338,8 +338,7 @@
       "password": "비밀번호",
       "sign_in": "가입",
       "sign_in_error": "인증에 실패했습니다. 다시 시도하세요",
-      "logout": "로그아웃",
-      "insightsCollectionNote": "Navidrome은 프로젝트 개선을 위해 익명의 사용 데이터를\n수집합니다. 자세한 내용을 알아보고 원치 않으시면 [여기]를\n클릭하여 수신 거부하세요"
+      "logout": "로그아웃"
     },
     "validation": {
       "invalidChars": "문자와 숫자만 사용하세요",
@@ -474,7 +473,7 @@
   "message": {
     "note": "참고",
     "transcodingDisabled": "웹 인터페이스를 통한 트랜스코딩 구성 변경은 보안상의 이유로 비활성화되어 있습니다. 트랜스코딩 옵션을 변경(편집 또는 추가)하려면, %{config} 구성 옵션으로 서버를 다시 시작하세요.",
-    "transcodingEnabled": "Navidrome은 현재 %{config}로 실행 중이므로 웹 인터페이스를 사용하여 트랜스코딩 설정에서 시스템 명령을 실행할 수 있습니다. 보안상의 이유로 비활성화하고 트랜스코딩 옵션을 구성할 때만 활성화하는 것이 좋습니다.",
+    "transcodingEnabled": "Bragi은 현재 %{config}로 실행 중이므로 웹 인터페이스를 사용하여 트랜스코딩 설정에서 시스템 명령을 실행할 수 있습니다. 보안상의 이유로 비활성화하고 트랜스코딩 옵션을 구성할 때만 활성화하는 것이 좋습니다.",
     "songsAddedToPlaylist": "1 개의 노래를 재생목록에 추가하였음 |||| %{smart_count} 개의 노래를 재생 목록에 추가하였음",
     "noSimilarSongsFound": "비슷한 노래를 찾을 수 없음",
     "noTopSongsFound": "인기곡을 찾을 수 없음",
@@ -486,7 +485,7 @@
     "remove_all_missing_title": "누락된 모든 파일 제거",
     "remove_all_missing_content": "데이터베이스에서 누락된 모든 파일을 제거할까요? 이렇게 하면 해당 게임의 플레이 횟수와 평점을 포함한 모든 참조 내용이 영구적으로 삭제됩니다.",
     "notifications_blocked": "브라우저 설정에서 이 사이트의 알림을 차단하였음",
-    "notifications_not_available": "이 브라우저는 데스크톱 알림을 지원하지 않거나 https를 통해 Navidrome에 접속하고 있지 않음",
+    "notifications_not_available": "이 브라우저는 데스크톱 알림을 지원하지 않거나 https를 통해 Bragi에 접속하고 있지 않음",
     "lastfmLinkSuccess": "Last.fm이 성공적으로 연결되었고 스크로블링이 활성화되었음",
     "lastfmLinkFailure": "Last.fm을 연결 해제할 수 없음",
     "lastfmUnlinkSuccess": "Last.fm 연결 해제 및 스크로블링 비활성화",
@@ -573,12 +572,7 @@
     "links": {
       "homepage": "홈페이지",
       "source": "소스 코드",
-      "featureRequests": "기능 요청",
-      "lastInsightsCollection": "마지막 인사이트 컬렉션",
-      "insights": {
-        "disabled": "비활성화",
-        "waiting": "대기중"
-      }
+      "featureRequests": "기능 요청"
     },
     "tabs": {
       "about": "정보",
@@ -613,7 +607,7 @@
     "minutesAgo": "%{smart_count} 분 전"
   },
   "help": {
-    "title": "Navidrome 단축키",
+    "title": "Bragi 단축키",
     "hotkeys": {
       "show_help": "이 도움말 표시",
       "toggle_menu": "메뉴 사이드바 전환",

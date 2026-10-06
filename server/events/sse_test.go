@@ -3,7 +3,7 @@ package events
 import (
 	"context"
 
-	"github.com/navidrome/navidrome/model/request"
+	"github.com/kinanqaz/bragi/model/request"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

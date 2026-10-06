@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { makeStyles } from '@material-ui/core/styles'
 import { ArtistLinkField } from '../common'
 import { songShowPath } from '../song/songNavigation'
+import { useImmediateLinkPress } from './controlPress'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -94,6 +95,7 @@ const TrackIdentity = ({
 }) => {
   const classes = useStyles()
   const location = useLocation()
+  const titlePress = useImmediateLinkPress(onTitleClick)
   const song = track?.song || track
   if (!song?.title && !track?.title && !track?.name) return null
 
@@ -135,7 +137,7 @@ const TrackIdentity = ({
           ? `${classes.titleLink} ${classes.mobileTitleLink}`
           : classes.titleLink
       }
-      onClick={mobile ? onTitleClick : undefined}
+      {...(mobile ? titlePress : {})}
       to={{
         pathname: linkTo,
         state: { returnTo: `${location.pathname}${location.search}` },

@@ -3,6 +3,7 @@
 .vscode
 .envrc
 /navidrome
+/bragi
 /iTunes*.xml
 /tmp
 /bin
@@ -13,7 +14,7 @@ wiki
 TODO.md
 var
 navidrome.toml
-!release/linux/navidrome.toml
+bragi.toml
 master.zip
 testDB
 cache/*
@@ -25,9 +26,9 @@ music.old
 *.db*
 .gitinfo
 docker-compose.yml
-!contrib/docker-compose.yml
 binaries
 navidrome-*
+bragi-*
 /ndpgen
 AGENTS.md
 .github/prompts

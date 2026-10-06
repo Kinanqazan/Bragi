@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/slice"
 	"github.com/stretchr/testify/mock"
 )
 

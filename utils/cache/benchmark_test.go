@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/conf/configtest"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/conf/configtest"
 )
 
 type benchItem struct {

@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/resources"
-	"github.com/navidrome/navidrome/tests"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/resources"
+	"github.com/kinanqaz/bragi/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

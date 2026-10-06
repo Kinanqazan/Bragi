@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/scanner/metadata_old"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/scanner/metadata_old"
 )
 
 const ExtractorID = "ffmpeg"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io/fs"
 
-	"github.com/navidrome/navidrome/model/metadata"
+	"github.com/kinanqaz/bragi/model/metadata"
 )
 
 var ErrLyricsSidecarConflict = errors.New("lyrics sidecar changed since it was loaded")

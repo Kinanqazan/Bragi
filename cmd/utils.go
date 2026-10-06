@@ -7,12 +7,12 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"github.com/navidrome/navidrome/core/auth"
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/persistence"
+	"github.com/kinanqaz/bragi/core/auth"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/persistence"
 )
 
 // newTabWriter keeps every CLI table on the same column settings.

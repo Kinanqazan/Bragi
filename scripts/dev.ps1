@@ -281,11 +281,11 @@ $tmpPath = Join-Path $projectRoot 'tmp'
 $devLogSuffix = Get-Date -Format 'yyyyMMdd-HHmmss'
 $viteStdoutLog = Join-Path $tmpPath "vite-dev.$devLogSuffix.stdout.log"
 $viteStderrLog = Join-Path $tmpPath "vite-dev.$devLogSuffix.stderr.log"
-$backendStdoutLog = Join-Path $tmpPath "navidrome-dev.$devLogSuffix.stdout.log"
-$backendStderrLog = Join-Path $tmpPath "navidrome-dev.$devLogSuffix.stderr.log"
+$backendStdoutLog = Join-Path $tmpPath "bragi-dev.$devLogSuffix.stdout.log"
+$backendStderrLog = Join-Path $tmpPath "bragi-dev.$devLogSuffix.stderr.log"
 
 Write-Host '=================================================' -ForegroundColor Cyan
-Write-Host '  Starting Navidrome live single-origin test server' -ForegroundColor Cyan
+Write-Host '  Starting Bragi live single-origin test server' -ForegroundColor Cyan
 Write-Host "  UI + API: $localUrl" -ForegroundColor Cyan
 foreach ($address in (Get-LanIPv4Addresses)) {
     Write-Host "  LAN URL:   http://$address`:$Port$appPath" -ForegroundColor Cyan
@@ -334,7 +334,7 @@ try {
     Wait-ForVite -CheckPort $Port -Process $viteProcess -ErrorLog $viteStderrLog
 
     Write-Host "`nReady. Open $localUrl" -ForegroundColor Green
-    Write-Host 'Vite and Go logs are in tmp\vite-dev.*.log and tmp\navidrome-dev.*.log.' -ForegroundColor DarkGray
+    Write-Host 'Vite and Go logs are in tmp\vite-dev.*.log and tmp\bragi-dev.*.log.' -ForegroundColor DarkGray
     try {
         Start-Process $localUrl | Out-Null
     } catch {

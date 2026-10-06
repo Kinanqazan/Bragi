@@ -1,8 +1,5 @@
 export const REST_URL = '/api'
 
-export const INSIGHTS_DOC_URL =
-  'https://navidrome.org/docs/getting-started/insights'
-
 export const M3U_MIME_TYPE = 'audio/x-mpegurl'
 
 export const AUTO_THEME_ID = 'AUTO_THEME_ID'

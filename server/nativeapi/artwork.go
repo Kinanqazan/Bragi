@@ -5,9 +5,9 @@ import (
 	"slices"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 )
 
 func (api *Router) addArtworkRoute(r chi.Router) {

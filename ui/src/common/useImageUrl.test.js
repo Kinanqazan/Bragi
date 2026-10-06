@@ -289,9 +289,9 @@ describe('useImageUrl', () => {
 
     // Song 1 and Song 2 from the same album have different track IDs, but identical imageHash
     const urlSong1 =
-      'http://localhost:4533/rest/getCoverArt?u=user&t=token1&s=salt1&v=1.8.0&c=NavidromeUI&id=mf-track1_aabbccdd11223344&size=300'
+      'http://localhost:4533/rest/getCoverArt?u=user&t=token1&s=salt1&v=1.8.0&c=BragiWeb&id=mf-track1_aabbccdd11223344&size=300'
     const urlSong2 =
-      'http://localhost:4533/rest/getCoverArt?u=user&t=token2&s=salt2&v=1.8.0&c=NavidromeUI&id=mf-track2_aabbccdd11223344&size=300'
+      'http://localhost:4533/rest/getCoverArt?u=user&t=token2&s=salt2&v=1.8.0&c=BragiWeb&id=mf-track2_aabbccdd11223344&size=300'
 
     const { result: res1 } = renderHook(() => useImageUrl(urlSong1))
     const { result: res2 } = renderHook(() => useImageUrl(urlSong2))

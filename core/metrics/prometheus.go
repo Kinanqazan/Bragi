@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/singleton"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/singleton"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -91,12 +91,12 @@ func (m *metrics) GetHandler() http.Handler {
 }
 
 type prometheusMetrics struct {
-	dbTotal               *prometheus.GaugeVec
-	versionInfo           *prometheus.GaugeVec
-	lastMediaScan         *prometheus.GaugeVec
-	mediaScansCounter     *prometheus.CounterVec
-	httpRequestCounter    *prometheus.CounterVec
-	httpRequestDuration   *prometheus.SummaryVec
+	dbTotal             *prometheus.GaugeVec
+	versionInfo         *prometheus.GaugeVec
+	lastMediaScan       *prometheus.GaugeVec
+	mediaScansCounter   *prometheus.CounterVec
+	httpRequestCounter  *prometheus.CounterVec
+	httpRequestDuration *prometheus.SummaryVec
 }
 
 // Prometheus' metrics requires initialization. But not more than once
@@ -114,7 +114,7 @@ var getPrometheusMetrics = sync.OnceValue(func() *prometheusMetrics {
 		versionInfo: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "navidrome_info",
-				Help: "Information about Navidrome version",
+				Help: "Information about Bragi version",
 			},
 			[]string{"version"},
 		),

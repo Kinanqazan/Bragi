@@ -335,7 +335,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Merci d'avoir installé Navidrome !",
+      "welcome1": "Merci d'avoir installé Bragi !",
       "welcome2": "Pour commencer, créez un compte administrateur",
       "confirmPassword": "Confirmez votre mot de passe",
       "buttonCreateAdmin": "Créer un compte administrateur",
@@ -345,8 +345,7 @@
       "password": "Mot de passe",
       "sign_in": "Connexion",
       "sign_in_error": "Échec de l'authentification, merci de réessayer",
-      "logout": "Déconnexion",
-      "insightsCollectionNote": "Navidrome collecte des données de façon anonyme\nafin d'améliorer le projet. Cliquez [ici] pour en savoir\nplus ou pour désactiver la télémétrie"
+      "logout": "Déconnexion"
     },
     "validation": {
       "invalidChars": "Merci de n'utiliser que des chiffres et des lettres",
@@ -481,13 +480,13 @@
   "message": {
     "note": "NOTE",
     "transcodingDisabled": "Le changement de paramètres depuis l'interface web est désactivé pour des raisons de sécurité. Pour changer (éditer ou supprimer) les options de transcodage, relancer le serveur avec l'option %{config} activée.",
-    "transcodingEnabled": "Navidrome fonctionne actuellement avec %{config}, rendant possible l’exécution de commandes arbitraires depuis l'interface web. Il est recommandé d'activer cette fonctionnalité uniquement lors de la configuration du transcodage.",
+    "transcodingEnabled": "Bragi fonctionne actuellement avec %{config}, rendant possible l’exécution de commandes arbitraires depuis l'interface web. Il est recommandé d'activer cette fonctionnalité uniquement lors de la configuration du transcodage.",
     "songsAddedToPlaylist": "1 titre a été ajouté à la playlist |||| %{smart_count} titres ont été ajoutés à la playlist",
     "noPlaylistsAvailable": "Aucune playlist",
     "delete_user_title": "Supprimer l'utilisateur '%{name}'",
     "delete_user_content": "Êtes-vous sûr(e) de vouloir supprimer cet utilisateur et ses données associées (y compris ses playlists et préférences) ?",
     "notifications_blocked": "Votre navigateur bloque les notifications de ce site",
-    "notifications_not_available": "Votre navigateur ne permet pas d'afficher les notifications sur le bureau ou vous n'accédez pas à Navidrome via HTTPS",
+    "notifications_not_available": "Votre navigateur ne permet pas d'afficher les notifications sur le bureau ou vous n'accédez pas à Bragi via HTTPS",
     "lastfmLinkSuccess": "Last.fm a été correctement relié et le scrobble a été activé",
     "lastfmLinkFailure": "Last.fm n'a pas pu être correctement relié",
     "lastfmUnlinkSuccess": "Last.fm n'est plus relié et le scrobble a été désactivé",
@@ -587,12 +586,7 @@
     "links": {
       "homepage": "Page d'accueil",
       "source": "Code source",
-      "featureRequests": "Demande de fonctionnalités",
-      "lastInsightsCollection": "Dernière collection des données",
-      "insights": {
-        "disabled": "Désactivée",
-        "waiting": "En attente"
-      }
+      "featureRequests": "Demande de fonctionnalités"
     },
     "tabs": {
       "about": "À propos",
@@ -624,7 +618,7 @@
     "selectiveScan": "Sélectif"
   },
   "help": {
-    "title": "Raccourcis Navidrome",
+    "title": "Raccourcis Bragi",
     "hotkeys": {
       "show_help": "Montrer cette fenêtre d'aide",
       "toggle_menu": "Afficher/Cacher le menu latéral",

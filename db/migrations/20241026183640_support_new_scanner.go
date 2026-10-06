@@ -11,9 +11,9 @@ import (
 	"testing/fstest"
 	"unicode/utf8"
 
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/run"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/run"
 	"github.com/pressly/goose/v3"
 )
 

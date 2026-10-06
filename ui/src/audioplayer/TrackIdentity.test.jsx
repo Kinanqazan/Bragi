@@ -1,8 +1,19 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import TrackIdentity from './TrackIdentity'
+
+const pointerEvent = (type, options = {}) => {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(
+    event,
+    Object.fromEntries(
+      Object.entries(options).map(([key, value]) => [key, { value }]),
+    ),
+  )
+  return event
+}
 
 vi.mock('../common', () => ({
   ArtistLinkField: ({ record, source }) => (
@@ -81,6 +92,43 @@ describe('TrackIdentity', () => {
     )
     expect(screen.getByText('Mobile Song')).toBeInTheDocument()
     expect(screen.getByTestId('artist-link-field')).toHaveTextContent('Mobile Artist')
+  })
+
+  it('runs the mobile title action on touch release and suppresses its duplicate click', () => {
+    const onTitleClick = vi.fn((event) => event.preventDefault())
+    render(
+      <MemoryRouter>
+        <TrackIdentity
+          track={{ song: { id: 'song-5', title: 'Touch Song' } }}
+          mobile
+          onTitleClick={onTitleClick}
+        />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Touch Song' })
+    fireEvent(link, pointerEvent('pointerdown', {
+      pointerId: 5,
+      pointerType: 'touch',
+      clientX: 10,
+      clientY: 10,
+    }))
+    const release = pointerEvent('pointerup', {
+      pointerId: 5,
+      pointerType: 'touch',
+      clientX: 10,
+      clientY: 10,
+    })
+    fireEvent(link, release)
+
+    expect(onTitleClick).toHaveBeenCalledOnce()
+    const click = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(link, click)
+    expect(onTitleClick).toHaveBeenCalledOnce()
+    expect(click.defaultPrevented).toBe(true)
   })
 
   it('does not wrap artist in the song page link', () => {

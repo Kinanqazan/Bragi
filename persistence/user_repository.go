@@ -12,13 +12,13 @@ import (
 
 	. "github.com/Masterminds/squirrel"
 	"github.com/deluan/rest"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/id"
-	"github.com/navidrome/navidrome/utils"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/id"
+	"github.com/kinanqaz/bragi/utils"
+	"github.com/kinanqaz/bragi/utils/slice"
 	"github.com/pocketbase/dbx"
 )
 

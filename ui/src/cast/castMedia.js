@@ -60,19 +60,19 @@ export const toCastReceiverUrl = (url) => {
     }
   }
 
-  // A track belongs to this Navidrome server if:
+  // A track belongs to this Bragi server if:
   // 1. Its origin matches window.location.origin (e.g. browser or PWA)
   // 2. Its origin matches serverBase origin (e.g. Android APK wrapper targeting https://bragi.lan)
   // 3. It was loaded from appassets (offline wrapper)
   // 4. Its path is a Subsonic rest endpoint (/rest/stream, /rest/getCoverArt, etc.)
-  const isNavidromeMedia =
+  const isBragiMedia =
     senderUrl.origin === origin ||
     (serverOrigin && senderUrl.origin === serverOrigin) ||
     isAppAssets ||
     senderUrl.pathname.includes('/rest/stream') ||
     senderUrl.pathname.includes('/rest/getCoverArt')
 
-  if (receiverBaseValue && isNavidromeMedia) {
+  if (receiverBaseValue && isBragiMedia) {
     const receiverUrl = new URL(receiverBaseValue)
     const receiverBasePath = normalizePath(receiverUrl.pathname)
     const mediaPath = pathWithoutAppBase(senderUrl.pathname, serverBase || config.baseURL)

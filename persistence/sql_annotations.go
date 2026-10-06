@@ -12,10 +12,10 @@ import (
 
 	. "github.com/Masterminds/squirrel"
 	"github.com/fatih/structs"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 )
 
 const annotationTable = "annotation"

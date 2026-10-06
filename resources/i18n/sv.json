@@ -335,7 +335,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Tack för att du installerade Navidrome!",
+      "welcome1": "Tack för att du installerade Bragi!",
       "welcome2": "Skapa först ett admin-konto",
       "confirmPassword": "Bekräfta lösenord",
       "buttonCreateAdmin": "Skapa admin-konto",
@@ -345,8 +345,7 @@
       "password": "Lösenord",
       "sign_in": "Logga in",
       "sign_in_error": "Felaktig inloggning, försök igen",
-      "logout": "Logga ut",
-      "insightsCollectionNote": "Navidrome samlar anonym användardata för att\nhjälpa projektet att bli bättre. Klicka [här]\nför att läsa mer och avaktivera om du vill"
+      "logout": "Logga ut"
     },
     "validation": {
       "invalidChars": "Använd enbart bokstäver och siffror",
@@ -481,13 +480,13 @@
   "message": {
     "note": "OBSERVERA",
     "transcodingDisabled": "Inställning för kodning via webbgränssnittet är av säkerhetsskäl ej aktiverat. Starta om servern med alternativet %{config} markerat om du vill göra ändringar (redigera eller lägga till).",
-    "transcodingEnabled": "Navidrome körs för närvarande med %{config}, vilket gör att systemkommandon kan köras från webbplattformen. Du rekommenderas av säkerhetsskäl att du stänger av den och bara slår på den när du ställer in omkodning.",
+    "transcodingEnabled": "Bragi körs för närvarande med %{config}, vilket gör att systemkommandon kan köras från webbplattformen. Du rekommenderas av säkerhetsskäl att du stänger av den och bara slår på den när du ställer in omkodning.",
     "songsAddedToPlaylist": "La till en låt i spellistan |||| La till %{smart_count} låtar i spellistan",
     "noPlaylistsAvailable": "Ingen tillgänglig",
     "delete_user_title": "Ta bort användare '%{name}'",
     "delete_user_content": "Är du säker på att du vill ta bort denna användare (inklusive spellistor och inställningar)?",
     "notifications_blocked": "Du har blockerat meddelanden från denna sajt in din webbläsares inställningar",
-    "notifications_not_available": "Denna webbläsare stödjer inte skrivbordsmeddelanden eller du använder inte Navidrome via https",
+    "notifications_not_available": "Denna webbläsare stödjer inte skrivbordsmeddelanden eller du använder inte Bragi via https",
     "lastfmLinkSuccess": "Last.fm är länkat och scrobbling är aktivt",
     "lastfmLinkFailure": "Last.fm kunde inte länkas",
     "lastfmUnlinkSuccess": "Last.fm är inte längre länkat och scrobbling är deaktiverat",
@@ -587,12 +586,7 @@
     "links": {
       "homepage": "Hemsida",
       "source": "Källkod",
-      "featureRequests": "Funktionalitetförfrågan",
-      "lastInsightsCollection": "Senaste Insights-kollektion",
-      "insights": {
-        "disabled": "Inaktiverad",
-        "waiting": "Väntar"
-      }
+      "featureRequests": "Funktionalitetförfrågan"
     },
     "tabs": {
       "about": "Om",
@@ -624,7 +618,7 @@
     "selectiveScan": "Urval"
   },
   "help": {
-    "title": "Navidrome kortkommandon",
+    "title": "Bragi kortkommandon",
     "hotkeys": {
       "show_help": "Visa denna hjälp",
       "toggle_menu": "Växla sidomeny",

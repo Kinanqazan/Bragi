@@ -299,7 +299,7 @@ export const SongContextMenu = ({
         getContentAnchorEl={null}
         style={{ zIndex: 1500 }}
       >
-        {Object.keys(options).map((key) => {
+        {Object.keys(options).filter((key) => key !== 'info').map((key) => {
           const showInPlaylistDisabled =
             key === 'showInPlaylist' && !playlists.length
           return (

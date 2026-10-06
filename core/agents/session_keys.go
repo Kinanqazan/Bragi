@@ -3,7 +3,7 @@ package agents
 import (
 	"context"
 
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/model"
 )
 
 // SessionKeys is a simple wrapper around the UserPropsRepository

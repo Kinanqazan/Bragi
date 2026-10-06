@@ -12,9 +12,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/utils/gg"
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/utils/gg"
+	"github.com/kinanqaz/bragi/utils/str"
 )
 
 const (

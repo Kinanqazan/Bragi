@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 )
 
 func getListeningStats(ds model.DataStore) http.HandlerFunc {

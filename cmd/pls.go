@@ -12,14 +12,14 @@ import (
 	"strings"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/utils/ioutils"
-	"github.com/navidrome/navidrome/utils/slice"
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/utils/ioutils"
+	"github.com/kinanqaz/bragi/utils/slice"
+	"github.com/kinanqaz/bragi/utils/str"
 	"github.com/spf13/cobra"
 )
 

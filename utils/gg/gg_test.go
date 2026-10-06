@@ -3,8 +3,8 @@ package gg_test
 import (
 	"testing"
 
-	"github.com/navidrome/navidrome/tests"
-	"github.com/navidrome/navidrome/utils/gg"
+	"github.com/kinanqaz/bragi/tests"
+	"github.com/kinanqaz/bragi/utils/gg"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

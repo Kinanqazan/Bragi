@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/auth"
-	"github.com/navidrome/navidrome/core/publicurl"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/server"
-	"github.com/navidrome/navidrome/ui"
-	. "github.com/navidrome/navidrome/utils/gg"
-	"github.com/navidrome/navidrome/utils/req"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/auth"
+	"github.com/kinanqaz/bragi/core/publicurl"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/server"
+	"github.com/kinanqaz/bragi/ui"
+	. "github.com/kinanqaz/bragi/utils/gg"
+	"github.com/kinanqaz/bragi/utils/req"
 )
 
 func (pub *Router) handleShares(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,7 @@ func (pub *Router) mapShareToM3U(r *http.Request, s model.Share) *model.Share {
 // encodeMediafileShare builds the signed token embedded in a public share link
 // for a single track.
 //
-// NOTE ON JWT USAGE: This is deliberately NOT part of Navidrome's authentication.
+// NOTE ON JWT USAGE: This is deliberately NOT part of Bragi's authentication.
 // The token is a signed, opaque capability that identifies one shared track
 // (plus its transcode format/bitrate and the parent share id). We use a JWT here
 // (reusing the library we already have) because it is a simple way to get three

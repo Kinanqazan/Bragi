@@ -5,13 +5,11 @@ import { IconButton } from '@material-ui/core'
 import { useDispatch } from 'react-redux'
 import { useDataProvider } from 'react-admin'
 import { playTracks } from '../actions'
+import recordsToMap from './recordsToMap'
 
 export const PlayButton = ({ record, size, className }) => {
   let extractSongsData = function (response) {
-    const data = response.data.reduce(
-      (acc, cur) => ({ ...acc, [cur.id]: cur }),
-      {},
-    )
+    const data = recordsToMap(response.data)
     const ids = response.data.map((r) => r.id)
     return { data, ids }
   }

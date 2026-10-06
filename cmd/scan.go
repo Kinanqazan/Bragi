@@ -9,14 +9,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/persistence"
-	"github.com/navidrome/navidrome/scanner"
-	"github.com/navidrome/navidrome/utils/pl"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/persistence"
+	"github.com/kinanqaz/bragi/scanner"
+	"github.com/kinanqaz/bragi/utils/pl"
 	"github.com/spf13/cobra"
 )
 

@@ -340,7 +340,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "感谢您安装 Navidrome！",
+      "welcome1": "感谢您安装 Bragi！",
       "welcome2": "开始使用前，请创建一个管理员账户",
       "confirmPassword": "确认密码",
       "buttonCreateAdmin": "创建管理员",
@@ -350,8 +350,7 @@
       "password": "密码",
       "sign_in": "登录",
       "sign_in_error": "验证失败，请重试",
-      "logout": "注销",
-      "insightsCollectionNote": "Navidrome 会收集匿名使用数据以帮助改进项目。\n点击[此处]了解详情或选择不参与收集。"
+      "logout": "注销"
     },
     "validation": {
       "invalidChars": "请只使用字母和数字",
@@ -492,7 +491,7 @@
     "coverRemoveError": "移除封面时出错",
     "note": "注意",
     "transcodingDisabled": "出于安全原因，从 Web 界面更改转码配置的功能已被禁用。要更改（编辑或新增）转码选项，请在启用 %{config} 选项的情况下重新启动服务器。",
-    "transcodingEnabled": "Navidrome 当前与 %{config} 一起使用，可以通过从 Web 界面配置转码选项来执行任意命令。建议禁用此选项，并且仅在需要配置转码选项时启用此功能。",
+    "transcodingEnabled": "Bragi 当前与 %{config} 一起使用，可以通过从 Web 界面配置转码选项来执行任意命令。建议禁用此选项，并且仅在需要配置转码选项时启用此功能。",
     "songsAddedToPlaylist": "已添加 %{smart_count} 首歌到歌单",
     "noSimilarSongsFound": "未找到相似歌曲",
     "startingInstantMix": "即兴推荐加载中...",
@@ -505,7 +504,7 @@
     "remove_all_missing_title": "移除所有丢失文件",
     "remove_all_missing_content": "您确定要从数据库中移除所有丢失文件吗？这将永久删除对它们的所有引用，包括播放次数和评分。",
     "notifications_blocked": "您已在浏览器的设置中屏蔽了此网站的通知",
-    "notifications_not_available": "此浏览器不支持桌面通知，或者您未通过 https 访问 Navidrome",
+    "notifications_not_available": "此浏览器不支持桌面通知，或者您未通过 https 访问 Bragi",
     "lastfmLinkSuccess": "Last.fm 成功关联并启用个性化记录",
     "lastfmLinkFailure": "Last.fm 无法关联",
     "lastfmUnlinkSuccess": "Last.fm 已取消关联并禁用个性化记录",
@@ -593,12 +592,7 @@
     "links": {
       "homepage": "主页",
       "source": "源代码",
-      "featureRequests": "功能需求",
-      "lastInsightsCollection": "上次的匿名数据收集",
-      "insights": {
-        "disabled": "已禁用",
-        "waiting": "等待中"
-      }
+      "featureRequests": "功能需求"
     },
     "tabs": {
       "about": "关于",
@@ -635,7 +629,7 @@
     "minutesAgo": "%{smart_count} 分钟前"
   },
   "help": {
-    "title": "Navidrome 快捷键",
+    "title": "Bragi 快捷键",
     "hotkeys": {
       "show_help": "显示此帮助",
       "toggle_menu": "显示/隐藏菜单侧栏",

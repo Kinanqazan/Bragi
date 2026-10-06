@@ -10,6 +10,8 @@ import {
   Menu,
   MenuItem,
   Paper,
+  Tab,
+  Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -47,6 +49,7 @@ import {
   Artwork,
   DurationField,
   LoveButton,
+  SongInfo,
   Title,
   useScrollRestoration,
 } from '../common'
@@ -55,7 +58,7 @@ const useStyles = makeStyles((theme) => ({
   root: {
     padding: theme.spacing(2),
     [theme.breakpoints.down('xs')]: {
-      paddingTop: theme.spacing(4),
+      paddingTop: 'var(--nd-mobile-top-offset, 82px)',
       height: '100%',
       minHeight: 0,
       overflowY: 'auto',
@@ -69,16 +72,67 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   backButton: {
+    flex: '0 0 auto',
+    marginBottom: 0,
+  },
+  pageNavigation: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: theme.spacing(2),
     marginBottom: theme.spacing(2),
+    minWidth: 0,
+    [theme.breakpoints.down('xs')]: {
+      gap: theme.spacing(1),
+    },
+  },
+  pageTabs: {
+    flex: '1 1 180px',
+    minWidth: 0,
+    maxWidth: 480,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    '& .MuiTab-root': {
+      minWidth: 0,
+      paddingLeft: theme.spacing(1),
+      paddingRight: theme.spacing(1),
+    },
+  },
+  tabPanel: {
+    maxWidth: 1440,
+    paddingTop: theme.spacing(2),
+  },
+  detailsPanel: {
+    overflowX: 'auto',
+    [theme.breakpoints.down('xs')]: {
+      '& .MuiTable-root': { tableLayout: 'fixed' },
+      '& .MuiTableCell-root:first-child': { width: '34%', minWidth: 96 },
+      '& .MuiTableCell-root:nth-child(2)': { overflowWrap: 'anywhere' },
+    },
+  },
+  lyricsCard: {
+    marginTop: theme.spacing(3),
+  },
+  tagGroups: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    alignItems: 'start',
+    gap: theme.spacing(3),
+    marginTop: theme.spacing(3),
+    [theme.breakpoints.down('xs')]: {
+      gap: theme.spacing(2),
+    },
+  },
+  tagGroup: {
+    minWidth: 0,
   },
   content: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(220px, 300px) minmax(0, 1fr)',
+    gridTemplateColumns: 'minmax(180px, 220px) minmax(0, 1fr)',
     gap: theme.spacing(3),
     alignItems: 'start',
     maxWidth: 1440,
     [theme.breakpoints.down('sm')]: {
-      gridTemplateColumns: 'minmax(0, 260px) minmax(0, 1fr)',
+      gridTemplateColumns: 'minmax(0, 200px) minmax(0, 1fr)',
       gap: theme.spacing(2),
     },
     [theme.breakpoints.down('xs')]: {
@@ -97,12 +151,12 @@ const useStyles = makeStyles((theme) => ({
     position: 'relative',
     width: '100%',
     aspectRatio: '1 / 1',
-    maxWidth: 300,
+    maxWidth: 220,
     overflow: 'hidden',
     borderRadius: theme.shape.borderRadius,
     [theme.breakpoints.down('xs')]: {
-      maxWidth: 220,
-      justifySelf: 'center',
+      maxWidth: 160,
+      justifySelf: 'start',
       marginTop: 'calc(8px + env(safe-area-inset-top, 0px))',
     },
   },
@@ -140,6 +194,9 @@ const useStyles = makeStyles((theme) => ({
     right: theme.spacing(1.5),
     bottom: theme.spacing(1.5),
     zIndex: 2,
+    [theme.breakpoints.down('xs')]: {
+      display: 'none',
+    },
   },
   playButton: {
     minHeight: 40,
@@ -175,7 +232,8 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.down('xs')]: {
       position: 'absolute',
       top: 'calc(8px + env(safe-area-inset-top, 0px))',
-      right: 'calc((100% - 220px) / 2 - 56px)',
+      left: 176,
+      right: 'auto',
       zIndex: 3,
       flexDirection: 'column',
       gap: 0,
@@ -286,8 +344,8 @@ const useStyles = makeStyles((theme) => ({
   },
   lyricsInput: {
     width: '100%',
-    maxWidth: 480,
-    height: 440,
+    minHeight: 240,
+    height: 320,
     boxSizing: 'border-box',
     marginTop: theme.spacing(1),
     padding: theme.spacing(1.5),
@@ -297,6 +355,9 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.primary,
     font: 'inherit',
     resize: 'vertical',
+    [theme.breakpoints.down('xs')]: {
+      height: 260,
+    },
   },
   lyricsTimingButton: {
     minWidth: 0,
@@ -327,6 +388,7 @@ const useStyles = makeStyles((theme) => ({
   lyricsActions: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: theme.spacing(0.25),
     '& .MuiButton-root': {
       minWidth: 52,
@@ -454,7 +516,11 @@ const SongShowLayout = (props) => {
   const [artworkFile, setArtworkFile] = useState(null)
   const [artworkPreview, setArtworkPreview] = useState('')
   const [artworkSaving, setArtworkSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
+  const [rawTags, setRawTags] = useState(undefined)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const artworkInputRef = useRef(null)
+  const detailsRequestRef = useRef(0)
 
   useEffect(() => {
     if (!record) return
@@ -466,6 +532,43 @@ const SongShowLayout = (props) => {
   const canEdit = config.enableMediaFileMetadataEditing && permissions === 'admin'
   const recordId = displayRecord?.id
   const mediaFileId = displayRecord?.mediaFileId
+  useEffect(() => {
+    setActiveTab(0)
+    setRawTags(undefined)
+    setDetailsLoading(false)
+    detailsRequestRef.current += 1
+  }, [recordId])
+
+  const handleTabChange = async (_event, value) => {
+    setActiveTab(value)
+    if (
+      value !== 1 ||
+      permissions !== 'admin' ||
+      displayRecord.missing ||
+      rawTags !== undefined ||
+      detailsLoading
+    ) {
+      return
+    }
+
+    const requestId = ++detailsRequestRef.current
+    setDetailsLoading(true)
+    try {
+      const data = await dataProvider.inspect(mediaFileId || recordId)
+      if (detailsRequestRef.current === requestId) {
+        setRawTags(data?.data?.rawTags ?? null)
+      }
+    } catch (detailsError) {
+      if (detailsRequestRef.current === requestId) {
+        notify(`Could not load raw song tags: ${detailsError.message}`, {
+          type: 'warning',
+          multiLine: true,
+        })
+      }
+    } finally {
+      if (detailsRequestRef.current === requestId) setDetailsLoading(false)
+    }
+  }
   const changedFields = useMemo(() => {
     if (!displayRecord) return {}
     const changes = Object.fromEntries(
@@ -960,315 +1063,339 @@ const SongShowLayout = (props) => {
         message="You have unsaved changes. Leave this page?"
       />
       <RaTitle title={<Title subTitle={displayRecord.title} />} />
-      <Button
-        className={classes.backButton}
-        onClick={handleBack}
-        startIcon={<ArrowBackIcon />}
+      <div className={classes.pageNavigation}>
+        <Button
+          className={classes.backButton}
+          onClick={handleBack}
+          startIcon={<ArrowBackIcon />}
+        >
+          Back
+        </Button>
+        <Tabs
+          aria-label="Song page sections"
+          className={classes.pageTabs}
+          onChange={handleTabChange}
+          value={activeTab}
+          variant="fullWidth"
+        >
+          <Tab aria-controls="song-overview-panel" id="song-overview-tab" label="Overview" />
+          <Tab aria-controls="song-details-panel" id="song-details-tab" label="Details" />
+        </Tabs>
+      </div>
+      <div
+        aria-labelledby="song-overview-tab"
+        className={classes.tabPanel}
+        hidden={activeTab !== 0}
+        id="song-overview-panel"
+        role="tabpanel"
       >
-        Back
-      </Button>
-      <div className={classes.content}>
-        <div className={classes.coverFrame} data-testid="cover-frame">
-          <Artwork
-            record={displayRecord}
-            size={560}
-            square
-            className={classes.artwork}
-            title={displayRecord.title}
-          />
-          {artworkPreview && (
-            <img className={classes.artworkPreview} src={artworkPreview} alt="Artwork preview" />
-          )}
-          {canEdit && (
-            <div className={classes.artworkActions} role="group" aria-label="Song artwork">
-              <Tooltip title={artworkFile ? 'Choose another image' : 'Change song artwork'}>
-                <span>
-                  <IconButton
-                    aria-label={artworkFile ? 'Choose another image' : 'Change song artwork'}
-                    disabled={artworkSaving}
-                    onClick={() => artworkInputRef.current?.click()}
-                    size="small"
-                  >
-                    <PhotoCameraIcon />
-                  </IconButton>
-                </span>
-              </Tooltip>
-              {artworkFile && (
-                <>
-                  <Tooltip title="Save artwork">
-                    <span>
+        <div className={classes.content}>
+          <div className={classes.coverFrame} data-testid="cover-frame">
+            <Artwork
+              record={displayRecord}
+              size={560}
+              fit="cover"
+              className={classes.artwork}
+              title={displayRecord.title}
+            />
+            {artworkPreview && (
+              <img className={classes.artworkPreview} src={artworkPreview} alt="Artwork preview" />
+            )}
+            {canEdit && (
+              <div className={classes.artworkActions} role="group" aria-label="Song artwork">
+                <Tooltip title={artworkFile ? 'Choose another image' : 'Change song artwork'}>
+                  <span>
+                    <IconButton
+                      aria-label={artworkFile ? 'Choose another image' : 'Change song artwork'}
+                      disabled={artworkSaving}
+                      onClick={() => artworkInputRef.current?.click()}
+                      size="small"
+                    >
+                      <PhotoCameraIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                {artworkFile && (
+                  <>
+                    <Tooltip title="Save artwork">
+                      <span>
+                        <IconButton
+                          aria-label={artworkSaving ? 'Saving artwork' : 'Save artwork'}
+                          color="primary"
+                          disabled={artworkSaving}
+                          onClick={handleArtworkSave}
+                          size="small"
+                        >
+                          {artworkSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Cancel artwork change">
                       <IconButton
-                        aria-label={artworkSaving ? 'Saving artwork' : 'Save artwork'}
-                        color="primary"
+                        aria-label="Cancel artwork change"
                         disabled={artworkSaving}
-                        onClick={handleArtworkSave}
+                        onClick={handleArtworkCancel}
                         size="small"
                       >
-                        {artworkSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+                        <CloseIcon />
                       </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Cancel artwork change">
-                    <IconButton
-                      aria-label="Cancel artwork change"
-                      disabled={artworkSaving}
-                      onClick={handleArtworkCancel}
-                      size="small"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
-            </div>
-          )}
-          <input
-            ref={artworkInputRef}
-            className={classes.artworkFileInput}
-            type="file"
-            accept="image/*"
-            aria-label="Choose song artwork"
-            onChange={handleArtworkSelection}
-          />
-          <div className={classes.playOverlay} role="group" aria-label="Song playback">
-            <Button
-              className={classes.playButton}
-              color="primary"
-              variant="contained"
-              startIcon={<PlayArrowIcon />}
-              disabled={displayRecord.missing}
-              onClick={() =>
-                dispatch(playTracks({ [displayRecord.id]: displayRecord }, [displayRecord.id]))
-              }
-            >
-              Play <span className={classes.playDuration}>
-                (<DurationField record={displayRecord} source="duration" />)
-              </span>
-            </Button>
-          </div>
-        </div>
-        <div className={classes.details} role="group" aria-label="Song metadata">
-          {canEdit && !displayRecord.hasCoverArt && (
-            <Typography color="textSecondary" component="p" variant="caption">
-              No embedded cover is stored in this song. The displayed cover comes from shared disc, album, or folder artwork when available.
-            </Typography>
-          )}
-          <div className={classes.titleRow}>
-            <Typography className={classes.title} variant="h6" component="h1">
-              {editing ? (
-                <input
-                  aria-label="Song title"
-                  className={`${classes.inlineInput} ${classes.titleInput}`}
-                  maxLength={4096}
-                  value={draft.title}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, title: event.target.value }))
-                  }
-                />
-              ) : (
-                displayRecord.title
-              )}
-            </Typography>
-            <div className={classes.titleActions} role="group" aria-label="Song actions">
-              <LoveButton
-                resource="song"
-                record={displayRecord}
-                aria-label="Toggle favorite"
-              />
-              {editing ? (
-                <div className={classes.editActions}>
-                  <Tooltip title={saving ? 'Saving changes' : 'Save changes'}>
-                    <span>
-                      <IconButton
-                        aria-label={saving ? 'Saving changes' : 'Save changes'}
-                        color="primary"
-                        disabled={saving || Object.keys(changedFields).length === 0}
-                        onClick={handleSave}
-                      >
-                        <SaveIcon />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Cancel">
-                    <IconButton
-                      aria-label="Cancel"
-                      disabled={saving}
-                      onClick={() => {
-                        setDraft(metadataDraftFromRecord(displayRecord))
-                        setEditing(false)
-                      }}
-                      size="small"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                </div>
-              ) : (
-                canEdit && (
-                  <Tooltip title="Edit metadata">
-                    <IconButton aria-label="Edit metadata" onClick={startEditing}>
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                )
-              )}
-            </div>
-          </div>
-          {editing && (
-            <>
-              <datalist id="artist-suggestions">
-                {metadataSuggestions.artists.map((name) => <option key={name} value={name} />)}
-              </datalist>
-              <datalist id="genre-suggestions">
-                {metadataSuggestions.genres.map((name) => <option key={name} value={name} />)}
-              </datalist>
-              <datalist id="mood-suggestions">
-                {metadataSuggestions.moods.map((name) => <option key={name} value={name} />)}
-              </datalist>
-            </>
-          )}
-          <Typography className={classes.artist} color="textSecondary" component="div">
-            {editing ? (
-              <input
-                aria-label="Artist"
-                className={`${classes.inlineInput} ${classes.artistInput}`}
-                list="artist-suggestions"
-                maxLength={4096}
-                placeholder="Unknown artist"
-                value={draft.artist}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, artist: event.target.value }))
-                }
-              />
-            ) : displayRecord.artist ? (
-              <ArtistLinkField source="artist" record={displayRecord} limit={Infinity} />
-            ) : (
-              'Unknown artist'
+                    </Tooltip>
+                  </>
+                )}
+              </div>
             )}
-          </Typography>
-          <div className={classes.section}>
-            <Typography component="div">
-              <span className={classes.label}>Album artist</span>
+            <input
+              ref={artworkInputRef}
+              className={classes.artworkFileInput}
+              type="file"
+              accept="image/*"
+              aria-label="Choose song artwork"
+              onChange={handleArtworkSelection}
+            />
+            <div className={classes.playOverlay} role="group" aria-label="Song playback">
+              <Button
+                className={classes.playButton}
+                color="primary"
+                variant="contained"
+                startIcon={<PlayArrowIcon />}
+                disabled={displayRecord.missing}
+                onClick={() =>
+                  dispatch(playTracks({ [displayRecord.id]: displayRecord }, [displayRecord.id]))
+                }
+              >
+                Play <span className={classes.playDuration}>
+                  (<DurationField record={displayRecord} source="duration" />)
+                </span>
+              </Button>
+            </div>
+          </div>
+          <div className={classes.details} role="group" aria-label="Song metadata">
+            {canEdit && !displayRecord.hasCoverArt && (
+              <Typography color="textSecondary" component="p" variant="caption">
+                No embedded cover is stored in this song. The displayed cover comes from shared disc, album, or folder artwork when available.
+              </Typography>
+            )}
+            <div className={classes.titleRow}>
+              <Typography className={classes.title} variant="h6" component="h1">
+                {editing ? (
+                  <input
+                    aria-label="Song title"
+                    className={`${classes.inlineInput} ${classes.titleInput}`}
+                    maxLength={4096}
+                    value={draft.title}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, title: event.target.value }))
+                    }
+                  />
+                ) : (
+                  displayRecord.title
+                )}
+              </Typography>
+              <div className={classes.titleActions} role="group" aria-label="Song actions">
+                <LoveButton
+                  resource="song"
+                  record={displayRecord}
+                  aria-label="Toggle favorite"
+                />
+                {editing ? (
+                  <div className={classes.editActions}>
+                    <Tooltip title={saving ? 'Saving changes' : 'Save changes'}>
+                      <span>
+                        <IconButton
+                          aria-label={saving ? 'Saving changes' : 'Save changes'}
+                          color="primary"
+                          disabled={saving || Object.keys(changedFields).length === 0}
+                          onClick={handleSave}
+                        >
+                          <SaveIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Cancel">
+                      <IconButton
+                        aria-label="Cancel"
+                        disabled={saving}
+                        onClick={() => {
+                          setDraft(metadataDraftFromRecord(displayRecord))
+                          setEditing(false)
+                        }}
+                        size="small"
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                ) : (
+                  canEdit && (
+                    <Tooltip title="Edit metadata">
+                      <IconButton aria-label="Edit metadata" onClick={startEditing}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )
+                )}
+              </div>
+            </div>
+            {editing && (
+              <>
+                <datalist id="artist-suggestions">
+                  {metadataSuggestions.artists.map((name) => <option key={name} value={name} />)}
+                </datalist>
+                <datalist id="genre-suggestions">
+                  {metadataSuggestions.genres.map((name) => <option key={name} value={name} />)}
+                </datalist>
+                <datalist id="mood-suggestions">
+                  {metadataSuggestions.moods.map((name) => <option key={name} value={name} />)}
+                </datalist>
+              </>
+            )}
+            <Typography className={classes.artist} color="textSecondary" component="div">
               {editing ? (
                 <input
-                  aria-label="Album artist"
-                  className={classes.inlineInput}
+                  aria-label="Artist"
+                  className={`${classes.inlineInput} ${classes.artistInput}`}
                   list="artist-suggestions"
                   maxLength={4096}
-                  placeholder="Not set"
-                  style={{ width: `${Math.max(7, (draft.albumArtist || '').length + 1)}ch` }}
-                  value={draft.albumArtist}
+                  placeholder="Unknown artist"
+                  value={draft.artist}
                   onChange={(event) =>
-                    setDraft((current) => ({ ...current, albumArtist: event.target.value }))
+                    setDraft((current) => ({ ...current, artist: event.target.value }))
                   }
                 />
+              ) : displayRecord.artist ? (
+                <ArtistLinkField source="artist" record={displayRecord} limit={Infinity} />
               ) : (
-                displayRecord.albumArtist || 'Not set'
+                'Unknown artist'
               )}
             </Typography>
+            <div className={classes.section}>
+              <Typography component="div">
+                <span className={classes.label}>Album artist</span>
+                {editing ? (
+                  <input
+                    aria-label="Album artist"
+                    className={classes.inlineInput}
+                    list="artist-suggestions"
+                    maxLength={4096}
+                    placeholder="Not set"
+                    style={{ width: `${Math.max(7, (draft.albumArtist || '').length + 1)}ch` }}
+                    value={draft.albumArtist}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, albumArtist: event.target.value }))
+                    }
+                  />
+                ) : (
+                  displayRecord.albumArtist || 'Not set'
+                )}
+              </Typography>
+            </div>
+            {refreshError && (
+              <Typography className={classes.refreshNotice} role="status" color="textSecondary">
+                The file was saved, but the library index still needs updating. {refreshError}{' '}
+                <Button size="small" disabled={refreshing} onClick={handleRefresh}>
+                  {refreshing ? 'Refreshing…' : 'Retry library refresh'}
+                </Button>
+              </Typography>
+            )}
+            {(editing || genres.length > 0 || moods.length > 0) && (
+              <div className={classes.tagGroups}>
+                {(editing || genres.length > 0) && (
+                  <div className={classes.tagGroup}>
+                    <Typography variant="subtitle2">Genres</Typography>
+                    {editing ? (
+                      <EditableTagList
+                        kind="Genre"
+                        values={draft.genres}
+                        classes={classes}
+                        onChange={(index, value) => updateTagDraft('genres', index, value)}
+                        onAdd={() => addTagDraft('genres')}
+                        onRemove={(index) => removeTagDraft('genres', index)}
+                        suggestionsId="genre-suggestions"
+                      />
+                    ) : (
+                      <div className={classes.chipList}>
+                        {genres.map((genre) => (
+                          <Typography className={classes.chip} key={genre}>
+                            {genre}
+                          </Typography>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(editing || moods.length > 0) && (
+                  <div className={classes.tagGroup}>
+                    <Typography variant="subtitle2">Moods</Typography>
+                    {editing ? (
+                      <EditableTagList
+                        kind="Mood"
+                        values={draft.moods}
+                        classes={classes}
+                        onChange={(index, value) => updateTagDraft('moods', index, value)}
+                        onAdd={() => addTagDraft('moods')}
+                        onRemove={(index) => removeTagDraft('moods', index)}
+                        suggestionsId="mood-suggestions"
+                      />
+                    ) : (
+                      <div className={classes.chipList}>
+                        {moods.map((mood) => (
+                          <Typography className={classes.chip} key={mood}>
+                            {mood}
+                          </Typography>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          {refreshError && (
-            <Typography className={classes.refreshNotice} role="status" color="textSecondary">
-              The file was saved, but the library index still needs updating. {refreshError}{' '}
-              <Button size="small" disabled={refreshing} onClick={handleRefresh}>
-                {refreshing ? 'Refreshing…' : 'Retry library refresh'}
-              </Button>
-            </Typography>
-          )}
-          {!editing && genres.length > 0 && (
-            <div className={classes.section}>
-              <Typography variant="subtitle2">Genres</Typography>
-              <div className={classes.chipList}>
-                {genres.map((genre) => (
-                  <Typography className={classes.chip} key={genre}>
-                    {genre}
-                  </Typography>
-                ))}
-              </div>
-            </div>
-          )}
-          {editing && (
-            <div className={classes.section}>
-              <Typography variant="subtitle2">Genres</Typography>
-              <EditableTagList
-                kind="Genre"
-                values={draft.genres}
-                classes={classes}
-                onChange={(index, value) => updateTagDraft('genres', index, value)}
-                onAdd={() => addTagDraft('genres')}
-                onRemove={(index) => removeTagDraft('genres', index)}
-                suggestionsId="genre-suggestions"
-              />
-            </div>
-          )}
-          {!editing && moods.length > 0 && (
-            <div className={classes.section}>
-              <Typography variant="subtitle2">Moods</Typography>
-              <div className={classes.chipList}>
-                {moods.map((mood) => (
-                  <Typography className={classes.chip} key={mood}>
-                    {mood}
-                  </Typography>
-                ))}
-              </div>
-            </div>
-          )}
-          {editing && (
-            <div className={classes.section}>
-              <Typography variant="subtitle2">Moods</Typography>
-              <EditableTagList
-                kind="Mood"
-                values={draft.moods}
-                classes={classes}
-                onChange={(index, value) => updateTagDraft('moods', index, value)}
-                onAdd={() => addTagDraft('moods')}
-                onRemove={(index) => removeTagDraft('moods', index)}
-                suggestionsId="mood-suggestions"
-              />
-            </div>
-          )}
-          {canEdit && (
-            <section className={classes.section} aria-labelledby="song-lyrics-heading">
-              <div className={classes.lyricsHeader}>
-                <div className={classes.lyricsHeaderTitle}>
-                  <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
-                  {lyricsHasTimestamps && (
-                    <div className={classes.lyricsTimingControls}>
-                      <Tooltip title="Move lyrics earlier by 1 second">
-                        <span>
-                          <Button
-                            aria-label="Shift lyrics earlier by 1 second"
-                            className={classes.lyricsTimingButton}
-                            disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
-                            onClick={() => shiftLyricsByOneSecond(-1000)}
-                            size="small"
-                          >
-                            −1s
-                          </Button>
-                        </span>
-                      </Tooltip>
-                      <Tooltip title="Move lyrics later by 1 second">
-                        <span>
-                          <Button
-                            aria-label="Shift lyrics later by 1 second"
-                            className={classes.lyricsTimingButton}
-                            disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
-                            onClick={() => shiftLyricsByOneSecond(1000)}
-                            size="small"
-                          >
-                            +1s
-                          </Button>
-                        </span>
-                      </Tooltip>
-                      {lyricsOffsetMs !== 0 && (
-                        <Typography
-                          aria-label={`Pending lyrics shift ${lyricsOffsetMs > 0 ? '+' : ''}${lyricsOffsetMs / 1000} seconds`}
-                          component="span"
-                          variant="caption"
+        </div>
+        {canEdit && (
+          <section
+            aria-labelledby="song-lyrics-heading"
+            className={classes.lyricsCard}
+          >
+            <div className={classes.lyricsHeader}>
+              <div className={classes.lyricsHeaderTitle}>
+                <Typography id="song-lyrics-heading" variant="subtitle1">Lyrics</Typography>
+                {lyricsHasTimestamps && (
+                  <div className={classes.lyricsTimingControls}>
+                    <Tooltip title="Move lyrics earlier by 1 second">
+                      <span>
+                        <Button
+                          aria-label="Shift lyrics earlier by 1 second"
+                          className={classes.lyricsTimingButton}
+                          disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
+                          onClick={() => shiftLyricsByOneSecond(-1000)}
+                          size="small"
                         >
-                          {lyricsOffsetMs > 0 ? '+' : ''}{lyricsOffsetMs / 1000}s
-                        </Typography>
-                      )}
+                          −1s
+                        </Button>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Move lyrics later by 1 second">
+                      <span>
+                        <Button
+                          aria-label="Shift lyrics later by 1 second"
+                          className={classes.lyricsTimingButton}
+                          disabled={lyricsSaving || lyricsDeleting || lyricsLoading}
+                          onClick={() => shiftLyricsByOneSecond(1000)}
+                          size="small"
+                        >
+                          +1s
+                        </Button>
+                      </span>
+                    </Tooltip>
+                    {lyricsOffsetMs !== 0 && (
+                      <Typography
+                        aria-label={`Pending lyrics shift ${lyricsOffsetMs > 0 ? '+' : ''}${lyricsOffsetMs / 1000} seconds`}
+                        component="span"
+                        variant="caption"
+                      >
+                        {lyricsOffsetMs > 0 ? '+' : ''}{lyricsOffsetMs / 1000}s
+                      </Typography>
+                    )}
                     </div>
                   )}
                 </div>
@@ -1401,9 +1528,27 @@ const SongShowLayout = (props) => {
                   )}
                 </>
               )}
-            </section>
+          </section>
           )}
-        </div>
+      </div>
+      <div
+        aria-labelledby="song-details-tab"
+        className={`${classes.tabPanel} ${classes.detailsPanel}`}
+        hidden={activeTab !== 1}
+        id="song-details-panel"
+        role="tabpanel"
+      >
+        {activeTab === 1 && (detailsLoading ? (
+          <CircularProgress size={20} aria-label="Loading song details" />
+        ) : (
+          <SongInfo
+            showAdditionalTags={false}
+            record={{
+              ...displayRecord,
+              ...(rawTags === undefined ? {} : { rawTags }),
+            }}
+          />
+        ))}
       </div>
       <Dialog
         aria-labelledby="song-lyrics-search-title"

@@ -12,17 +12,17 @@ RUN apk add -U --no-cache ffmpeg mpv sqlite libwebp libwebpdemux libwebpmux && \
     done
 
 # Copy Bragi binary (prebuilt dynamic musl binary for Alpine)
-COPY out/navidrome /app/navidrome
+COPY out/bragi /app/bragi
 
 VOLUME ["/data", "/music"]
 ENV BR_MUSICFOLDER=/music
 ENV BR_DATAFOLDER=/data
-ENV BR_CONFIGFILE=/data/navidrome.toml
+ENV BR_CONFIGFILE=/data/bragi.toml
 ENV BR_PORT=4533
-RUN touch /.nddockerenv
+RUN touch /.bragidockerenv
 
 EXPOSE ${BR_PORT}
 WORKDIR /app
 ENV PATH="/app:${PATH}"
 
-ENTRYPOINT ["/app/navidrome"]
+ENTRYPOINT ["/app/bragi"]

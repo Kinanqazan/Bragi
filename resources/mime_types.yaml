@@ -1,6 +1,6 @@
-# This file controls the MIME types that are used by the Navidrome.
+# This file controls the MIME types used by Bragi.
 # You can add or modify entries to match your needs.
-# Any "audio/*" MIME type is considered a valid audio file for Navidrome, but will only work properly if
+# Any "audio/*" MIME type is considered a valid audio file for Bragi, but will only work properly if
 # supported by `taglib` and/or `ffmpeg`.
 # Any "image/*" MIME type is considered a valid image file to be used as cover art.
 

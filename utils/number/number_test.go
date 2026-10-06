@@ -3,7 +3,7 @@ package number_test
 import (
 	"testing"
 
-	"github.com/navidrome/navidrome/utils/number"
+	"github.com/kinanqaz/bragi/utils/number"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

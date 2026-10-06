@@ -8,26 +8,26 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/resources"
+	"github.com/kinanqaz/bragi/scanner"
+	"github.com/kinanqaz/bragi/scheduler"
+	"github.com/kinanqaz/bragi/server/backgrounds"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/resources"
-	"github.com/navidrome/navidrome/scanner"
-	"github.com/navidrome/navidrome/scheduler"
-	"github.com/navidrome/navidrome/server/backgrounds"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
 	// Import adapters to register them
-	_ "github.com/navidrome/navidrome/adapters/deezer"
-	_ "github.com/navidrome/navidrome/adapters/gotaglib"
-	_ "github.com/navidrome/navidrome/adapters/lastfm"
-	_ "github.com/navidrome/navidrome/adapters/listenbrainz"
+	_ "github.com/kinanqaz/bragi/adapters/deezer"
+	_ "github.com/kinanqaz/bragi/adapters/gotaglib"
+	_ "github.com/kinanqaz/bragi/adapters/lastfm"
+	_ "github.com/kinanqaz/bragi/adapters/listenbrainz"
 )
 
 var (
@@ -35,15 +35,15 @@ var (
 	noBanner bool
 
 	rootCmd = &cobra.Command{
-		Use:   "navidrome",
+		Use:   "bragi",
 		Short: "Bragi is a self-hosted music server and streamer",
 		Long: `Bragi is a self-hosted music server and streamer.
-Project information is available at https://github.com/Kinanqaz/Bragi`,
+Project information is available at https://github.com/kinanqaz/bragi`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			preRun()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			runNavidrome(cmd.Context())
+			runBragi(cmd.Context())
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			postRun()
@@ -52,7 +52,7 @@ Project information is available at https://github.com/Kinanqaz/Bragi`,
 	}
 )
 
-// Execute runs the root cobra command, which will start the Navidrome server by calling the runNavidrome function.
+// Execute runs the root cobra command, which starts the Bragi server.
 func Execute() {
 	ctx, cancel := mainContext(context.Background())
 	defer cancel()
@@ -74,10 +74,10 @@ func postRun() {
 	log.Info("Bragi stopped, bye.")
 }
 
-// runNavidrome is the main entry point for the Navidrome server. It starts all the services and blocks.
+// runBragi is the main entry point for the Bragi server. It starts all the services and blocks.
 // If any of the services returns an error, it will log it and exit. If the process receives a signal to exit,
 // it will cancel the context and exit gracefully.
-func runNavidrome(ctx context.Context) {
+func runBragi(ctx context.Context) {
 	defer db.Init(ctx)()
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -86,7 +86,6 @@ func runNavidrome(ctx context.Context) {
 	g.Go(startScheduler(ctx))
 	g.Go(startPlaybackServer(ctx))
 	g.Go(schedulePeriodicBackup(ctx))
-	g.Go(startInsightsCollector(ctx))
 	g.Go(scheduleDBAnalyzer(ctx))
 	artworkWorker := CreateArtworkWorker()
 	g.Go(startArtworkWorker(ctx, artworkWorker))
@@ -114,7 +113,7 @@ func mainContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	)
 }
 
-// startServer starts the Navidrome web server, adding all the necessary routers.
+// startServer starts the Bragi web server, adding all the necessary routers.
 func startServer(ctx context.Context) func() error {
 	return func() error {
 		a := CreateServer()
@@ -303,7 +302,7 @@ func scheduleDBAnalyzer(ctx context.Context) func() error {
 	}
 }
 
-// startScheduler starts the Navidrome scheduler, which is used to run periodic tasks.
+// startScheduler starts the Bragi scheduler, which is used to run periodic tasks.
 func startScheduler(ctx context.Context) func() error {
 	return func() error {
 		log.Info(ctx, "Starting scheduler")
@@ -313,26 +312,7 @@ func startScheduler(ctx context.Context) func() error {
 	}
 }
 
-// startInsightsCollector starts the Navidrome Insight Collector, if configured.
-func startInsightsCollector(ctx context.Context) func() error {
-	return func() error {
-		if !conf.Server.EnableInsightsCollector {
-			log.Info(ctx, "Insight Collector is DISABLED")
-			return nil
-		}
-		log.Info(ctx, "Starting Insight Collector")
-		select {
-		case <-time.After(conf.Server.DevInsightsInitialDelay):
-		case <-ctx.Done():
-			return nil
-		}
-		ic := CreateInsights()
-		ic.Run(ctx)
-		return nil
-	}
-}
-
-// startPlaybackServer starts the Navidrome playback server, if configured.
+// startPlaybackServer starts the Bragi playback server, if configured.
 // It is responsible for the Jukebox functionality
 func startPlaybackServer(ctx context.Context) func() error {
 	return func() error {
@@ -414,7 +394,7 @@ func init() {
 		conf.InitConfig(cfgFile, true)
 	})
 
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "configfile", "c", "", `config file (default "./navidrome.toml")`)
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "configfile", "c", "", `config file (default "./bragi.toml"; legacy ./navidrome.toml is also read)`)
 	rootCmd.PersistentFlags().BoolVarP(&noBanner, "nobanner", "n", false, `don't show banner`)
 	rootCmd.PersistentFlags().String("musicfolder", viper.GetString("musicfolder"), "folder where your music is stored")
 	rootCmd.PersistentFlags().String("datafolder", viper.GetString("datafolder"), "folder to store application data (DB), needs write access")

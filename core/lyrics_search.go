@@ -13,10 +13,10 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
 	"github.com/xrash/smetrics"
 )
 
@@ -115,7 +115,7 @@ func (s lrclibSearchClient) searchQuery(ctx context.Context, searchTerm string) 
 		return nil, fmt.Errorf("%w: could not create request", ErrMediaFileLyricsSearchUnavailable)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", fmt.Sprintf("Bragi/%s (+https://github.com/Kinanqaz/Bragi)", consts.Version))
+	req.Header.Set("User-Agent", fmt.Sprintf("Bragi/%s (+https://github.com/kinanqaz/bragi)", consts.Version))
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {

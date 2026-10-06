@@ -23,6 +23,7 @@ import BragiLogo from '../icons/BragiLogo'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
 import { getStoredPerPage } from '../common/perPageStore'
 import { createSongListResetAction } from '../song/songListNavigation'
+import { useImmediateControlPress } from '../audioplayer/controlPress'
 
 const useStyles = makeStyles(
   (theme) => {
@@ -351,10 +352,10 @@ const MobileTopBar = () => {
     )
   }, [])
 
-  const handleToggleSidebar = (e) => {
-    e.currentTarget?.blur()
-    dispatch(toggleSidebar())
-  }
+  const menuPress = useImmediateControlPress(
+    () => dispatch(toggleSidebar()),
+    true,
+  )
 
   // Update filter in URL and Redux state
   const applySearchFilter = useCallback(
@@ -541,7 +542,7 @@ const MobileTopBar = () => {
             <div className={classes.leftGroup}>
               <IconButton
                 className={classes.headerIconButton}
-                onClick={handleToggleSidebar}
+                {...menuPress}
                 aria-label="Open menu"
                 tabIndex={-1}
               >

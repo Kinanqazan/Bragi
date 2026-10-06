@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Kiitos, että asensit Navidromen!",
+      "welcome1": "Kiitos, että asensit Bragin!",
       "welcome2": "Aloittaaksesi luo admin-käyttäjä",
       "confirmPassword": "Vahvista salasana",
       "buttonCreateAdmin": "Luo Admin",
@@ -347,8 +347,7 @@
       "password": "Salasana",
       "sign_in": "Kirjaudu",
       "sign_in_error": "Kirjautuminen epäonnistui. Yritä uudelleen",
-      "logout": "Kirjaudu ulos",
-      "insightsCollectionNote": "Navidrome kerää anonyymejä käyttötietoja auttaakseen parantamaan\nprojektia. Paina [tästä] saadaksesi lisätietoa\nja halutessasi kieltäytyä"
+      "logout": "Kirjaudu ulos"
     },
     "validation": {
       "invalidChars": "Käytä vain kirjaimia ja numeroita",
@@ -483,13 +482,13 @@
   "message": {
     "note": "HUOM",
     "transcodingDisabled": "Muunnoksen muokkaaminen verkkoliittymän kautta on poistettu tietoturvasyistä käytöstä. Mikäli haluat muuttaa muunnoksen asetuksia käynnistä palvelu uudelleen %{config} asetuksella.",
-    "transcodingEnabled": "Navidrome käyttää parhaillaan %{config} asetuksia. Tämä mahdollistaa järjestelmän komentojen suorittamisen muunnoksen asetuksista verkkokäyttöliittymän kautta. Tietoturvasyistä suosittelemme sen käyttöä vain kun teet muutoksia muunnoksen asetuksiin.",
+    "transcodingEnabled": "Bragi käyttää parhaillaan %{config} asetuksia. Tämä mahdollistaa järjestelmän komentojen suorittamisen muunnoksen asetuksista verkkokäyttöliittymän kautta. Tietoturvasyistä suosittelemme sen käyttöä vain kun teet muutoksia muunnoksen asetuksiin.",
     "songsAddedToPlaylist": "Lisättiin 1 kappale soittolistalle |||| Lisättiin %{smart_count} kappaletta soittolistalle",
     "noPlaylistsAvailable": "Soittolistaa ei saatavilla",
     "delete_user_title": "Poista käyttäjä '%{name}'",
     "delete_user_content": "Haluatko varmasti poistaa tämän käyttäjän ja kaikki hänen tiedot (mukaan lukien soittolistat ja asetukset)?",
     "notifications_blocked": "Olet estänyt tämän sivuston ilmoitukset selaimesi asetuksissa",
-    "notifications_not_available": "Tämä selain ei tue työpöytäilmoituksia tai et käytä Navidromea https-yhteyden kautta",
+    "notifications_not_available": "Tämä selain ei tue työpöytäilmoituksia tai et käytä Bragia https-yhteyden kautta",
     "lastfmLinkSuccess": "Last.fm onnistuneesti linkitetty ja kuuntelutottumus otettu käyttöön",
     "lastfmLinkFailure": "Last.fm linkitys epäonnistui",
     "lastfmUnlinkSuccess": "Last.fm linkitys poistettu ja kuuntelutottumus poistettu käytöstä",
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Kotisivu",
       "source": "Lähdekoodi",
-      "featureRequests": "Ominaisuuspyynnöt",
-      "lastInsightsCollection": "Viimeisin tietojenkeruu",
-      "insights": {
-        "disabled": "Ei käytössä",
-        "waiting": "Odottaa"
-      }
+      "featureRequests": "Ominaisuuspyynnöt"
     },
     "tabs": {
       "about": "Tietoja",
@@ -626,7 +620,7 @@
     "selectiveScan": "Valikoiva"
   },
   "help": {
-    "title": "Navidrome pikapainikkeet",
+    "title": "Bragi pikapainikkeet",
     "hotkeys": {
       "show_help": "Näytä tämä apuvalikko",
       "toggle_menu": "Menuvalikko päälle ja pois",

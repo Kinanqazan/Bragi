@@ -3,7 +3,7 @@ package utils_test
 import (
 	"context"
 
-	"github.com/navidrome/navidrome/utils"
+	"github.com/kinanqaz/bragi/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

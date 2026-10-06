@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/gen2brain/webp"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/log"
 	xdraw "golang.org/x/image/draw"
 )
 

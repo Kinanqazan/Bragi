@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/gohugoio/hashstructure"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/model"
 )
 
 type Constructor func(ds model.DataStore) Interface

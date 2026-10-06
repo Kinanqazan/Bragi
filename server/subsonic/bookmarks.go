@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/server/subsonic/responses"
-	"github.com/navidrome/navidrome/utils/req"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/server/subsonic/responses"
+	"github.com/kinanqaz/bragi/utils/req"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 func (api *Router) GetBookmarks(r *http.Request) (*responses.Subsonic, error) {

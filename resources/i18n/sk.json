@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Ďakujeme, že ste si nainštalovali Navidrome!",
+      "welcome1": "Ďakujeme, že ste si nainštalovali Bragi!",
       "welcome2": "Najskôr vytvorte účet správcu",
       "confirmPassword": "Potvrďte heslo",
       "buttonCreateAdmin": "Vytvoriť správcu",
@@ -347,8 +347,7 @@
       "password": "Heslo",
       "sign_in": "Prihlásiť sa",
       "sign_in_error": "Overenie zlyhalo, skúste to znova",
-      "logout": "Odhlásiť sa",
-      "insightsCollectionNote": "Navidrome zhromažďuje anonymné údaje\n o používaní, aby pomohol zlepšiť projekt.\nKliknite [sem] a dozviete sa viac a v prípade\npotreby sa odhláste."
+      "logout": "Odhlásiť sa"
     },
     "validation": {
       "invalidChars": "Prosím, používajte iba písmená a čísla",
@@ -433,7 +432,7 @@
       }
     },
     "message": {
-      "about": "O Navidrome",
+      "about": "O Bragi",
       "are_you_sure": "Ste si istý?",
       "bulk_delete_content": "Ste si istý, že chcete vymazať %{name}? |||| Ste si istý, že chcete vymazať týchto %{smart_count} položiek?",
       "bulk_delete_title": "Vymazať %{name} |||| Vymazať %{smart_count} %{name} položiek",
@@ -483,13 +482,13 @@
   "message": {
     "note": "POZNÁMKA",
     "transcodingDisabled": "Zmena nastavení transkódovania je vo webovom prostredí vypnutá z bezpečnostných dôvodov. Ak chcete zmeniť (upraviť alebo pridať) možnosti transkódovania, reštartujte server s možnosťou %{config}.",
-    "transcodingEnabled": "Navidrome práve beží s možnosťou %{config}, ktorá umožňuje spúšťanie systémových príkazov z nastavení transkódovania pomocou webového rozhrania. Odporúčame ju vypnúť z bezpečnostných dôvodov a používať ju iba pri úprave nastavení transkódovania.",
+    "transcodingEnabled": "Bragi práve beží s možnosťou %{config}, ktorá umožňuje spúšťanie systémových príkazov z nastavení transkódovania pomocou webového rozhrania. Odporúčame ju vypnúť z bezpečnostných dôvodov a používať ju iba pri úprave nastavení transkódovania.",
     "songsAddedToPlaylist": "1 skladba pridaná do zoznamu skladieb |||| %{smart_count} skladieb pridaných do zoznamu skladieb",
     "noPlaylistsAvailable": "Žiadne nie sú dostupné",
     "delete_user_title": "Odstrániť používateľa '%{name}'",
     "delete_user_content": "Ste si istí, že chcete odstrániť tohto používateľa a všetky jeho dáta (vrátane zoznamov skladieb a nastavení)?",
     "notifications_blocked": "Zablokovali ste si oznámenia pre túto stránku v nastaveniach vášho prehliadača",
-    "notifications_not_available": "Tento prehliadač nepodporuje oznámenia na ploche alebo nepristupujete k Navidrome cez https",
+    "notifications_not_available": "Tento prehliadač nepodporuje oznámenia na ploche alebo nepristupujete k Bragi cez https",
     "lastfmLinkSuccess": "Last.fm úspešne pripojené a scrobbling zapnutý",
     "lastfmLinkFailure": "Last.fm sa nepodarilo pripojiť",
     "lastfmUnlinkSuccess": "Last.fm odpojené a scrobbling vypnutý",
@@ -550,7 +549,7 @@
       }
     },
     "albumList": "Albumy",
-    "about": "O Navidrome",
+    "about": "O Bragi",
     "playlists": "Zoznamy skladieb",
     "sharedPlaylists": "Zdieľané zoznamy skladieb",
     "librarySelector": {
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Domovská stránka",
       "source": "Zdrojový kód",
-      "featureRequests": "Požiadavky na funkcie",
-      "lastInsightsCollection": "Posledný zber štatistík",
-      "insights": {
-        "disabled": "Zakázané",
-        "waiting": "Čakanie"
-      }
+      "featureRequests": "Požiadavky na funkcie"
     },
     "tabs": {
       "about": "O aplikácii",
@@ -626,7 +620,7 @@
     "selectiveScan": "Selektívne"
   },
   "help": {
-    "title": "Klávesové skratky Navidrome",
+    "title": "Klávesové skratky Bragi",
     "hotkeys": {
       "show_help": "Zobraziť túto nápovedu",
       "toggle_menu": "Prepnúť bočné menu",

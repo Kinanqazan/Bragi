@@ -10,14 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/core/auth"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/server/events"
-	"github.com/navidrome/navidrome/utils/cache"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/core/auth"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/server/events"
+	"github.com/kinanqaz/bragi/utils/cache"
 )
 
 const (

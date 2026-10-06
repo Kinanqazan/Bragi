@@ -1,4 +1,4 @@
-// Package e2e provides end-to-end integration tests for the Navidrome Subsonic API.
+// Package e2e provides end-to-end integration tests for Bragi's Subsonic API.
 //
 // These tests exercise the full HTTP request/response cycle through the Subsonic API router,
 // using a real SQLite database and real repository implementations while stubbing out external

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/deluan/rest"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/model"
 )
 
 // User provides the user repository to the API layer.

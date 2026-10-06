@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/navidrome/navidrome/consts"
+	"github.com/kinanqaz/bragi/consts"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

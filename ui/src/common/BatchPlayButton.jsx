@@ -8,6 +8,7 @@ import {
   useNotify,
 } from 'react-admin'
 import { useDispatch } from 'react-redux'
+import recordsToMap from './recordsToMap'
 
 export const BatchPlayButton = ({
   resource,
@@ -28,10 +29,7 @@ export const BatchPlayButton = ({
       .getMany(resource, { ids: selectedIds })
       .then((response) => {
         // Add tracks to a map for easy lookup by ID, needed for the next step
-        const tracks = response.data.reduce(
-          (acc, cur) => ({ ...acc, [cur.id]: cur }),
-          {},
-        )
+        const tracks = recordsToMap(response.data)
         // Add the tracks to the queue in the selection order
         dispatch(action(tracks, selectedIds))
       })

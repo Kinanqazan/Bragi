@@ -101,4 +101,21 @@ describe('MobilePlayerBar', () => {
     fireEvent.click(screen.getByText('My Cool Song'))
     expect(onOpen).toHaveBeenCalledOnce()
   })
+
+  it('exposes its progress strip so shared artwork can reserve its space', () => {
+    const progressTrackRef = React.createRef()
+
+    render(
+      <MobilePlayerBar
+        sharedPlayback
+        cover="cover.jpg"
+        progressTrackRef={progressTrackRef}
+        title="Test song"
+        snapshot={{ duration: 120, currentTime: 30, playing: false }}
+        commands={{ play: vi.fn(), pause: vi.fn() }}
+      />,
+    )
+
+    expect(progressTrackRef.current).toHaveAttribute('aria-hidden', 'true')
+  })
 })

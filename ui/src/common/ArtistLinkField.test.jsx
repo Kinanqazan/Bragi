@@ -1,8 +1,19 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ArtistLinkField } from './ArtistLinkField'
 import { intersperse } from '../utils/index.js'
+
+const pointerEvent = (type, options = {}) => {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(
+    event,
+    Object.fromEntries(
+      Object.entries(options).map(([key, value]) => [key, { value }]),
+    ),
+  )
+  return event
+}
 
 // Mock dependencies
 vi.mock('react-redux', () => ({
@@ -39,6 +50,41 @@ describe('ArtistLinkField', () => {
   })
 
   describe('when rendering artists', () => {
+    it('runs the supplied mobile artist action on touch release only once', () => {
+      const onArtistClick = vi.fn((event) => event.preventDefault())
+      render(
+        <ArtistLinkField
+          record={{ participants: { artist: [{ id: 'touch-artist', name: 'Touch Artist' }] } }}
+          source="artist"
+          onArtistClick={onArtistClick}
+        />,
+      )
+
+      const link = screen.getByRole('link', { name: 'Touch Artist' })
+      fireEvent(link, pointerEvent('pointerdown', {
+        pointerId: 9,
+        pointerType: 'touch',
+        clientX: 12,
+        clientY: 12,
+      }))
+      fireEvent(link, pointerEvent('pointerup', {
+        pointerId: 9,
+        pointerType: 'touch',
+        clientX: 12,
+        clientY: 12,
+      }))
+
+      expect(onArtistClick).toHaveBeenCalledOnce()
+      const click = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+      })
+      fireEvent(link, click)
+
+      expect(onArtistClick).toHaveBeenCalledOnce()
+      expect(click.defaultPrevented).toBe(true)
+    })
+
     it('renders artists from participants when available', () => {
       const record = {
         participants: {

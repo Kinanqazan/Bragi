@@ -6,7 +6,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-// Claims represents the typed JWT claims used throughout Navidrome,
+// Claims represents the typed JWT claims used throughout Bragi,
 // replacing the untyped map[string]any approach.
 type Claims struct {
 	// Standard JWT claims

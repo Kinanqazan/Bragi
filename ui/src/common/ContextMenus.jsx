@@ -21,6 +21,7 @@ import {
 import config from '../config'
 import { formatBytes } from '../utils'
 import { artistDownloadSize } from './artist'
+import recordsToMap from './recordsToMap'
 
 const useStyles = makeStyles({
   noWrap: {
@@ -125,10 +126,7 @@ const ContextMenu = ({
   }
 
   let extractSongsData = function (response) {
-    const data = response.data.reduce(
-      (acc, cur) => ({ ...acc, [cur.id]: cur }),
-      {},
-    )
+    const data = recordsToMap(response.data)
     const ids = response.data.map((r) => r.id)
     return { data, ids }
   }

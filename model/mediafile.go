@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/gohugoio/hashstructure"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/utils"
-	"github.com/navidrome/navidrome/utils/gg"
-	"github.com/navidrome/navidrome/utils/number"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/utils"
+	"github.com/kinanqaz/bragi/utils/gg"
+	"github.com/kinanqaz/bragi/utils/number"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 type MediaFile struct {

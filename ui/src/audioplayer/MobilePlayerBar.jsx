@@ -73,11 +73,12 @@ const useStyles = makeStyles((theme) => ({
     minWidth: 0,
     flex: 1,
     padding: theme.spacing(0, 2),
-    transform: 'translateY(-3px)',
+    transform: 'translateY(-5px)',
   },
   title: {
     display: 'block',
     overflow: 'hidden',
+    fontSize: '1.05rem',
     fontWeight: 700,
     color: 'inherit',
     textDecoration: 'none',
@@ -89,7 +90,7 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden',
     marginTop: 3,
     color: theme.palette.text.secondary,
-    fontSize: '0.85rem',
+    fontSize: '1rem',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
@@ -151,6 +152,7 @@ const MobilePlayerBar = ({
   playRef,
   titleRef,
   artistRef,
+  progressTrackRef,
   gestureHandlers,
   style: customStyle,
 }) => {
@@ -162,7 +164,6 @@ const MobilePlayerBar = ({
   const duration = snapshot?.duration || 0
   const progressPercent =
     progress ?? (duration ? (snapshot.currentTime / duration) * 100 : 0)
-
   return (
     <aside
       ref={rootRef}
@@ -174,7 +175,11 @@ const MobilePlayerBar = ({
       {!sharedPlayback && (
         <AmbientBackdrop cover={cover} color={ambientColor} />
       )}
-      <div className={classes.progressTrack} aria-hidden="true">
+      <div
+        ref={progressTrackRef}
+        className={classes.progressTrack}
+        aria-hidden="true"
+      >
         <div
           className={classes.progress}
           style={{ width: `${progressPercent}%` }}

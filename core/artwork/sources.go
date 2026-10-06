@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 	"go.senan.xyz/taglib"
 )
 
@@ -31,7 +31,7 @@ type sourceFunc func() (r io.ReadCloser, path string, err error)
 
 func (f sourceFunc) String() string {
 	name := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
-	name = strings.TrimPrefix(name, "github.com/navidrome/navidrome/core/artwork.")
+	name = strings.TrimPrefix(name, "github.com/kinanqaz/bragi/core/artwork.")
 	if _, after, found := strings.Cut(name, ")."); found {
 		name = after
 	}

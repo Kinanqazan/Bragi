@@ -3,7 +3,7 @@ package stream
 import "strings"
 
 // normalizeProbeCodec maps ffprobe codec_name values to the simplified internal
-// codec names used throughout Navidrome (matching inferCodecFromSuffix output).
+// codec names used throughout Bragi (matching inferCodecFromSuffix output).
 // Most ffprobe names match directly; this handles the exceptions.
 func normalizeProbeCodec(codec string) string {
 	c := strings.ToLower(codec)

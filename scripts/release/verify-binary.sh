@@ -28,7 +28,7 @@ for bin in "$@"; do
     fi
     if go version -m "${bin}" | grep -q "ebitengine/purego"; then
         echo "ERROR: 32-bit binary '${bin}' links ebitengine/purego; it will SIGSEGV at startup (issue #5738)."
-        echo "       Ensure the 'nodynamic' build tag is applied (see release/build-tags.sh)."
+        echo "       Ensure the 'nodynamic' build tag is applied (see scripts/release/build-tags.sh)."
         exit 1
     fi
 done

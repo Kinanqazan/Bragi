@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
 )
 
 var (

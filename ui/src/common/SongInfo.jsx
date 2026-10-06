@@ -45,6 +45,7 @@ export const SongInfo = (props) => {
   const classes = useStyles({ gain: config.enableReplayGain })
   const translate = useTranslate()
   const record = useRecordContext(props)
+  const { showAdditionalTags = true } = props
   const [tab, setTab] = useState(0)
 
   // These are already displayed in other fields or are album-level tags
@@ -118,9 +119,9 @@ export const SongInfo = (props) => {
     )
   }
 
-  const tags = Object.entries(record.tags ?? {}).filter(
-    (tag) => !excludedTags.includes(tag[0]),
-  )
+  const tags = showAdditionalTags
+    ? Object.entries(record.tags ?? {}).filter((tag) => !excludedTags.includes(tag[0]))
+    : []
 
   return (
     <TableContainer>

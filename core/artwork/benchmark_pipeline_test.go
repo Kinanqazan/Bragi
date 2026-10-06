@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/conf/configtest"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/conf/configtest"
 )
 
 func BenchmarkResizeFullPipeline(b *testing.B) {

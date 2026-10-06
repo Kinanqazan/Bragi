@@ -1,17 +1,16 @@
 package core
 
 import (
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/core/external"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/core/lyrics"
+	"github.com/kinanqaz/bragi/core/matcher"
+	"github.com/kinanqaz/bragi/core/playback"
+	"github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/core/scrobbler"
+	"github.com/kinanqaz/bragi/core/stream"
 	"github.com/google/wire"
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/core/external"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/core/lyrics"
-	"github.com/navidrome/navidrome/core/matcher"
-	"github.com/navidrome/navidrome/core/metrics"
-	"github.com/navidrome/navidrome/core/playback"
-	"github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/core/scrobbler"
-	"github.com/navidrome/navidrome/core/stream"
 )
 
 var Set = wire.NewSet(
@@ -32,6 +31,5 @@ var Set = wire.NewSet(
 	ffmpeg.New,
 	scrobbler.GetPlayTracker,
 	playback.GetInstance,
-	metrics.GetInstance,
 	lyrics.NewLyrics,
 )

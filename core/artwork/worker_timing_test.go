@@ -7,8 +7,8 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/tests"
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/tests"
 	. "github.com/onsi/gomega"
 )
 

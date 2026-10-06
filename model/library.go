@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 type Library struct {

@@ -3,7 +3,7 @@ package model
 import (
 	"slices"
 
-	"github.com/navidrome/navidrome/utils/gg"
+	"github.com/kinanqaz/bragi/utils/gg"
 )
 
 func normalizeLyrics(lyrics Lyrics) Lyrics {

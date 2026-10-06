@@ -36,8 +36,19 @@ const renderRows = (props = {}) => {
   return onPlay
 }
 
-const pointerEvent = (type, options) =>
-  new MouseEvent(type, { bubbles: true, ...options })
+const pointerEvent = (type, options = {}) => {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    ...options,
+  })
+  for (const property of ['pointerId', 'pointerType']) {
+    if (options[property] !== undefined) {
+      Object.defineProperty(event, property, { value: options[property] })
+    }
+  }
+  return event
+}
 
 afterEach(() => vi.useRealTimers())
 
@@ -53,6 +64,33 @@ describe('<ModernTrackRows />', () => {
     const onPlay = renderRows()
     fireEvent.click(screen.getByRole('button', { name: 'Play Playable song' }))
     expect(onPlay).toHaveBeenCalledWith(song)
+  })
+
+  it('plays immediately on touch release and ignores the following synthetic click', () => {
+    const onPlay = renderRows()
+    const row = screen.getByRole('button', { name: 'Play Playable song' })
+    fireEvent(row, pointerEvent('pointerdown', {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+      pointerType: 'touch',
+    }))
+
+    const release = pointerEvent('pointerup', {
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+      pointerType: 'touch',
+    })
+    fireEvent(row, release)
+
+    expect(onPlay).toHaveBeenCalledTimes(1)
+    expect(onPlay).toHaveBeenCalledWith(song)
+    expect(release.defaultPrevented).toBe(true)
+
+    fireEvent.click(row)
+    expect(onPlay).toHaveBeenCalledTimes(1)
   })
 
   it.each(['Enter', ' '])('plays a song with the %s key', (key) => {
@@ -141,6 +179,32 @@ describe('<ModernTrackRows />', () => {
     })
 
     expect(onStartSelection).not.toHaveBeenCalled()
+  })
+
+  it('does not play a song when the touch moves to scroll before release', () => {
+    const onPlay = renderRows()
+    const row = screen.getByRole('button', { name: 'Play Playable song' })
+    fireEvent(row, pointerEvent('pointerdown', {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 2,
+      pointerType: 'touch',
+    }))
+    fireEvent(row, pointerEvent('pointermove', {
+      clientX: 10,
+      clientY: 28,
+      pointerId: 2,
+      pointerType: 'touch',
+    }))
+    fireEvent(row, pointerEvent('pointerup', {
+      clientX: 10,
+      clientY: 28,
+      pointerId: 2,
+      pointerType: 'touch',
+    }))
+
+    expect(onPlay).not.toHaveBeenCalled()
   })
 
   it('toggles songs instead of playing them during selection mode', () => {

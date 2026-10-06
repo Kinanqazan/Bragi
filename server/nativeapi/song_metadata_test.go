@@ -13,9 +13,9 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

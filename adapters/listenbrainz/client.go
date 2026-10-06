@@ -12,8 +12,8 @@ import (
 	"path"
 	"slices"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
 )
 
 const (

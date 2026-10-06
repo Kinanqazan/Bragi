@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/navidrome/navidrome/core/storage"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/core/storage"
+	"github.com/kinanqaz/bragi/model"
 )
 
 // libraryView bundles the MusicFS for a library with its absolute root path,

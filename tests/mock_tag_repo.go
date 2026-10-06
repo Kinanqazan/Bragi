@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/model"
 )
 
 // MockTagRepo records the QueryOptions passed to GetAll, mirroring MockArtistRepo, so tests can

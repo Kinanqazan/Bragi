@@ -332,7 +332,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Navidromeをインストールいただきありがとうございます！",
+      "welcome1": "Bragiをインストールいただきありがとうございます！",
       "welcome2": "管理ユーザーを作成して始めましょう",
       "confirmPassword": "パスワードの確認",
       "buttonCreateAdmin": "管理者の作成",
@@ -342,8 +342,7 @@
       "password": "パスワード",
       "sign_in": "ログイン",
       "sign_in_error": "認証に失敗しました。入力を確認してください",
-      "logout": "ログアウト",
-      "insightsCollectionNote": "Navidromeでは、プロジェクトの改善に役立てるため、匿名の利用データを収集しています。詳しくは [here] をクリックしてください。"
+      "logout": "ログアウト"
     },
     "validation": {
       "invalidChars": "文字と数字のみを使用してください",
@@ -478,7 +477,7 @@
   "message": {
     "note": "注意",
     "transcodingDisabled": "セキュリティ上の理由から、Web インターフェイスからのトランスコード設定は無効になっています。\nこれを設定したい場合、環境変数 %{config} を設定しサーバーを再起動してください。",
-    "transcodingEnabled": "Navidromeは現在 %{config} の設定で実行されており、WebUIのトランスコード設定からコマンドを実行できます。\nセキュリティ上の問題から、この設定はトランスコード設定を変更する時のみ有効にすることを推奨します。",
+    "transcodingEnabled": "Bragiは現在 %{config} の設定で実行されており、WebUIのトランスコード設定からコマンドを実行できます。\nセキュリティ上の問題から、この設定はトランスコード設定を変更する時のみ有効にすることを推奨します。",
     "songsAddedToPlaylist": "プレイリストへ1曲追加しました |||| プレイリストへ%{smart_count}曲追加しました",
     "noPlaylistsAvailable": "利用不可",
     "delete_user_title": "'%{name}' を削除",
@@ -577,12 +576,7 @@
     "links": {
       "homepage": "ホームページ",
       "source": "ソースコード",
-      "featureRequests": "機能リクエスト",
-      "lastInsightsCollection": "最後のデータ収集",
-      "insights": {
-        "disabled": "無効",
-        "waiting": "待機中"
-      }
+      "featureRequests": "機能リクエスト"
     },
     "tabs": {
       "about": "詳細",

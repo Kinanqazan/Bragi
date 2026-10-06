@@ -5,7 +5,7 @@ import (
 	"image"
 	"testing"
 
-	"github.com/navidrome/navidrome/core/artwork/thumbhash"
+	"github.com/kinanqaz/bragi/core/artwork/thumbhash"
 )
 
 // hashEncoders contains the placeholder encoder used by decodeArtwork.

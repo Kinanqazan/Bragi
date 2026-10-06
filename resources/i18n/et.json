@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Aitäh, et paigaldasid Navidrome'i!",
+      "welcome1": "Aitäh, et paigaldasid Bragi'i!",
       "welcome2": "Alustamiseks lisa peakasutaja",
       "confirmPassword": "Korda salasõna",
       "buttonCreateAdmin": "Lisa peakasutaja",
@@ -347,8 +347,7 @@
       "password": "Salasõna",
       "sign_in": "Logi sisse",
       "sign_in_error": "Tuvastamine ei toiminud, palun proovi uuesti",
-      "logout": "Logi välja",
-      "insightsCollectionNote": "Navidrome kogub anonüümset kasutustusstatistikat, mille alusel on võimalik projekti paremaks muuta. Klõpsides [siin], saad lugeda lisateavet ning soovi korral sellest kogumisest loobuda"
+      "logout": "Logi välja"
     },
     "validation": {
       "invalidChars": "Palun kasuta ainult tähti ja numbreid",
@@ -483,13 +482,13 @@
   "message": {
     "note": "MÄRGE",
     "transcodingDisabled": "Teisendusseadistuste muutmine läbi veebiliidese ei ole turvariskide tõttu saadaval. Kui soovid muuta või lisada teisendamisega seotud seadistusi, taaskäivita server %{config} valikuga.",
-    "transcodingEnabled": "Navidrome käivitati %{config} valikuga, mis lubab läbi veebiliidese teisendusseadistuste käivitada süsteemikäsklusi. Turvakaalutlustel on soovitatav kasutada seda valikut ainult teisendusvalikute muutmiseks.",
+    "transcodingEnabled": "Bragi käivitati %{config} valikuga, mis lubab läbi veebiliidese teisendusseadistuste käivitada süsteemikäsklusi. Turvakaalutlustel on soovitatav kasutada seda valikut ainult teisendusvalikute muutmiseks.",
     "songsAddedToPlaylist": "Lisasin ühe loo esitusloendisse |||| Lisasin %{smart_count} lugu esitusloendisse",
     "noPlaylistsAvailable": "Pole saadaval",
     "delete_user_title": "Kustuta kasutaja „%{name}“",
     "delete_user_content": "Kas oled kindel, et soovid selle kasutaja ja kõik tema andmed (sh esitusloendid ja eelistused) kustutada?",
     "notifications_blocked": "Sa oled selle saidi teavitused veebibrauseri seadistusest keelanud",
-    "notifications_not_available": "See veebibrauser kas ei toeta töölauateavitusi või sa ei kasuta Navidrome'i üle https-protokolli",
+    "notifications_not_available": "See veebibrauser kas ei toeta töölauateavitusi või sa ei kasuta Bragi'i üle https-protokolli",
     "lastfmLinkSuccess": "Last.fm-i seos on lisatud ja kraasimine on lülitatud sisse",
     "lastfmLinkFailure": "Last.fm-i seose lisamine ei õnnestunud",
     "lastfmUnlinkSuccess": "Last.fm-i seos on eemaldatud ja kraasimine on lülitatud välja",
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Avaleht",
       "source": "Lähtekood",
-      "featureRequests": "Arendusettepanekud",
-      "lastInsightsCollection": "Viimati kogutud statistika",
-      "insights": {
-        "disabled": "Pole kasutusel",
-        "waiting": "Ootel"
-      }
+      "featureRequests": "Arendusettepanekud"
     },
     "tabs": {
       "about": "Teave",
@@ -626,7 +620,7 @@
     "selectiveScan": "Valikuline"
   },
   "help": {
-    "title": "Navidrome'i kiirklahvid",
+    "title": "Bragi'i kiirklahvid",
     "hotkeys": {
       "show_help": "Näita seda abiteavet",
       "toggle_menu": "Lülita menüü külgriba sisse/välja",

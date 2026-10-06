@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/utils/str"
 )
 
 var (

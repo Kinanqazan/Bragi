@@ -5,23 +5,23 @@ package cmd
 import (
 	"context"
 
+	"github.com/kinanqaz/bragi/adapters/lastfm"
+	"github.com/kinanqaz/bragi/adapters/listenbrainz"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/core/metrics"
+	"github.com/kinanqaz/bragi/core/playback"
+	"github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/persistence"
+	"github.com/kinanqaz/bragi/scanner"
+	"github.com/kinanqaz/bragi/server"
+	"github.com/kinanqaz/bragi/server/events"
+	"github.com/kinanqaz/bragi/server/nativeapi"
+	"github.com/kinanqaz/bragi/server/public"
+	"github.com/kinanqaz/bragi/server/subsonic"
 	"github.com/google/wire"
-	"github.com/navidrome/navidrome/adapters/lastfm"
-	"github.com/navidrome/navidrome/adapters/listenbrainz"
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/core/metrics"
-	"github.com/navidrome/navidrome/core/playback"
-	"github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/persistence"
-	"github.com/navidrome/navidrome/scanner"
-	"github.com/navidrome/navidrome/server"
-	"github.com/navidrome/navidrome/server/events"
-	"github.com/navidrome/navidrome/server/nativeapi"
-	"github.com/navidrome/navidrome/server/public"
-	"github.com/navidrome/navidrome/server/subsonic"
 )
 
 var allProviders = wire.NewSet(
@@ -80,12 +80,6 @@ func CreateLastFMRouter() *lastfm.Router {
 }
 
 func CreateListenBrainzRouter() *listenbrainz.Router {
-	panic(wire.Build(
-		allProviders,
-	))
-}
-
-func CreateInsights() metrics.Insights {
 	panic(wire.Build(
 		allProviders,
 	))

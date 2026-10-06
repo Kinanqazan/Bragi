@@ -1,5 +1,5 @@
 /**
- * Nautiline Theme for Navidrome
+ * Nautiline Theme for Bragi
  * Light theme inspired by the Nautiline iOS app
  */
 

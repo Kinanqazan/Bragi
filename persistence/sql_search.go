@@ -6,9 +6,9 @@ import (
 
 	. "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/str"
 )
 
 func formatFullText(text ...string) string {

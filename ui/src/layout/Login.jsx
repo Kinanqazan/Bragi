@@ -4,7 +4,6 @@ import { Field, Form } from 'react-final-form'
 import { useDispatch } from 'react-redux'
 import Button from '@material-ui/core/Button'
 import CircularProgress from '@material-ui/core/CircularProgress'
-import Link from '@material-ui/core/Link'
 import TextField from '@material-ui/core/TextField'
 import { ThemeProvider, createTheme, makeStyles } from '@material-ui/core/styles'
 import {
@@ -19,7 +18,6 @@ import Notification from './Notification'
 import useCurrentTheme from '../themes/useCurrentTheme'
 import config from '../config'
 import { clearQueue } from '../actions'
-import { INSIGHTS_DOC_URL } from '../consts.js'
 
 const useStyles = makeStyles(
   (theme) => ({
@@ -150,21 +148,6 @@ const useStyles = makeStyles(
         color: 'rgba(255, 255, 255, 0.5) !important',
       },
     },
-    message: {
-      marginTop: '1.4em',
-      padding: '0 0.5em',
-      textAlign: 'center',
-      wordBreak: 'break-word',
-      fontSize: '0.8rem',
-      color: 'rgba(255, 255, 255, 0.5)',
-      '& a': {
-        color: theme.palette.primary.main,
-        textDecoration: 'none',
-        '&:hover': {
-          textDecoration: 'underline',
-        },
-      },
-    },
     // Backwards-compatible aliases for themes targeting old NDLogin classes
     card: {
       background: 'transparent !important',
@@ -273,53 +256,6 @@ const FormLogin = ({ loading, handleSubmit, validate }) => {
   )
 }
 
-const InsightsNotice = ({ url }) => {
-  const translate = useTranslate()
-  const classes = useStyles()
-
-  const anchorRegex = /\[(.+?)]/g
-  const originalMsg = translate('ra.auth.insightsCollectionNote')
-
-  // Split the entire message on newlines
-  const lines = originalMsg.split('\n')
-
-  const renderedLines = lines.map((line, lineIndex) => {
-    const segments = []
-    let lastIndex = 0
-    let match
-
-    // Find bracketed text in each line
-    while ((match = anchorRegex.exec(line)) !== null) {
-      const bracketText = match[1]
-
-      segments.push(line.slice(lastIndex, match.index))
-      segments.push(
-        <Link
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          key={`${lineIndex}-${match.index}`}
-          style={{ cursor: 'pointer' }}
-        >
-          {bracketText}
-        </Link>,
-      )
-      lastIndex = match.index + match[0].length
-    }
-
-    segments.push(line.slice(lastIndex))
-
-    return (
-      <React.Fragment key={lineIndex}>
-        {segments}
-        {lineIndex < lines.length - 1 && <br />}
-      </React.Fragment>
-    )
-  })
-
-  return <div className={classes.message}>{renderedLines}</div>
-}
-
 const FormSignUp = ({ loading, handleSubmit, validate }) => {
   const translate = useTranslate()
   const classes = useStyles()
@@ -387,7 +323,6 @@ const FormSignUp = ({ loading, handleSubmit, validate }) => {
                   {translate('ra.auth.buttonCreateAdmin')}
                 </Button>
               </div>
-              <InsightsNotice url={INSIGHTS_DOC_URL} />
             </div>
             <Notification />
           </div>

@@ -11,10 +11,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model/criteria"
-	"github.com/navidrome/navidrome/resources"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model/criteria"
+	"github.com/kinanqaz/bragi/resources"
 	"gopkg.in/yaml.v3"
 )
 

@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core/storage"
-	"github.com/navidrome/navidrome/core/storage/local"
-	_ "github.com/navidrome/navidrome/core/storage/local"
-	"github.com/navidrome/navidrome/model/metadata"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core/storage"
+	"github.com/kinanqaz/bragi/core/storage/local"
+	_ "github.com/kinanqaz/bragi/core/storage/local"
+	"github.com/kinanqaz/bragi/model/metadata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

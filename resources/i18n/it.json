@@ -340,7 +340,7 @@
     },
     "ra": {
         "auth": {
-            "welcome1": "Grazie per aver installato Navidrome!",
+            "welcome1": "Grazie per aver installato Bragi!",
             "welcome2": "Per iniziare, crea un account amministratore",
             "confirmPassword": "Conferma la password",
             "buttonCreateAdmin": "Crea admin",
@@ -350,8 +350,7 @@
             "password": "Password",
             "sign_in": "Accedi",
             "sign_in_error": "Autenticazione fallita, per favore riprova",
-            "logout": "Disconnetti",
-            "insightsCollectionNote": "Navidrome raccoglie dati di utilizzo anonimi per\nmigliorare il progetto. Clicca [qui] per saperne di più\ne per disattivarlo se lo desideri"
+            "logout": "Disconnetti"
         },
         "validation": {
             "invalidChars": "Per favore usa solo lettere e numeri",
@@ -492,7 +491,7 @@
         "coverRemoveError": "Errore durante la rimozione della copertina",
         "note": "NOTA",
         "transcodingDisabled": "La possibilità di modificare le opzioni di transcodifica attraverso l'interfaccia web è disabilitata per ragioni di sicurezza. Se desideri cambiare (modificare o aggiungere) opzioni di transcodifica, riavvia il server con l'opzione %{config}.",
-        "transcodingEnabled": "Navidrome è al momento attivo con %{config}, rendendo possibile eseguire comandi di sistema dalle impostazioni di transcodifica tramite l'interfaccia web. Si raccomanda di disabilitare questa opzione per ragioni di sicurezza e di abilitarla solo per configurare le opzioni di transcodifica.",
+        "transcodingEnabled": "Bragi è al momento attivo con %{config}, rendendo possibile eseguire comandi di sistema dalle impostazioni di transcodifica tramite l'interfaccia web. Si raccomanda di disabilitare questa opzione per ragioni di sicurezza e di abilitarla solo per configurare le opzioni di transcodifica.",
         "songsAddedToPlaylist": "Aggiunta una traccia alla playlist |||| Aggiunte %{smart_count} tracce alla playlist",
         "noSimilarSongsFound": "Nessuna traccia simile trovata",
         "startingInstantMix": "Caricamento del Mix istantaneo...",
@@ -505,7 +504,7 @@
         "remove_all_missing_title": "Rimuovi tutti i file mancanti",
         "remove_all_missing_content": "Vuoi rimuovere tutti i file mancanti dal database? Verranno eliminati permanentemente tutti i riferimenti ad essi, inclusi i conteggi delle riproduzioni e le valutazioni.",
         "notifications_blocked": "Hai bloccato le notifiche per questo sito nelle tue impostazioni del browser",
-        "notifications_not_available": "Questo browser non supporta le notifiche desktop o non stai accedendo a Navidrome tramite HTTPS",
+        "notifications_not_available": "Questo browser non supporta le notifiche desktop o non stai accedendo a Bragi tramite HTTPS",
         "lastfmLinkSuccess": "Collegamento a Last.fm riuscito e scrobbling abilitato",
         "lastfmLinkFailure": "Non è stato possibile collegare Last.fm",
         "lastfmUnlinkSuccess": "Lo scrobbling è stato disabilitato e Last.fm è stato disconnesso",
@@ -593,12 +592,7 @@
         "links": {
             "homepage": "Sito web",
             "source": "Codice sorgente",
-            "featureRequests": "Proponi idee",
-            "lastInsightsCollection": "Ultima raccolta dati",
-            "insights": {
-                "disabled": "Disabilitato",
-                "waiting": "In attesa"
-            }
+            "featureRequests": "Proponi idee"
         },
         "tabs": {
             "about": "Info",
@@ -635,7 +629,7 @@
         "minutesAgo": "%{smart_count} minuto fa |||| %{smart_count} minuti fa"
     },
     "help": {
-        "title": "Scorciatoie da tastiera di Navidrome",
+        "title": "Scorciatoie da tastiera di Bragi",
         "hotkeys": {
             "show_help": "Mostra questa schermata",
             "toggle_menu": "Mostra/Nascondi la barra laterale",

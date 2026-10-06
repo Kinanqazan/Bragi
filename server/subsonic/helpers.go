@@ -12,16 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/publicurl"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/server/subsonic/responses"
-	"github.com/navidrome/navidrome/utils/gg"
-	"github.com/navidrome/navidrome/utils/number"
-	"github.com/navidrome/navidrome/utils/req"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/publicurl"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/server/subsonic/responses"
+	"github.com/kinanqaz/bragi/utils/gg"
+	"github.com/kinanqaz/bragi/utils/number"
+	"github.com/kinanqaz/bragi/utils/req"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 func newResponse() *responses.Subsonic {

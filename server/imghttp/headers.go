@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/navidrome/navidrome/core/artwork"
+	"github.com/kinanqaz/bragi/core/artwork"
 )
 
 // WriteImageHeaders applies the artwork caching contract and reports whether a 304 was written

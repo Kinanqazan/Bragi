@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/utils/str"
 )
 
 // support the standard [mm:ss.mm], as well as [hh:*] and [*.mmm]

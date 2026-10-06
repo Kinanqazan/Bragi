@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -23,7 +23,7 @@ func TestFFmpeg(t *testing.T) {
 	//nolint:dogsled
 	_, file, _, _ := runtime.Caller(0)
 	appPath, _ := filepath.Abs(filepath.Join(filepath.Dir(file), "..", ".."))
-	confPath := filepath.Join(appPath, "tests", "navidrome-test.toml")
+	confPath := filepath.Join(appPath, "tests", "bragi-test.toml")
 	_ = os.Chdir(appPath)
 	conf.LoadFromFile(confPath)
 	log.SetLevel(log.LevelFatal)
@@ -585,7 +585,7 @@ var _ = Describe("ffmpeg", func() {
 		})
 
 		It("returns a generic reason for launch failures, without leaking the binary path", func() {
-			err := errors.New("fork/exec /opt/navidrome/bin/ffprobe: no such file or directory")
+		err := errors.New("fork/exec /usr/bin/ffprobe: no such file or directory")
 			Expect(probeClientReason(err, "/music/foo.flac")).To(Equal("could not read file"))
 		})
 	})

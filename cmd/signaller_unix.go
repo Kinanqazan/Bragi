@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 const triggerScanSignal = syscall.SIGUSR1

@@ -67,4 +67,23 @@ describe('<MobileBottomNav />', () => {
     history.goBack()
     expect(history.location.pathname).toBe('/song')
   })
+
+  it('navigates on the first touch release without replaying the synthetic click', () => {
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    const onChange = vi.fn()
+    history.listen(onChange)
+    render(
+      <Router history={history}>
+        <MobileBottomNav />
+      </Router>,
+    )
+
+    const artists = screen.getByRole('link', { name: 'Artists' })
+    fireEvent.pointerUp(artists, { pointerType: 'touch', button: 0 })
+    expect(history.location.pathname).toBe('/artist')
+
+    fireEvent.click(artists)
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(history.location.pathname).toBe('/artist')
+  })
 })

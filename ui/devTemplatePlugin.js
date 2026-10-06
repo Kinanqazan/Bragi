@@ -13,7 +13,7 @@ export function devTemplatePlugin(isStandalone = false, environment = process.en
   )
 
   return {
-    name: 'navidrome-dev-template',
+    name: 'bragi-dev-template',
     apply: isStandalone ? undefined : 'serve',
     enforce: 'pre',
     transformIndexHtml(html) {

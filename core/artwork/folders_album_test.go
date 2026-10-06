@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/tests"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/tests"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

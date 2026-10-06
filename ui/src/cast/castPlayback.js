@@ -51,7 +51,7 @@ const mediaIdentity = (url) => {
     const parsed = new URL(url, origin)
     const trackId = parsed.searchParams.get('id')
 
-    // Navidrome stream URLs contain a fresh cache-busting/authentication
+    // Bragi stream URLs contain a fresh cache-busting/authentication
     // query string on every resolution. The endpoint and track ID identify
     // the media across a page refresh; the other query values do not.
     if (trackId && parsed.pathname.endsWith('/rest/stream')) {

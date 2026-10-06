@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 type logger struct{}

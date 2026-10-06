@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/navidrome/navidrome/server/subsonic"
-	"github.com/navidrome/navidrome/server/subsonic/responses"
+	"github.com/kinanqaz/bragi/server/subsonic"
+	"github.com/kinanqaz/bragi/server/subsonic/responses"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

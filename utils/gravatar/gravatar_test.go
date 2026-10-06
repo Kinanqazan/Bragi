@@ -3,8 +3,8 @@ package gravatar_test
 import (
 	"testing"
 
-	"github.com/navidrome/navidrome/tests"
-	"github.com/navidrome/navidrome/utils/gravatar"
+	"github.com/kinanqaz/bragi/tests"
+	"github.com/kinanqaz/bragi/utils/gravatar"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

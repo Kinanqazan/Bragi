@@ -96,6 +96,25 @@ describe('<AppBar />', () => {
     expect(screen.getByPlaceholderText('Search your music')).toBeInTheDocument()
   })
 
+  it('toggles the mobile sidebar on the first touch release', () => {
+    useMediaQuery.mockReturnValue(true)
+    const dispatch = vi.spyOn(store, 'dispatch')
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/song']}>
+          <AppBar />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    const menu = screen.getByLabelText('Open menu')
+    fireEvent.pointerUp(menu, { pointerType: 'touch', button: 0 })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_SIDEBAR' })
+
+    fireEvent.click(menu)
+    expect(dispatch).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps multi-character mobile searches intact while the filter is debounced', async () => {
     useMediaQuery.mockReturnValue(true)
 

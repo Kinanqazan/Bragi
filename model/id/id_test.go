@@ -1,7 +1,7 @@
 package id_test
 
 import (
-	"github.com/navidrome/navidrome/model/id"
+	"github.com/kinanqaz/bragi/model/id"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

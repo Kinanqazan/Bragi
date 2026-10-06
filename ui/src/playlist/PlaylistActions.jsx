@@ -28,6 +28,7 @@ import PropTypes from 'prop-types'
 import { formatBytes } from '../utils'
 import config from '../config'
 import { ToggleFieldsMenu } from '../common'
+import recordsToMap from '../common/recordsToMap'
 
 const useStyles = makeStyles({
   toolbar: { display: 'flex', justifyContent: 'space-between', width: '100%' },
@@ -55,10 +56,7 @@ const PlaylistActions = ({ className, ids, data, record, ...rest }) => {
           filter: { playlist_id: record.id },
         })
         .then((res) => {
-          const data = res.data.reduce(
-            (acc, curr) => ({ ...acc, [curr.id]: curr }),
-            {},
-          )
+          const data = recordsToMap(res.data)
           dispatch(action(data))
         })
         .catch(() => {

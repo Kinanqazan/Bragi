@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core/playback"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/server/subsonic/responses"
-	"github.com/navidrome/navidrome/utils/req"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core/playback"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/server/subsonic/responses"
+	"github.com/kinanqaz/bragi/utils/req"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 const (

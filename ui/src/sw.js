@@ -51,7 +51,7 @@ const navigationHandler = createNavigationHandler(
 workbox.precaching.precacheAndRoute(self.__WB_MANIFEST)
 
 // Cache artwork and cover images using CacheFirst.
-// Navidrome artwork URLs are content-versioned (via imageHash or updatedAt timestamp).
+// Bragi artwork URLs are content-versioned (via imageHash or updatedAt timestamp).
 // CacheFirst serves cached images directly from storage with 0ms network overhead,
 // preventing dozens of redundant background requests from saturating Tailscale/remote tunnels.
 workbox.routing.registerRoute(
@@ -61,9 +61,14 @@ workbox.routing.registerRoute(
     url.pathname.includes('getAvatar') ||
     url.pathname.includes('/rest/getCoverArt'),
   new workbox.strategies.CacheFirst({
-    cacheName: 'navidrome-artwork-cache',
+    cacheName: 'bragi-artwork-cache',
   }),
 )
+
+// Remove the old branded cache after the updated service worker activates.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(caches.delete('navidrome-artwork-cache'))
+})
 
 // Register this strategy to handle all navigations.
 workbox.routing.registerRoute(

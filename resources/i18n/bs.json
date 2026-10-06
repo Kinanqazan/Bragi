@@ -327,7 +327,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Hvala što ste instalirali Navidrome!",
+      "welcome1": "Hvala što ste instalirali Bragi!",
       "welcome2": "Prvo kreirajte admin korisnika",
       "confirmPassword": "Potvrdi lozinku",
       "buttonCreateAdmin": "Kreiraj admina",
@@ -337,8 +337,7 @@
       "password": "Lozinka",
       "sign_in": "Prijava",
       "sign_in_error": "Greška pri prijavi",
-      "logout": "Odjava",
-      "insightsCollectionNote": "Navidrome prikuplja anonimne statistike \nda podrži razvoj projekta. \nKliknite [ovdje] za više informacija ili da isključite \"Insights\""
+      "logout": "Odjava"
     },
     "validation": {
       "invalidChars": "Koristite samo slova i brojeve",
@@ -473,7 +472,7 @@
   "message": {
     "note": "NAPOMENA",
     "transcodingDisabled": "Izmjena postavki transkodiranja preko web sučelja je onemogućena iz sigurnosnih razloga. Ako želiš promijeniti opcije transkodiranja (urediti ili dodati), ponovo pokreni server sa konfiguracijskom opcijom %{config}.",
-    "transcodingEnabled": "Navidrome trenutno radi sa %{config}, što omogućava izvršavanje sistemskih komandi kroz postavke transkodiranja preko web sučelja. Preporučujemo da ovo onemogućiš iz sigurnosnih razloga i koristiš samo prilikom konfiguracije transkodiranja.",
+    "transcodingEnabled": "Bragi trenutno radi sa %{config}, što omogućava izvršavanje sistemskih komandi kroz postavke transkodiranja preko web sučelja. Preporučujemo da ovo onemogućiš iz sigurnosnih razloga i koristiš samo prilikom konfiguracije transkodiranja.",
     "songsAddedToPlaylist": "1 pjesma dodana u playlistu |||| %{smart_count} pjesme dodane u playlistu",
     "noPlaylistsAvailable": "Nema dostupnih playlisti",
     "delete_user_title": "Obriši korisnika '%{name}'",
@@ -572,12 +571,7 @@
     "links": {
       "homepage": "Početna stranica",
       "source": "Izvorni kod",
-      "featureRequests": "Zahtjevi za funkcijama",
-      "lastInsightsCollection": "Posljednje prikupljanje \"Insights\"",
-      "insights": {
-        "disabled": "Isključeno",
-        "waiting": "Čekanje"
-      }
+      "featureRequests": "Zahtjevi za funkcijama"
     },
     "tabs": {
       "about": "O aplikaciji",
@@ -607,7 +601,7 @@
     "elapsedTime": "Proteklo vrijeme"
   },
   "help": {
-    "title": "Navidrome prečice",
+    "title": "Bragi prečice",
     "hotkeys": {
       "show_help": "Prikaži ovu pomoć",
       "toggle_menu": "Uključi/isključi bočnu traku",

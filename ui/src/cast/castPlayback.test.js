@@ -1245,7 +1245,7 @@ describe('createCastPlaybackTarget', () => {
     )
 
     expect(errorSpy).toHaveBeenCalledWith(
-      '[Navidrome Cast] Media load failed',
+      '[Bragi Cast] Media load failed',
       expect.objectContaining({
         code: 'LOAD_MEDIA_FAILED',
         mediaUrl: 'https://server.test/rest/stream',
@@ -1283,7 +1283,7 @@ describe('createCastPlaybackTarget', () => {
       phase: 'load-media',
     })
     expect(errorSpy).toHaveBeenCalledWith(
-      '[Navidrome Cast] Media load failed',
+      '[Bragi Cast] Media load failed',
       expect.objectContaining({ phase: 'load-media' }),
     )
     errorSpy.mockRestore()
@@ -1451,7 +1451,7 @@ describe('createCastPlaybackTarget', () => {
       code: 'NO_CAST_SESSION',
     })
     expect(errorSpy).toHaveBeenCalledWith(
-      '[Navidrome Cast] Media load failed',
+      '[Bragi Cast] Media load failed',
       expect.objectContaining({ code: 'NO_CAST_SESSION' }),
     )
     errorSpy.mockRestore()

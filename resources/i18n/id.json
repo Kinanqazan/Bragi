@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Terima kasih telah menginstal Navidrome!",
+      "welcome1": "Terima kasih telah menginstal Bragi!",
       "welcome2": "Untuk memulai, buat dulu akun admin",
       "confirmPassword": "Konfirmasi Kata Sandi",
       "buttonCreateAdmin": "Buat Akun Admin",
@@ -347,8 +347,7 @@
       "password": "Kata Sandi",
       "sign_in": "Masuk",
       "sign_in_error": "Otentikasi gagal, silakan coba lagi",
-      "logout": "Keluar",
-      "insightsCollectionNote": "Navidrome mengumpulkan penggunaan data anonim untuk membantu menyempurnakan project ini. Klik [disini] untuk mempelajari lebih lanjut dan untuk opt-out jika anda mau"
+      "logout": "Keluar"
     },
     "validation": {
       "invalidChars": "Harap menggunakan huruf dan angka saja",
@@ -483,13 +482,13 @@
   "message": {
     "note": "CATATAN",
     "transcodingDisabled": "Mengubah konfigurasi transkode melalui antarmuka web dinonaktifkan karena alasan keamanan. Jika Kamu ingin mengubah (mengedit atau menambahkan) opsi transkode, restart server dengan opsi konfigurasi %{config}.",
-    "transcodingEnabled": "Navidrome saat ini berjalan dengan %{config}, sehingga memungkinkan untuk menjalankan perintah sistem dari pengaturan Transkode menggunakan antarmuka web. Kami sarankan untuk menonaktifkannya demi alasan keamanan dan hanya mengaktifkannya saat mengonfigurasi opsi Transcoding.",
+    "transcodingEnabled": "Bragi saat ini berjalan dengan %{config}, sehingga memungkinkan untuk menjalankan perintah sistem dari pengaturan Transkode menggunakan antarmuka web. Kami sarankan untuk menonaktifkannya demi alasan keamanan dan hanya mengaktifkannya saat mengonfigurasi opsi Transcoding.",
     "songsAddedToPlaylist": "Menambahkan 1 lagu ke playlist |||| Menambahkan %{smart_count} lagu ke playlist",
     "noPlaylistsAvailable": "Tidak tersedia",
     "delete_user_title": "Hapus pengguna '%{name}'",
     "delete_user_content": "Apakah Kamu yakin ingin menghapus pengguna ini dan semua datanya (termasuk daftar putar dan preferensi)?",
     "notifications_blocked": "Kamu telah memblokir Notifikasi untuk situs ini di pengaturan browser Anda",
-    "notifications_not_available": "Browser ini tidak mendukung notifikasi desktop atau Kamu tidak mengakses Navidrome melalui https",
+    "notifications_not_available": "Browser ini tidak mendukung notifikasi desktop atau Kamu tidak mengakses Bragi melalui https",
     "lastfmLinkSuccess": "Last.fm berhasil ditautkan dan scrobbling diaktifkan",
     "lastfmLinkFailure": "Last.fm tidak dapat ditautkan",
     "lastfmUnlinkSuccess": "Tautan Last.fm dibatalkan dan scrobbling dinonaktifkan",
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Halaman beranda",
       "source": "Kode sumber",
-      "featureRequests": "Permintaan fitur",
-      "lastInsightsCollection": "Koleksi insight terakhir",
-      "insights": {
-        "disabled": "Nonaktifkan",
-        "waiting": "Menunggu"
-      }
+      "featureRequests": "Permintaan fitur"
     },
     "tabs": {
       "about": "Tentang",
@@ -626,7 +620,7 @@
     "selectiveScan": "Selektif"
   },
   "help": {
-    "title": "Tombol Pintasan Navidrome",
+    "title": "Tombol Pintasan Bragi",
     "hotkeys": {
       "show_help": "Tampilkan Bantuan Ini",
       "toggle_menu": "Menu Samping",

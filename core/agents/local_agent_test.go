@@ -3,9 +3,9 @@ package agents
 import (
 	"context"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/tests"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/tests"
+	"github.com/kinanqaz/bragi/utils/slice"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

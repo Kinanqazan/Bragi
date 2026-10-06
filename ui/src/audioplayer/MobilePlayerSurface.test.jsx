@@ -20,6 +20,8 @@ vi.mock('./MobilePlayerBar', () => ({
     snapshot,
     commands,
     ambientColor,
+    artworkRef,
+    progressTrackRef,
     titleRef,
     artistRef,
   }) => (
@@ -30,6 +32,12 @@ vi.mock('./MobilePlayerBar', () => ({
       style={style}
       {...gestureHandlers}
     >
+      <span
+        ref={artworkRef}
+        data-testid="mini-artwork-anchor"
+        aria-hidden="true"
+      />
+      <div ref={progressTrackRef} data-testid="mini-progress-anchor" />
       <span ref={titleRef} data-testid="mini-title-anchor" aria-hidden="true" />
       <span
         ref={artistRef}
@@ -152,6 +160,9 @@ describe('MobilePlayerSurface gestures', () => {
       function () {
         const testId = this.getAttribute('data-testid')
         const anchor = this.getAttribute('data-player-anchor')
+        if (testId === 'full-artwork-anchor') return rect(40, 160, 320, 320)
+        if (testId === 'mini-artwork-anchor') return rect(10, 660, 84, 92)
+        if (testId === 'mini-progress-anchor') return rect(10, 749, 380, 3)
         if (this.getAttribute('aria-label') === 'Full-screen player') {
           return rect(0, 0, 400, 800)
         }
@@ -170,6 +181,13 @@ describe('MobilePlayerSurface gestures', () => {
     vi.unstubAllGlobals()
   })
 
+  it('keeps the full-screen player above app navigation', () => {
+    renderSurface()
+    const shell = screen.getByTestId('mobile-player-shell')
+
+    expect(Number(getComputedStyle(shell).zIndex)).toBe(1400)
+  })
+
   it('provides ambient artwork color to the backdrop and mobile player bar', () => {
     const { rerenderSurface } = renderSurface()
 
@@ -186,6 +204,15 @@ describe('MobilePlayerSurface gestures', () => {
     expect(screen.getByTestId('mock-mobile-player-bar')).toHaveAttribute(
       'data-ambient-color',
       '#123456',
+    )
+  })
+
+  it('ends shared mini artwork before the reserved progress strip', () => {
+    renderSurface(vi.fn(), false)
+
+    const sharedArtwork = document.querySelector('[data-player-artwork="true"]')
+    expect(sharedArtwork.style.transform).toContain(
+      'translate3d(10px, 660px, 0) scale(0.2625, 0.275)',
     )
   })
 
@@ -652,6 +679,85 @@ describe('MobilePlayerSurface gestures', () => {
     const play = screen.getByRole('button', { name: 'Play', hidden: true })
     play.click()
 
+    expect(onPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts playback on the first touch release of the animated shared play button', () => {
+    const onPlay = vi.fn()
+    renderSurface(vi.fn(), true, {
+      play: onPlay,
+      pause: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+    })
+    const play = document.querySelector('[data-player-shared-control="true"]')
+
+    dispatchPointer(play, 'pointerdown', {
+      pointerId: 51,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 600,
+    })
+    dispatchPointer(play, 'pointerup', {
+      pointerId: 51,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 600,
+    })
+
+    expect(onPlay).toHaveBeenCalledTimes(1)
+    play.click()
+    expect(onPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the fullscreen snap running when a control is pressed during it', () => {
+    const onExpandedChange = vi.fn()
+    const onPlay = vi.fn()
+    renderSurface(onExpandedChange, false, {
+      play: onPlay,
+      pause: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+    })
+    const mini = screen.getByTestId('mock-mobile-player-bar')
+    const frame = screen.getByTestId('shared-player-frame')
+    dispatchPointer(mini, 'pointerdown', {
+      pointerId: 52,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 300,
+    })
+    dispatchPointer(mini, 'pointermove', {
+      pointerId: 52,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 240,
+    })
+    dispatchPointer(mini, 'pointerup', {
+      pointerId: 52,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 240,
+    })
+    const transition = frame.style.transition
+    const surface = document.querySelector('[aria-label="Full-screen player"]')
+    const play = surface.querySelector('button')
+
+    dispatchPointer(play, 'pointerdown', {
+      pointerId: 53,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 600,
+    })
+    dispatchPointer(play, 'pointerup', {
+      pointerId: 53,
+      pointerType: 'touch',
+      clientX: 200,
+      clientY: 600,
+    })
+
+    expect(frame.style.transition).toBe(transition)
+    play.click()
     expect(onPlay).toHaveBeenCalledTimes(1)
   })
 

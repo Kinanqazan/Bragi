@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "¡Gracias por instalar Navidrome!",
+      "welcome1": "¡Gracias por instalar Bragi!",
       "welcome2": "Para empezar, crea un usuario administrador",
       "confirmPassword": "Confirme la contraseña",
       "buttonCreateAdmin": "Crear Admin",
@@ -347,8 +347,7 @@
       "password": "Contraseña",
       "sign_in": "Acceder",
       "sign_in_error": "La autenticación falló, por favor, vuelva a intentarlo",
-      "logout": "Cerrar sesión",
-      "insightsCollectionNote": "Navidrome recopila datos de uso anónimos para\nayudar a mejorar el proyecto. Haz clic [aquí] para \nobtener más información y optar por no\nparticipar si lo deseas"
+      "logout": "Cerrar sesión"
     },
     "validation": {
       "invalidChars": "Por favor use solo letras y números",
@@ -489,7 +488,7 @@
     "delete_user_title": "Eliminar usuario '%{name}'",
     "delete_user_content": "¿Esta seguro de eliminar a este usuario y todos sus datos (incluyendo listas y preferencias)?",
     "notifications_blocked": "Las notificaciones de este sitio están bloqueadas en tu navegador",
-    "notifications_not_available": "Este navegador no soporta notificaciones o no ingresaste a Navidrome usando https",
+    "notifications_not_available": "Este navegador no soporta notificaciones o no ingresaste a Bragi usando https",
     "lastfmLinkSuccess": "Last.fm esta conectado y el scrobbling esta activado",
     "lastfmLinkFailure": "No se pudo conectar con Last.fm",
     "lastfmUnlinkSuccess": "Last.fm se ha desconectado y el scrobbling se desactivo",
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Página de inicio",
       "source": "Código fuente",
-      "featureRequests": "Pedir funcionalidad",
-      "lastInsightsCollection": "Última recopilación de datos",
-      "insights": {
-        "disabled": "Deshabilitado",
-        "waiting": "Esperando"
-      }
+      "featureRequests": "Pedir funcionalidad"
     },
     "tabs": {
       "about": "Acerca de",
@@ -626,7 +620,7 @@
     "selectiveScan": "Selectivo"
   },
   "help": {
-    "title": "Atajos de teclado de Navidrome",
+    "title": "Atajos de teclado de Bragi",
     "hotkeys": {
       "show_help": "Muestra esta ayuda",
       "toggle_menu": "Activa/desactiva la barra lateral",

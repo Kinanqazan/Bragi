@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kinanqaz/bragi/core/stream"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/persistence"
+	"github.com/kinanqaz/bragi/utils/slice"
+	"github.com/kinanqaz/bragi/utils/str"
 	"github.com/Masterminds/squirrel"
-	"github.com/navidrome/navidrome/core/stream"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/persistence"
-	"github.com/navidrome/navidrome/utils/slice"
-	"github.com/navidrome/navidrome/utils/str"
 )
 
 type Archiver interface {
@@ -88,7 +88,7 @@ func (a *archiver) zipAlbums(ctx context.Context, id string, format string, bitr
 
 func createZipWriter(out io.Writer, format string, bitrate int) *zip.Writer {
 	z := zip.NewWriter(out)
-	comment := "Downloaded from Navidrome"
+	comment := "Downloaded from Bragi"
 	if format != "raw" && format != "" {
 		comment = fmt.Sprintf("%s, transcoded to %s %dbps", comment, format, bitrate)
 	}

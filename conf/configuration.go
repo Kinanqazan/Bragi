@@ -17,16 +17,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/scheduler"
+	"github.com/kinanqaz/bragi/utils/run"
+	"github.com/kinanqaz/bragi/utils/slice"
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/dustin/go-humanize"
 	"github.com/go-viper/encoding/ini"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/kr/pretty"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/scheduler"
-	"github.com/navidrome/navidrome/utils/run"
-	"github.com/navidrome/navidrome/utils/slice"
 	"github.com/spf13/viper"
 )
 
@@ -59,7 +59,6 @@ type configOptions struct {
 	EnableMediaFileMetadataEditing  bool
 	EnableExternalServices          bool
 	EnableM3UExternalAlbumArt       bool
-	EnableInsightsCollector         bool
 	EnableScheduledDBAnalyze        bool
 	EnableMediaFileCoverArt         bool
 	TranscodingCacheSize            string
@@ -154,8 +153,6 @@ type configOptions struct {
 	DevExternalScanner                bool
 	DevScannerThreads                 uint
 	DevSelectiveWatcher               bool
-	DevInsightsInitialDelay           time.Duration
-	DevEnablePlayerInsights           bool
 	DevExternalArtistFetchMultiplier  float64
 	DevPreserveUnicodeInExternalCalls bool
 	DevEnableMediaFileProbe           bool
@@ -785,7 +782,6 @@ func parseIniFileConfiguration() {
 
 func disableExternalServices() {
 	log.Info("All external integrations are DISABLED!")
-	Server.EnableInsightsCollector = false
 	Server.EnableM3UExternalAlbumArt = false
 	Server.LastFM.Enabled = false
 	Server.Deezer.Enabled = false
@@ -855,7 +851,7 @@ func validateEnforceNonRootUser() error {
 	}
 
 	if getEUID() == 0 {
-		return fmt.Errorf("EnforceNonRootUser is enabled but Navidrome is running as root")
+		return fmt.Errorf("EnforceNonRootUser is enabled but Bragi is running as root")
 	}
 
 	return nil
@@ -1027,7 +1023,6 @@ func setViperDefaults() {
 	viper.SetDefault("defaultshareexpiration", 8760*time.Hour)
 	viper.SetDefault("defaultdownloadableshare", false)
 	viper.SetDefault("gatrackingid", "")
-	viper.SetDefault("enableinsightscollector", false)
 	viper.SetDefault("enablescheduleddbanalyze", true)
 	viper.SetDefault("enablelogredacting", true)
 	viper.SetDefault("authrequestlimit", 5)
@@ -1116,8 +1111,6 @@ func setViperDefaults() {
 	viper.SetDefault("devexternalscanner", true)
 	viper.SetDefault("devscannerthreads", 5)
 	viper.SetDefault("devselectivewatcher", true)
-	viper.SetDefault("devinsightsinitialdelay", consts.InsightsInitialDelay)
-	viper.SetDefault("devenableplayerinsights", true)
 	viper.SetDefault("devexternalartistfetchmultiplier", 1.5)
 	viper.SetDefault("devpreserveunicodeinexternalcalls", false)
 	viper.SetDefault("devenablemediafileprobe", true)
@@ -1142,9 +1135,14 @@ func InitConfig(cfgFile string, loadEnvVars bool) {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search config in local directory with name "navidrome" (without extension).
+		// Prefer Bragi's config name while retaining Navidrome config files for existing installs.
 		viper.AddConfigPath(".")
-		viper.SetConfigName("navidrome")
+		viper.SetConfigName("bragi")
+		if _, err := os.Stat("bragi.toml"); err != nil {
+			if _, legacyErr := os.Stat("navidrome.toml"); legacyErr == nil {
+				viper.SetConfigName("navidrome")
+			}
+		}
 	}
 
 	if loadEnvVars {
@@ -1157,7 +1155,7 @@ func InitConfig(cfgFile string, loadEnvVars bool) {
 
 	err := viper.ReadInConfig()
 	if viper.ConfigFileUsed() != "" && err != nil {
-		logFatal("Navidrome could not open config file:", err)
+		logFatal("Bragi could not open config file:", err)
 	}
 }
 
@@ -1177,12 +1175,29 @@ func bindConfigEnvironmentVariables() {
 // If it is defined in the environment variable, it will check if the file exists.
 func getConfigFile(cfgFile string) string {
 	if cfgFile != "" {
+		if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
+			return cfgFile
+		}
+		if filepath.Base(cfgFile) == "bragi.toml" {
+			legacyConfigFile := filepath.Join(filepath.Dir(cfgFile), "navidrome.toml")
+			if _, err := os.Stat(legacyConfigFile); err == nil { //nolint:gosec
+				return legacyConfigFile
+			}
+		}
 		return cfgFile
 	}
 	cfgFile = os.Getenv("BR_CONFIGFILE")
 	if cfgFile != "" {
 		if _, err := os.Stat(cfgFile); err == nil { //nolint:gosec
 			return cfgFile
+		}
+		// Docker images now point at bragi.toml. Reuse a mounted Navidrome config
+		// when upgrading an existing /data volume without requiring a Compose edit.
+		if filepath.Base(cfgFile) == "bragi.toml" {
+			legacyConfigFile := filepath.Join(filepath.Dir(cfgFile), "navidrome.toml")
+			if _, err := os.Stat(legacyConfigFile); err == nil { //nolint:gosec
+				return legacyConfigFile
+			}
 		}
 	}
 	return ""

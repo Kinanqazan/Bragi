@@ -42,6 +42,10 @@ const PlayerControls = ({
     snapshot.playing ? commands.pause : commands.play,
     isolateGestures,
   )
+  const previousPress = useImmediateControlPress(commands.previous, isolateGestures)
+  const nextPress = useImmediateControlPress(commands.next, isolateGestures)
+  const lyricsPress = useImmediateControlPress(onLyrics, isolateGestures)
+  const queuePress = useImmediateControlPress(onQueue, isolateGestures)
 
   return (
     <div
@@ -51,7 +55,7 @@ const PlayerControls = ({
     >
       <div className="nd-player-controls-primary">
         <IconButton
-          onClick={commands.previous}
+          {...previousPress}
           aria-label="Previous track"
           className="nd-player-btn-prev"
         >
@@ -74,7 +78,7 @@ const PlayerControls = ({
           </IconButton>
         )}
         <IconButton
-          onClick={commands.next}
+          {...nextPress}
           aria-label="Next track"
           className="nd-player-btn-next"
         >
@@ -86,10 +90,15 @@ const PlayerControls = ({
         {favoriteButton && (
           <span className="nd-player-secondary-item">{favoriteButton}</span>
         )}
-        {showCast && <CastButton className="nd-player-btn-secondary" />}
+        {showCast && (
+          <CastButton
+            className="nd-player-btn-secondary"
+            isolateGestures={isolateGestures}
+          />
+        )}
         {onLyrics && (
           <IconButton
-            onClick={onLyrics}
+            {...lyricsPress}
             aria-label={lyricsActive ? 'Close lyrics' : 'Open lyrics'}
             aria-pressed={lyricsActive}
             className={clsx('nd-player-btn-secondary', {
@@ -101,7 +110,7 @@ const PlayerControls = ({
         )}
         {onQueue && (
           <IconButton
-            onClick={onQueue}
+            {...queuePress}
             aria-label="Open queue"
             className="nd-player-btn-secondary"
           >

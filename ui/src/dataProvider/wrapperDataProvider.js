@@ -13,6 +13,7 @@ const MAX_LIST_CACHE_SIZE = 100
 const facetResources = new Set(['genre', 'tag'])
 const cacheableResources = new Set(['album', 'song', 'artist', 'genre', 'tag', 'playlist'])
 const listCache = new Map()
+let getStoreState = () => undefined
 
 const pruneExpiredOrOverflow = () => {
   const now = Date.now()
@@ -82,9 +83,20 @@ const isAdmin = () => {
 
 const getSelectedLibraries = () => {
   try {
-    const rawState = localStorage.getItem('state')
-    if (!rawState) return []
-    const state = JSON.parse(rawState)
+    const state = getStoreState()
+    if (!state) {
+      const rawState = localStorage.getItem('state')
+      if (!rawState) return []
+      return getSelectedLibrariesFromState(JSON.parse(rawState))
+    }
+    return getSelectedLibrariesFromState(state)
+  } catch (err) {
+    return []
+  }
+}
+
+const getSelectedLibrariesFromState = (state) => {
+  try {
     const selectedLibraries = Array.isArray(state?.library?.selectedLibraries)
       ? state.library.selectedLibraries
       : []
@@ -93,13 +105,15 @@ const getSelectedLibraries = () => {
       : []
 
     // Validate selected libraries against current user libraries
-    const userLibraryIds = userLibraries.map((lib) => lib?.id).filter(Boolean)
+    const userLibraryIds = new Set(
+      userLibraries.map((lib) => lib?.id).filter(Boolean),
+    )
     const validatedSelection = selectedLibraries.filter((id) =>
-      userLibraryIds.includes(id),
+      userLibraryIds.has(id),
     )
 
     // If user has only one library, return empty array (no filter needed)
-    if (userLibraryIds.length === 1) {
+    if (userLibraryIds.size === 1) {
       return []
     }
 
@@ -343,6 +357,9 @@ const wrapperDataProvider = {
     }).then(({ json }) => ({ data: json }))
   },
   clearCache: clearListCache,
+  setStateGetter: (getState) => {
+    getStoreState = getState
+  },
 }
 
 export default wrapperDataProvider

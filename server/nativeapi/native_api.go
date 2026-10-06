@@ -5,37 +5,34 @@ import (
 	"encoding/json"
 	"html"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/core/artwork"
+	playlistsvc "github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/server"
 	"github.com/deluan/rest"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/core/metrics"
-	playlistsvc "github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/server"
 )
 
 type Router struct {
 	http.Handler
-	ds            model.DataStore
-	share         core.Share
-	playlists     playlistsvc.Playlists
-	insights      metrics.Insights
-	libs          core.Library
-	users         core.User
-	maintenance   core.Maintenance
-	imgUpload     artwork.Uploader
+	ds          model.DataStore
+	share       core.Share
+	playlists   playlistsvc.Playlists
+	libs        core.Library
+	users       core.User
+	maintenance core.Maintenance
+	imgUpload   artwork.Uploader
 }
 
-func New(ds model.DataStore, share core.Share, playlists playlistsvc.Playlists, insights metrics.Insights, libraryService core.Library, userService core.User, maintenance core.Maintenance, imgUpload artwork.Uploader) *Router {
-	r := &Router{ds: ds, share: share, playlists: playlists, insights: insights, libs: libraryService, users: userService, maintenance: maintenance, imgUpload: imgUpload}
+func New(ds model.DataStore, share core.Share, playlists playlistsvc.Playlists, libraryService core.Library, userService core.User, maintenance core.Maintenance, imgUpload artwork.Uploader) *Router {
+	r := &Router{ds: ds, share: share, playlists: playlists, libs: libraryService, users: userService, maintenance: maintenance, imgUpload: imgUpload}
 	r.Handler = r.routes()
 	return r
 }
@@ -72,7 +69,6 @@ func (api *Router) routes() http.Handler {
 		api.addMissingFilesRoute(r)
 		api.addKeepAliveRoute(r)
 		r.Get("/listening-stats", getListeningStats(api.ds))
-		api.addInsightsRoute(r)
 
 		r.With(adminOnlyMiddleware).Group(func(r chi.Router) {
 			r.Delete("/song/{id}/file", deleteMediaFile(api.maintenance))
@@ -238,17 +234,6 @@ func (api *Router) addConfigRoute(r chi.Router) {
 func (api *Router) addKeepAliveRoute(r chi.Router) {
 	r.Get("/keepalive/*", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"response":"ok", "id":"keepalive"}`))
-	})
-}
-
-func (api *Router) addInsightsRoute(r chi.Router) {
-	r.Get("/insights/*", func(w http.ResponseWriter, r *http.Request) {
-		last, success := api.insights.LastRun(r.Context())
-		if conf.Server.EnableInsightsCollector {
-			_, _ = w.Write([]byte(`{"id":"insights_status", "lastRun":"` + last.Format("2006-01-02 15:04:05") + `", "success":` + strconv.FormatBool(success) + `}`)) //nolint:gosec
-		} else {
-			_, _ = w.Write([]byte(`{"id":"insights_status", "lastRun":"disabled", "success":false}`))
-		}
 	})
 }
 

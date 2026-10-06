@@ -1,11 +1,9 @@
 # Version control & CI
 .git
 .github
-.devcontainer
 .worktrees
 
-# Documentation & IDE
-docs
+# IDE files
 *.md
 .vscode
 .idea
@@ -20,7 +18,6 @@ scripts
 reflex.conf
 Procfile.dev
 .nvmrc
-context7.json
 
 # Node & Frontend build artifacts
 ui/node_modules
@@ -38,6 +35,8 @@ music.old
 testDB
 navidrome
 navidrome.toml
+bragi
+bragi.toml
 docker-compose*.yml
 
 # Build outputs & caches
@@ -46,4 +45,4 @@ binaries
 cache
 tmp
 !tmp/taglib
-!out/navidrome
+!out/bragi

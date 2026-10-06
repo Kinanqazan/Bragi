@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Navidrome'yi yüklediğiniz için teşekkürler!",
+      "welcome1": "Bragi'yi yüklediğiniz için teşekkürler!",
       "welcome2": "Başlamak için yönetici kullanıcısı oluştur",
       "confirmPassword": "Şifreyi Onayla",
       "buttonCreateAdmin": "Yönetici oluştur",
@@ -347,8 +347,7 @@
       "password": "Parola",
       "sign_in": "Giriş yap",
       "sign_in_error": "Giriş başarısız. Lütfen tekrar deneyin",
-      "logout": "Çıkış",
-      "insightsCollectionNote": "Navidrome, projenin iyileştirilmesine yardımcı\nolmak için anonim kullanım verileri toplar.\nDaha fazla bilgi edinmek ve isterseniz\ndevre dışı bırakmak için [buraya] tıklayın"
+      "logout": "Çıkış"
     },
     "validation": {
       "invalidChars": "Lütfen sadece harf ve rakam kullan",
@@ -483,13 +482,13 @@
   "message": {
     "note": "NOT",
     "transcodingDisabled": "Güvenlik nedenleriyle, kod dönüştürme yapılandırmasını web arayüzü üzerinden değiştirmek devre dışıdır. Kod dönüştürme seçeneklerini değiştirmek (düzenlemek veya eklemek) isterseniz, sunucuyu %{config} yapılandırma seçeneğiyle yeniden başlatın.",
-    "transcodingEnabled": "Navidrome yapılandırmanızda \" %{config} \" etkin ve bu da web arayüzünü kullanarak kod dönüştürme ayarlarından sistem komutlarını çalıştırmayı mümkün kılıyor. Güvenlik nedenleriyle bunu devre dışı bırakmanızı ve yalnızca Kod dönüştürme seçeneklerini yapılandırırken etkinleştirmenizi öneririz.",
+    "transcodingEnabled": "Bragi yapılandırmanızda \" %{config} \" etkin ve bu da web arayüzünü kullanarak kod dönüştürme ayarlarından sistem komutlarını çalıştırmayı mümkün kılıyor. Güvenlik nedenleriyle bunu devre dışı bırakmanızı ve yalnızca Kod dönüştürme seçeneklerini yapılandırırken etkinleştirmenizi öneririz.",
     "songsAddedToPlaylist": "Çalma listesine 1 şarkı eklendi |||| Çalma listesine %{smart_count} şarkı eklendi",
     "noPlaylistsAvailable": "Mevcut değil",
     "delete_user_title": "'%{name}' kullanıcısını sil",
     "delete_user_content": "Bu kullanıcıyı ve tüm verilerini (çalma listeleri ve tercihleri dahil) silmek istediğinden emin misin?",
     "notifications_blocked": "Tarayıcınızın ayarlarında bu site için Bildirimleri engellediniz",
-    "notifications_not_available": "Bu tarayıcı masaüstü bildirimlerini desteklemiyor veya Navidrome'a ​​\"https://\" üzerinden erişmiyorsunuz",
+    "notifications_not_available": "Bu tarayıcı masaüstü bildirimlerini desteklemiyor veya Bragi'a ​​\"https://\" üzerinden erişmiyorsunuz",
     "lastfmLinkSuccess": "Last.fm bağlantısı başarılı ve skroplama etkinleştirildi",
     "lastfmLinkFailure": "Last.fm'e bağlanılamadı",
     "lastfmUnlinkSuccess": "Last.fm bağlantısı kaldırıldı ve Skroplama devre dışı bırakıldı",
@@ -589,12 +588,7 @@
     "links": {
       "homepage": "Ana sayfa",
       "source": "Kaynak kodu",
-      "featureRequests": "Özellik talepleri",
-      "lastInsightsCollection": "Son Veri Toplama",
-      "insights": {
-        "disabled": "Pasif",
-        "waiting": "Bekle"
-      }
+      "featureRequests": "Özellik talepleri"
     },
     "tabs": {
       "about": "Hakkında",
@@ -626,7 +620,7 @@
     "selectiveScan": "Seçmeli"
   },
   "help": {
-    "title": "Navidrome Kısayolları",
+    "title": "Bragi Kısayolları",
     "hotkeys": {
       "show_help": "Yardımı Göster",
       "toggle_menu": "Menü Kenar Çubuğunu Aç/Kapat",

@@ -337,7 +337,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Vielen Dank für die Installation von Navidrome!",
+      "welcome1": "Vielen Dank für die Installation von Bragi!",
       "welcome2": "Als erstes erstelle einen Admin-Benutzer",
       "confirmPassword": "Passwort bestätigen",
       "buttonCreateAdmin": "Admin erstellen",
@@ -347,8 +347,7 @@
       "password": "Passwort",
       "sign_in": "Anmelden",
       "sign_in_error": "Fehler bei der Anmeldung",
-      "logout": "Abmelden",
-      "insightsCollectionNote": "Navidrome sammelt anonyme Statistiken \num die Entwicklung des Projekts zu unterstützen. \n[here] klicken für mehr Informationen oder um \"Insights\" abzuschalten"
+      "logout": "Abmelden"
     },
     "validation": {
       "invalidChars": "Bitte nur Buchstaben und Zahlen verwenden",
@@ -483,7 +482,7 @@
   "message": {
     "note": "HINWEIS",
     "transcodingDisabled": "Die Änderung der Transcodierungskonfiguration über die Web-UI ist aus Sicherheitsgründen deaktiviert. Wenn du die Transcodierungsoptionen ändern (bearbeiten oder hinzufügen) möchtest, starte den Server mit der Konfigurationsoption %{config} neu.",
-    "transcodingEnabled": "Navidrome läuft derzeit mit %{config}, wodurch es möglich ist, Systembefehle aus den Transkodierungseinstellungen über die Webschnittstelle auszuführen. Wir empfehlen, es aus Sicherheitsgründen zu deaktivieren und nur bei der Konfiguration von Transkodierungsoptionen zu aktivieren.",
+    "transcodingEnabled": "Bragi läuft derzeit mit %{config}, wodurch es möglich ist, Systembefehle aus den Transkodierungseinstellungen über die Webschnittstelle auszuführen. Wir empfehlen, es aus Sicherheitsgründen zu deaktivieren und nur bei der Konfiguration von Transkodierungsoptionen zu aktivieren.",
     "songsAddedToPlaylist": "Einen Titel zur Wiedergabeliste hinzugefügt |||| %{smart_count} Titel zur Wiedergabeliste hinzugefügt",
     "noPlaylistsAvailable": "Keine Wiedergabeliste verfügbar",
     "delete_user_title": "Benutzer '%{name}' löschen",
@@ -605,7 +604,7 @@
     "selectiveScan": "Selektiver Scan"
   },
   "help": {
-    "title": "Navidrome Hotkeys",
+    "title": "Bragi Hotkeys",
     "hotkeys": {
       "show_help": "Diese Hilfe anzeigen",
       "toggle_menu": "Seitenleiste umschalten",

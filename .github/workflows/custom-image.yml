@@ -83,15 +83,15 @@ jobs:
           apk add --no-cache clang lld file git gcc musl-dev zlib-dev
           git config --global --add safe.directory '*'
           export CGO_ENABLED=1
-          BUILD_TAGS=$(./release/build-tags.sh)
+          BUILD_TAGS=$(./scripts/release/build-tags.sh)
           go build -buildvcs=false -tags="${BUILD_TAGS}" -ldflags="-w -s \
             -linkmode=external -extldflags '-latomic' \
-            -X github.com/navidrome/navidrome/consts.gitSha=${{ github.sha }} \
-            -X github.com/navidrome/navidrome/consts.gitTag=custom-${{ github.ref_name }}" \
-            -o out/navidrome .
-          ./release/verify-binary.sh out/navidrome
-          file out/navidrome | grep -q "dynamically linked" || { echo "ERROR: out/navidrome is not dynamically linked"; file out/navidrome; exit 1; }
-          chmod 755 out/navidrome
+            -X github.com/kinanqaz/bragi/consts.gitSha=${{ github.sha }} \
+            -X github.com/kinanqaz/bragi/consts.gitTag=custom-${{ github.ref_name }}" \
+            -o out/bragi .
+          ./scripts/release/verify-binary.sh out/bragi
+          file out/bragi | grep -q "dynamically linked" || { echo "ERROR: out/bragi is not dynamically linked"; file out/bragi; exit 1; }
+          chmod 755 out/bragi
           EOF
 
       - name: Set up Docker Buildx

@@ -335,7 +335,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Dankon pro instalado de Navidrome !",
+      "welcome1": "Dankon pro instalado de Bragi !",
       "welcome2": "Por komenci, kreu administrantan uzanton",
       "confirmPassword": "Konfirmu Pasvorton",
       "buttonCreateAdmin": "Krei Administranto",
@@ -345,8 +345,7 @@
       "password": "Pasvorto",
       "sign_in": "Ensaluti",
       "sign_in_error": "Aŭtentikigo malsukcesis, bonvolu reprovi",
-      "logout": "Elsaluti",
-      "insightsCollectionNote": "Navidrome kolektas anoniman uzdatumon por helpi\nplibonigi la projekton. Alklaku [ĉi tie] por lerni pli kaj\nsupozi permeson se vi volas"
+      "logout": "Elsaluti"
     },
     "validation": {
       "invalidChars": "Bonvolu uzi nur literojn kaj ciferojn",
@@ -481,13 +480,13 @@
   "message": {
     "note": "Noto",
     "transcodingDisabled": "Ŝanĝi la transkodigan agordon per la interreta interfaco estas malebligita pro sekurecaj kialoj. Se vi ŝatus ŝanĝi (redakti aŭ aldoni) transkodigajn opciojn, relanĉu la servilon per la agordo %{config}.",
-    "transcodingEnabled": "Navidrome nuntempe funkcias kun %{config}, ebligante lanĉi sistemajn komandojn de la transkodigaj agordoj per la interreta interfaco. Ni rekomendas malŝalti ĝin pro sekurecaj kialoj kaj ebligi ĝin nur dum agordo de Transkodigaj opcioj.",
+    "transcodingEnabled": "Bragi nuntempe funkcias kun %{config}, ebligante lanĉi sistemajn komandojn de la transkodigaj agordoj per la interreta interfaco. Ni rekomendas malŝalti ĝin pro sekurecaj kialoj kaj ebligi ĝin nur dum agordo de Transkodigaj opcioj.",
     "songsAddedToPlaylist": "Aldonis 1 kanton al ludlisto |||| Aldonis %{smart_count} kantojn al ludlisto",
     "noPlaylistsAvailable": "Neniu disponebla",
     "delete_user_title": "Forigi uzanto '%{name}'",
     "delete_user_content": "Ĉu vi certas, ke vi volas forigi ĉi tiun uzanton kaj ĉiujn iliajn datumojn (inkluzive ludlistojn kaj preferojn) ?",
     "notifications_blocked": "Vi blokis sciigojn por ĉi tiu retejo en la agordoj de via retumilo",
-    "notifications_not_available": "Ĉi tiu retumilo ne subtenas labortablajn sciigojn aŭ vi ne aliras Navidrome per https",
+    "notifications_not_available": "Ĉi tiu retumilo ne subtenas labortablajn sciigojn aŭ vi ne aliras Bragi per https",
     "lastfmLinkSuccess": "Last.fm sukcese ligiĝis kaj scrobbling ebliĝis",
     "lastfmLinkFailure": "Last.fm ne povis ligiĝi",
     "lastfmUnlinkSuccess": "Last.fm malligiĝis kaj scrobbling malebliĝis",
@@ -587,12 +586,7 @@
     "links": {
       "homepage": "Hejmpaĝo",
       "source": "Fontkodo",
-      "featureRequests": "Trajta peto",
-      "lastInsightsCollection": "Plej lasta kolekto de datumoj",
-      "insights": {
-        "disabled": "Malebligita",
-        "waiting": "Atendante"
-      }
+      "featureRequests": "Trajta peto"
     },
     "tabs": {
       "about": "Pri",
@@ -624,7 +618,7 @@
     "selectiveScan": "Selektema"
   },
   "help": {
-    "title": "Navidrome klavkomando",
+    "title": "Bragi klavkomando",
     "hotkeys": {
       "show_help": "Montru ĉi tiun helpon",
       "toggle_menu": "Baskuli menuan flankobreton",

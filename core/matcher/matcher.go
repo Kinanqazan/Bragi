@@ -7,13 +7,13 @@ import (
 	"math"
 	"slices"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/slice"
+	"github.com/kinanqaz/bragi/utils/str"
 	"github.com/Masterminds/squirrel"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/slice"
-	"github.com/navidrome/navidrome/utils/str"
 	"github.com/xrash/smetrics"
 )
 
@@ -283,7 +283,7 @@ func newSanitizedTrack(mf *model.MediaFile, artistIDs, artistMBIDs map[string]st
 // computeSpecificityLevel determines how well query metadata matches a track (0-5), taking the best
 // level achievable across any of the query's artists. Fields must be pre-sanitized.
 //
-// A query artist counts as an identity match when the track credits its resolved Navidrome ID (the
+// A query artist counts as an identity match when the track credits its resolved Bragi ID (the
 // strongest signal, our own primary key) or its MBID; that identity then unlocks the album tiers.
 // Name matching is the lowest fallback for an artist with no identity match (e.g. a cover credited
 // to a different artist by the same name).
@@ -351,7 +351,7 @@ func (m *Matcher) matchByTitle(ctx context.Context, songs []agents.Song, result 
 }
 
 // groupQueries builds one normalized title query per still-unmatched song, carrying its full
-// artist set. An artist is usable if it carries a Navidrome ID or a non-empty sanitized name;
+// artist set. An artist is usable if it carries a Bragi ID or a non-empty sanitized name;
 // songs with no usable artist are skipped (the title phase needs at least one to scope the query).
 func groupQueries(songs []agents.Song, result map[int]model.MediaFile) []indexedQuery {
 	var queries []indexedQuery
@@ -390,7 +390,7 @@ type resolvedArtists struct {
 }
 
 // resolveArtists resolves every artist of every query to artist-table rows. Artists that carry a
-// Navidrome ID are owned directly (no name/MBID lookup). The remaining names/MBIDs are resolved in
+// Bragi ID are owned directly (no name/MBID lookup). The remaining names/MBIDs are resolved in
 // one batched query. Ownership is recorded per query index.
 func (m *Matcher) resolveArtists(ctx context.Context, queries []indexedQuery) (resolvedArtists, error) {
 	res := resolvedArtists{

@@ -364,8 +364,7 @@
       "password": "Password",
       "sign_in": "Sign in",
       "sign_in_error": "Authentication failed, please retry",
-      "logout": "Logout",
-      "insightsCollectionNote": "Bragi collects anonymous usage data to\nhelp improve the project. Click [here] to learn\nmore and to opt-out if you want"
+      "logout": "Logout"
     },
     "validation": {
       "invalidChars": "Please only use letters and numbers",

@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/utils/gg"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/utils/gg"
 )
 
 const fallbackBitrate = 256 // kbps
@@ -188,7 +188,7 @@ func parseProbeData(data string) (*ffmpeg.AudioProbeResult, error) {
 	return &result, nil
 }
 
-// matchesPCMWAVBridge bridges Navidrome's internal "pcm" codec name with the
+// matchesPCMWAVBridge bridges Bragi's internal "pcm" codec name with the
 // "wav" codec name that browsers use to advertise audio/wav support. The match
 // is scoped to WAV-container sources so AIFF files (which also normalize to
 // codec "pcm" but use a different container) cannot false-match a codec-only

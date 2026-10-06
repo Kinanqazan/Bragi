@@ -1,10 +1,10 @@
-# Navidrome Scanner: Technical Overview
+# Bragi Scanner: Technical Overview
 
-This document provides a comprehensive technical explanation of Navidrome's music library scanner system.
+This document provides a comprehensive technical explanation of Bragi's music library scanner system.
 
 ## Architecture Overview
 
-The Navidrome scanner is built on a multi-phase pipeline architecture designed for efficient processing of music files. It systematically traverses file system directories, processes metadata, and maintains a database representation of the music library. A key performance feature is that some phases run sequentially while others execute in parallel.
+The Bragi scanner is built on a multi-phase pipeline architecture designed for efficient processing of music files. It systematically traverses file system directories, processes metadata, and maintains a database representation of the music library. A key performance feature is that some phases run sequentially while others execute in parallel.
 
 ```mermaid
 flowchart TD
@@ -31,7 +31,7 @@ flowchart TD
     ScheduledJob[Scheduled Job] -->|Based on Scanner.Schedule| Controller
     ServerStartup[Server Startup] -->|If Scanner.ScanOnStartup=true| Controller
     ManualTrigger[Manual Scan via UI/API] -->|Admin user action| Controller
-    CLICommand[Command Line: navidrome scan] -->|Direct invocation| Controller
+    CLICommand[Command Line: bragi scan] -->|Direct invocation| Controller
     PIDChange[PID Configuration Change] -->|Forces full scan| Controller
     DBMigration[Database Migration] -->|May require full scan| Controller
     
@@ -81,7 +81,7 @@ This design enables:
 
 ### External Scanner (`external.go`)
 
-The External Scanner is a specialized implementation that offloads the scanning process to a separate subprocess. This is specifically designed to address memory management challenges in long-running Navidrome instances.
+The External Scanner is a specialized implementation that offloads the scanning process to a separate subprocess. This is specifically designed to address memory management challenges in long-running Bragi instances.
 
 ```go
 // scannerExternal is a scanner that runs an external process to do the scanning. It is used to avoid
@@ -97,7 +97,7 @@ The External Scanner is a specialized implementation that offloads the scanning 
 sequenceDiagram
     participant MP as Main Process
     participant ES as External Scanner
-    participant SP as Subprocess (navidrome scan --subprocess)
+    participant SP as Subprocess (bragi scan --subprocess)
     participant FS as File System
     participant DB as Database
     
@@ -142,7 +142,7 @@ Technical details:
 3. **Memory Management Benefits**
     - Scanning operations can be memory-intensive, especially with large music libraries
     - Memory leaks or excessive allocations are automatically cleaned up when the process terminates
-    - Main Navidrome process remains stable even if scanner encounters memory-related issues
+    - Main Bragi process remains stable even if scanner encounters memory-related issues
 
 4. **Error Handling**
     - Detects non-zero exit codes from the subprocess
@@ -463,4 +463,4 @@ These options can be set in the Bragi configuration file or via environment vari
 
 ## Conclusion
 
-The Navidrome scanner represents a sophisticated system for efficiently managing music libraries. Its phase-based pipeline architecture, careful handling of edge cases, and performance optimizations allow it to handle libraries of significant size while maintaining data integrity and providing a responsive user experience.
+The Bragi scanner represents a sophisticated system for efficiently managing music libraries. Its phase-based pipeline architecture, careful handling of edge cases, and performance optimizations allow it to handle libraries of significant size while maintaining data integrity and providing a responsive user experience.

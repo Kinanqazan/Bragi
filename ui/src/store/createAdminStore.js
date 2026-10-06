@@ -8,7 +8,6 @@ import { routerMiddleware, connectRouter } from 'connected-react-router'
 import createSagaMiddleware from 'redux-saga'
 import { all, fork } from 'redux-saga/effects'
 import { adminReducer, adminSaga, USER_LOGOUT } from 'react-admin'
-import throttle from 'lodash.throttle'
 import { loadState, saveState } from './persistState'
 import { normalizePersistedTrack } from '../audioplayer/trackModel'
 
@@ -58,23 +57,46 @@ const createAdminStore = ({
     ),
   )
 
-  store.subscribe(
-    throttle(() => {
-      const state = store.getState()
-      saveState({
-        theme: state.theme,
-        library: state.library,
-        player: (({ queue, volume, savedPlayIndex }) => ({
-          queue,
-          volume,
-          savedPlayIndex,
-        }))(state.player),
-        albumView: state.albumView,
-        settings: state.settings,
-      })
-    }),
-    1000,
-  )
+  dataProvider.setStateGetter?.(store.getState)
+
+  const getPersistedReferences = (state) => ({
+    theme: state.theme,
+    library: state.library,
+    queue: state.player?.queue,
+    volume: state.player?.volume,
+    savedPlayIndex: state.player?.savedPlayIndex,
+    albumView: state.albumView,
+    settings: state.settings,
+  })
+  let lastPersistedReferences = getPersistedReferences(store.getState())
+
+  store.subscribe(() => {
+    const state = store.getState()
+    const player = state.player
+    const hasPersistedChange =
+      state.theme !== lastPersistedReferences.theme ||
+      state.library !== lastPersistedReferences.library ||
+      player?.queue !== lastPersistedReferences.queue ||
+      player?.volume !== lastPersistedReferences.volume ||
+      player?.savedPlayIndex !== lastPersistedReferences.savedPlayIndex ||
+      state.albumView !== lastPersistedReferences.albumView ||
+      state.settings !== lastPersistedReferences.settings
+    if (!hasPersistedChange) return
+
+    const nextReferences = getPersistedReferences(state)
+    const saved = saveState({
+      theme: nextReferences.theme,
+      library: nextReferences.library,
+      player: {
+        queue: nextReferences.queue,
+        volume: nextReferences.volume,
+        savedPlayIndex: nextReferences.savedPlayIndex,
+      },
+      albumView: nextReferences.albumView,
+      settings: nextReferences.settings,
+    })
+    if (saved) lastPersistedReferences = nextReferences
+  })
 
   sagaMiddleware.run(saga)
   return store

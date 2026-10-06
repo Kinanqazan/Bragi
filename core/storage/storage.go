@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 const LocalSchemaID = "file"

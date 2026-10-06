@@ -14,6 +14,7 @@ import PauseRoundedIcon from '@material-ui/icons/PauseRounded'
 import PlayArrowRoundedIcon from '@material-ui/icons/PlayArrowRounded'
 import AmbientBackdrop, { getTopBlendedColor } from './AmbientBackdrop'
 import { useArtworkColor } from './artworkColor'
+import { useImmediateControlPress } from './controlPress'
 import { useThemeColorOverride } from '../useChangeThemeColor'
 import {
   clamp,
@@ -34,6 +35,9 @@ const isInteractiveTarget = (target) =>
       'button, a, input, select, textarea, [role="button"], [role="slider"], [data-player-artwork]',
     ),
   )
+
+const isNativeControlTarget = (target) =>
+  Boolean(target?.closest?.('button, input, select, textarea, [role="slider"]'))
 
 const useStyles = makeStyles((theme) => ({
   shell: {
@@ -94,7 +98,7 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
     maxWidth: 520,
     margin: '0 auto',
-    paddingTop: 'clamp(40px, 8vh, 72px)',
+    paddingTop: 'clamp(34px, calc(8vh - 6px), 66px)',
     boxSizing: 'border-box',
   },
   headerInfo: {
@@ -113,7 +117,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: '100%',
     margin: '0 auto',
     overflow: 'hidden',
-    fontSize: '1.15rem',
+    fontSize: '1.3rem',
     fontWeight: 700,
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -125,7 +129,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: '100%',
     margin: '4px auto 0',
     overflow: 'hidden',
-    fontSize: '1rem',
+    fontSize: '1.2rem',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     visibility: 'hidden',
@@ -198,7 +202,7 @@ const useStyles = makeStyles((theme) => ({
     minWidth: 0,
     width: '100%',
     maxWidth: 520,
-    margin: 'auto auto 0',
+    margin: '8px auto 0',
     paddingTop: 0,
     boxSizing: 'border-box',
   },
@@ -213,9 +217,16 @@ const useStyles = makeStyles((theme) => ({
   controls: {
     display: 'flex',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 0,
     '& .nd-player-controls': {
       gap: 40,
+    },
+    '& .nd-player-btn-prev, & .nd-player-btn-next': {
+      width: '56px !important',
+      height: '56px !important',
+    },
+    '& .nd-player-btn-prev svg, & .nd-player-btn-next svg': {
+      fontSize: 36,
     },
   },
   volume: {
@@ -319,6 +330,7 @@ const MobilePlayerSurface = ({
   const frameRef = useRef(null)
   const fullRef = useRef(null)
   const miniRef = useRef(null)
+  const miniProgressTrackRef = useRef(null)
   const fullArtworkRef = useRef(null)
   const fullPlayRef = useRef(null)
   const fullTitleRef = useRef(null)
@@ -339,6 +351,10 @@ const MobilePlayerSurface = ({
   const settle = useRef(null)
   const settleTimer = useRef(null)
   const { snapshot, commands, uiVolume } = bridge
+  const sharedPlayPress = useImmediateControlPress(
+    snapshot.playing ? commands.pause : commands.play,
+    true,
+  )
   const track = snapshot.currentTrack || {}
   const song = track.song || track
   const ambientColor = useArtworkColor(track.cover)
@@ -400,7 +416,20 @@ const MobilePlayerSurface = ({
       play: miniPlayRef.current,
       title: miniTitleRef.current,
       artist: miniArtistRef.current,
+      progressTrack: miniProgressTrackRef.current,
     })
+    if (miniRects.artwork && miniRects.progressTrack) {
+      miniRects.artwork = {
+        ...miniRects.artwork,
+        height: Math.max(
+          0,
+          Math.min(
+            miniRects.artwork.height,
+            miniRects.progressTrack.top - miniRects.artwork.top - 1,
+          ),
+        ),
+      }
+    }
     if (frame) {
       frame.style.transform = previousTransform
       frame.style.transition = previousTransition
@@ -748,6 +777,9 @@ const MobilePlayerSurface = ({
 
   const handlePointerDown = (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return
+    // A button press must not cancel or reposition the player snap beneath the
+    // finger. The moving frame can otherwise make Android drop the click.
+    if (isNativeControlTarget(event.target)) return
     flushScheduledProgress()
     cancelSettle()
     ensureSharedRects()
@@ -882,6 +914,7 @@ const MobilePlayerSurface = ({
     }
 
     if (!gesture.moved && isInteractiveTarget(event?.target)) {
+      if (event.immediateLinkActionHandled) return
       // Small finger drift is still a tap. Let the browser synthesize its click
       // instead of settling the layer and cancelling the control activation.
       setThemeColorActive(expanded)
@@ -995,7 +1028,7 @@ const MobilePlayerSurface = ({
   }
 
   return (
-    <div className={classes.shell}>
+    <div className={classes.shell} data-testid="mobile-player-shell">
       <div
         ref={frameRef}
         data-testid="shared-player-frame"
@@ -1059,6 +1092,7 @@ const MobilePlayerSurface = ({
             <div className={classes.artworkSlot}>
               <div
                 ref={fullArtworkRef}
+                data-testid="full-artwork-anchor"
                 className={classes.artwork}
                 style={{ visibility: 'hidden' }}
                 aria-hidden="true"
@@ -1127,6 +1161,7 @@ const MobilePlayerSurface = ({
         playRef={miniPlayRef}
         titleRef={miniTitleRef}
         artistRef={miniArtistRef}
+        progressTrackRef={miniProgressTrackRef}
         gestureHandlers={gestureHandlers}
         progress={miniProgress}
         snapshot={snapshot}
@@ -1196,12 +1231,7 @@ const MobilePlayerSurface = ({
         ref={sharedPlayRef}
         data-player-shared-control="true"
         className={classes.sharedPlay}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onTransitionEnd={handleTransitionEnd}
-        onClick={snapshot.playing ? commands.pause : commands.play}
+        {...sharedPlayPress}
         disableRipple
         aria-label={snapshot.playing ? 'Pause' : 'Play'}
         style={{

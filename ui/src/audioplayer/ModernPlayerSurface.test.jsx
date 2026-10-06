@@ -14,6 +14,8 @@ const renderControls = (overrides = {}) => {
     seek: vi.fn(),
     ...overrides.commands,
   }
+  const onLyrics = vi.fn()
+  const onQueue = vi.fn()
   const snapshot = {
     playing: false,
     loading: false,
@@ -27,14 +29,14 @@ const renderControls = (overrides = {}) => {
       <PlayerControls
         snapshot={snapshot}
         commands={commands}
-        onQueue={vi.fn()}
-        onLyrics={vi.fn()}
+        onQueue={onQueue}
+        onLyrics={onLyrics}
         favoriteButton={<button data-testid="favorite-button">Favorite</button>}
       />
       <ProgressBar snapshot={snapshot} commands={commands} />
     </ThemeProvider>,
   )
-  return commands
+  return { ...commands, onLyrics, onQueue }
 }
 
 describe('native player surfaces', () => {
@@ -65,5 +67,20 @@ describe('native player surfaces', () => {
     fireEvent.click(play)
 
     expect(commands.play).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['Previous track', 'previous'],
+    ['Next track', 'next'],
+    ['Open lyrics', 'onLyrics'],
+    ['Open queue', 'onQueue'],
+  ])('activates %s on the first touch release', (label, action) => {
+    const handlers = renderControls()
+    const button = screen.getByRole('button', { name: label })
+
+    fireEvent.pointerUp(button, { pointerType: 'touch' })
+    fireEvent.click(button)
+
+    expect(handlers[action]).toHaveBeenCalledOnce()
   })
 })

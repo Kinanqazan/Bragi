@@ -23,7 +23,7 @@ describe('detectBrowserProfile', () => {
 
     const profile = detectBrowserProfile()
 
-    expect(profile.name).toBe('NavidromeUI')
+    expect(profile.name).toBe('BragiWeb')
     expect(profile.directPlayProfiles.length).toBe(2)
 
     const codecs = profile.directPlayProfiles.flatMap((p) => p.audioCodecs)

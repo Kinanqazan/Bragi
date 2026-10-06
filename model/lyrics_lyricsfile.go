@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/utils/str"
 	"gopkg.in/yaml.v3"
 )
 

@@ -3,7 +3,7 @@ package criteria
 import (
 	"strings"
 
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 type SortField struct {

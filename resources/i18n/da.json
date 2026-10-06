@@ -335,7 +335,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Tak fordi du installerede Navidrome!",
+      "welcome1": "Tak fordi du installerede Bragi!",
       "welcome2": "Først, opret en administrator",
       "confirmPassword": "Bekræft kodeord",
       "buttonCreateAdmin": "Opret administrator",
@@ -345,8 +345,7 @@
       "password": "Kodeord",
       "sign_in": "Log ind",
       "sign_in_error": "Dit log ind slog fejl, prøv igen",
-      "logout": "Log ud",
-      "insightsCollectionNote": "Navidrome indsamler anonyme brugsdata for at forbedre projektet. Klik [her] for at få mere at vide og fravælge, hvis du ønsker det."
+      "logout": "Log ud"
     },
     "validation": {
       "invalidChars": "Venligst, benyt kun bogstaver og tal",
@@ -481,13 +480,13 @@
   "message": {
     "note": "NOTE",
     "transcodingDisabled": "Ændring af indstillinger til transkodning via webgrænsefladen er deaktiveret af sikkerhedshensyn.\nFor at ændre eller tilføje indstillinger skal du genstarte serveren med %{config} konfigurations option.",
-    "transcodingEnabled": "Navidrome kører i øjeblikket med %{config}. Dét gør det muligt at køre systemkommandoer fra transkodningsindstillingerne, via webgrænsefladen.\nVi anbefaler at deaktivere dette af sikkerhedshensyn og kun have det aktiveret, når du konfigurerer indstillinger til transkodning.",
+    "transcodingEnabled": "Bragi kører i øjeblikket med %{config}. Dét gør det muligt at køre systemkommandoer fra transkodningsindstillingerne, via webgrænsefladen.\nVi anbefaler at deaktivere dette af sikkerhedshensyn og kun have det aktiveret, når du konfigurerer indstillinger til transkodning.",
     "songsAddedToPlaylist": "Føjede 1 sang til afspilningsliste |||| Føjede %{smart_count} sange til afspilningsliste",
     "noPlaylistsAvailable": "Ingen tilgængelige",
     "delete_user_title": "Slet bruger '%{name}'",
     "delete_user_content": "Er du sikker på at du vil slette denne bruger og tilhørende data (inklusive afspilningslister og valgte indstillinger)?",
     "notifications_blocked": "Du blokerer for notifikationer fra dette site i dine browserindstillinger",
-    "notifications_not_available": "Denne browser understøtter ikke skrivebordsnotifikationer, eller: Du tilgår ikke Navidrome over https",
+    "notifications_not_available": "Denne browser understøtter ikke skrivebordsnotifikationer, eller: Du tilgår ikke Bragi over https",
     "lastfmLinkSuccess": "Du er koblet til Last.fm, og scrobbling er slået til",
     "lastfmLinkFailure": "Du kan ikke kobles til Last.fm",
     "lastfmUnlinkSuccess": "Last.fm frakoblet, og scrobbling deaktiveret",
@@ -587,12 +586,7 @@
     "links": {
       "homepage": "Hjemmeside",
       "source": "Kildekode",
-      "featureRequests": "Funktionsønsker",
-      "lastInsightsCollection": "Seneste indsamling af indsigter",
-      "insights": {
-        "disabled": "Slået fra",
-        "waiting": "Venter"
-      }
+      "featureRequests": "Funktionsønsker"
     },
     "tabs": {
       "about": "Om",
@@ -624,7 +618,7 @@
     "selectiveScan": "Selektiv"
   },
   "help": {
-    "title": "Navidrome genvejstaster",
+    "title": "Bragi genvejstaster",
     "hotkeys": {
       "show_help": "Vis denne hjælp",
       "toggle_menu": "Skift menu sidepanel",

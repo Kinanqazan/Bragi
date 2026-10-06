@@ -201,7 +201,7 @@
     },
     "ra": {
         "auth": {
-            "welcome1": "Děkujeme, že jste si nainstalovali Navidrome!",
+            "welcome1": "Děkujeme, že jste si nainstalovali Bragi!",
             "welcome2": "Nejdříve vytvořte účet správce",
             "confirmPassword": "Potvrďte heslo",
             "buttonCreateAdmin": "Vytvořit správce",
@@ -296,7 +296,7 @@
             }
         },
         "message": {
-            "about": "O Navidrome",
+            "about": "O Bragi",
             "are_you_sure": "Jste si jistý?",
             "bulk_delete_content": "Jste si jistý, že chcete smazat %{name}? |||| Jste si jistý, že chcete smazat těchto %{smart_count} položek?",
             "bulk_delete_title": "Smazat %{name} |||| Smazat %{smart_count} %{name} položek",
@@ -346,13 +346,13 @@
     "message": {
         "note": "POZNÁMKA",
         "transcodingDisabled": "Měnění nastavení překódování je ve webovém prostředí vypnuto kvůli bezpečnosti. Pokud by jste chtěli změnit (upravit nebo přidat) možnosti překódování, restartujte server s možností %{config}.",
-        "transcodingEnabled": "Navidrome právě běží s možností %{config}, umožňující spouštění systémových příkazů z nastavení překódování pomocí webového rozhraní. Doporučujeme ji vypnout kvůli bezpečnosti a použít ji pouze pokud upravujete nastavení překódování.",
+        "transcodingEnabled": "Bragi právě běží s možností %{config}, umožňující spouštění systémových příkazů z nastavení překódování pomocí webového rozhraní. Doporučujeme ji vypnout kvůli bezpečnosti a použít ji pouze pokud upravujete nastavení překódování.",
         "songsAddedToPlaylist": "1 skladba přidána na seznam skladeb |||| %{smart_count} skladeb přidáno na seznam skladeb",
         "noPlaylistsAvailable": "Žádné nejsou dostupné",
         "delete_user_title": "Odstranit uživatele '%{name}'",
         "delete_user_content": "Jste si jisti že chcete odstranit tohoto uživatele a všechny jejich data (zahrujicí seznamy skladeb a nastavení)?",
         "notifications_blocked": "Zablokovali jste si oznámení pro tuto stránku v nastavení vašeho prohlížeče",
-        "notifications_not_available": "Tento prohlížeč nepodporuje oznámení na ploše nebo nepřistupujete k Navidrome přes https",
+        "notifications_not_available": "Tento prohlížeč nepodporuje oznámení na ploše nebo nepřistupujete k Bragi přes https",
         "lastfmLinkSuccess": "Last.fm úspěšně připojeno a scrobblování zapnuto",
         "lastfmLinkFailure": "Last.fm nemohlo být připojeno",
         "lastfmUnlinkSuccess": "Last.fm odpojeno a scrobblování vypnuto",
@@ -399,7 +399,7 @@
             }
         },
         "albumList": "Alba",
-        "about": "O Navidrome",
+        "about": "O Bragi",
         "playlists": "Seznamy skladeb",
         "sharedPlaylists": "Sdílené seznamy skladeb"
     },
@@ -444,7 +444,7 @@
         "serverDown": "OFFLINE"
     },
     "help": {
-        "title": "Klávesové zkratky Navidrome",
+        "title": "Klávesové zkratky Bragi",
         "hotkeys": {
             "show_help": "Ukázat tuto nápovědu",
             "toggle_menu": "Přepnout postranní menu",

@@ -3,8 +3,8 @@ package model
 import (
 	"path/filepath"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
 )
 
 // UploadedImagePath returns the absolute filesystem path for a manually uploaded

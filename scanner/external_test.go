@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/model"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -81,7 +81,7 @@ var _ = Describe("targetArguments", func() {
 
 			// Verify the file exists and has correct format
 			filePath := args[1]
-			Expect(filePath).To(ContainSubstring("navidrome-scan-targets-"))
+			Expect(filePath).To(ContainSubstring("bragi-scan-targets-"))
 			Expect(filePath).To(HaveSuffix(".txt"))
 
 			// Verify file actually exists
@@ -105,7 +105,7 @@ var _ = Describe("targetArguments", func() {
 
 			// Verify file exists with correct format
 			filePath := args[1]
-			Expect(filePath).To(ContainSubstring("navidrome-scan-targets-"))
+			Expect(filePath).To(ContainSubstring("bragi-scan-targets-"))
 			Expect(filePath).To(HaveSuffix(".txt"))
 
 			// Verify file content

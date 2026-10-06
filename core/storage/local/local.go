@@ -18,11 +18,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/djherbis/times"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/storage"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model/metadata"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/storage"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model/metadata"
 	"go.senan.xyz/taglib"
 )
 

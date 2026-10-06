@@ -122,7 +122,6 @@ const Admin = (props) => {
         <Resource name="tag" />,
         <Resource name="playlistTrack" />,
         <Resource name="keepalive" />,
-        <Resource name="insights" />,
         <Resource name="config" />,
         <Player />,
       ]}

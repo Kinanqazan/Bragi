@@ -71,7 +71,7 @@ export function detectBrowserProfile() {
   }, [])
 
   return {
-    name: 'NavidromeUI',
+    name: 'BragiWeb',
     platform: navigator.userAgent,
     directPlayProfiles,
     transcodingProfiles,

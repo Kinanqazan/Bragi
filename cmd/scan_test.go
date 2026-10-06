@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/scanner"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/scanner"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -29,7 +29,7 @@ var _ = Describe("readTargetsFromFile", func() {
 
 	BeforeEach(func() {
 		var err error
-		tempDir, err = os.MkdirTemp("", "navidrome-test-")
+		tempDir, err = os.MkdirTemp("", "bragi-test-")
 		Expect(err).ToNot(HaveOccurred())
 	})
 

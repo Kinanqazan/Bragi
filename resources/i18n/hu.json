@@ -332,7 +332,7 @@
   },
   "ra": {
     "auth": {
-      "welcome1": "Köszönjük, hogy a Navidrome-ot telepítetted!",
+      "welcome1": "Köszönjük, hogy a Bragi-ot telepítetted!",
       "welcome2": "A kezdéshez hozz létre egy admin felhasználót!",
       "confirmPassword": "Jelszó megerősítése",
       "buttonCreateAdmin": "Admin hozzáadása",
@@ -342,8 +342,7 @@
       "password": "Jelszó",
       "sign_in": "Bejelentkezés",
       "sign_in_error": "A hitelesítés sikertelen. Kérjük, próbáld újra!",
-      "logout": "Kijelentkezés",
-      "insightsCollectionNote": "A Navidrome anonim metrikákat gyűjt \na projekt fejlesztéséhez. Kattints [ide],\n információkért és az adatgyűjtésből kilépésért."
+      "logout": "Kijelentkezés"
     },
     "validation": {
       "invalidChars": "Kérlek, csak betűket és számokat használj!",
@@ -484,7 +483,7 @@
     "coverRemoveError": "Borítókép törlése sikertelen",
     "note": "MEGJEGYZÉS",
     "transcodingDisabled": "Az átkódolási konfiguráció módosítása a webes felületen keresztül biztonsági okokból nem lehetséges. Ha módosítani szeretnéd az átkódolási beállításokat, indítsd újra a kiszolgálót a %{config} konfigurációs opcióval.",
-    "transcodingEnabled": "A Navidrome jelenleg a következőkkel fut %{config}, ez lehetővé teszi a rendszerparancsok futtatását az átkódolási beállításokból a webes felület segítségével. Javasoljuk, hogy biztonsági okokból tiltsd ezt le, és csak az átkódolási beállítások konfigurálásának idejére kapcsold be.",
+    "transcodingEnabled": "A Bragi jelenleg a következőkkel fut %{config}, ez lehetővé teszi a rendszerparancsok futtatását az átkódolási beállításokból a webes felület segítségével. Javasoljuk, hogy biztonsági okokból tiltsd ezt le, és csak az átkódolási beállítások konfigurálásának idejére kapcsold be.",
     "songsAddedToPlaylist": "1 szám hozzáadva a lejátszási listához |||| %{smart_count} szám hozzáadva a lejátszási listához",
     "noSimilarSongsFound": "Nem találhatóak hasonló számok",
     "startingInstantMix": "Instant keverés töltődik...",
@@ -495,7 +494,7 @@
     "remove_all_missing_title": "Összes hiányzó fájl eltávolítása",
     "remove_all_missing_content": "Biztos, hogy minden hiányzó fájlt törölni akarsz az adatbázisból? Ez minden hozzájuk fűződő referenciát törölni fog, beleértve a lejátszásaikat és értékeléseiket.",
     "notifications_blocked": "A böngésződ beállításaiban letiltottad az értesítéseket erre az oldalra.",
-    "notifications_not_available": "Ez a böngésző nem támogatja az asztali értesítéseket, vagy a Navidrome-ot nem https-en keresztül használod.",
+    "notifications_not_available": "Ez a böngésző nem támogatja az asztali értesítéseket, vagy a Bragi-ot nem https-en keresztül használod.",
     "lastfmLinkSuccess": "Sikeresen összekapcsolva Last.fm-el és halgatott számok küldése engedélyezve.",
     "lastfmLinkFailure": "Nem lehet kapcsolódni a Last.fm-hez.",
     "lastfmUnlinkSuccess": "Last.fm leválasztva és a halgatott számok küldése kikapcsolva.",
@@ -584,12 +583,7 @@
     "links": {
       "homepage": "Honlap",
       "source": "Forráskód",
-      "featureRequests": "Funkciókérések",
-      "lastInsightsCollection": "Legutóbb gyűjtött metrikák",
-      "insights": {
-        "disabled": "Kikapcsolva",
-        "waiting": "Várakozás"
-      }
+      "featureRequests": "Funkciókérések"
     },
     "tabs": {
       "about": "Rólunk",
@@ -626,7 +620,7 @@
     "minutesAgo": "%{smart_count} perce |||| %{smart_count} perce"
   },
   "help": {
-    "title": "Navidrome Gyorsbillentyűk",
+    "title": "Bragi Gyorsbillentyűk",
     "hotkeys": {
       "show_help": "Mutasd ezt a súgót",
       "toggle_menu": "Menu oldalsáv be",

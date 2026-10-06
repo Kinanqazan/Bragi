@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
+	"github.com/kinanqaz/bragi/conf"
 
 	"github.com/gohugoio/hashstructure"
 )

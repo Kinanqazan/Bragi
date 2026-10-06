@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
 )
 
 type MockScrobbleRepo struct {

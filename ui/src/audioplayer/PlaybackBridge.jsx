@@ -241,7 +241,7 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       // If the SDK reports ready before its remote-player classes are usable,
       // keep the failure visible instead of silently losing the Cast target.
       // eslint-disable-next-line no-console
-      console.error('[Navidrome Cast] Playback target unavailable', {
+      console.error('[Bragi Cast] Playback target unavailable', {
         code: getCastErrorCode(error),
       })
       return undefined

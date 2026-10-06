@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/deluan/rest"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/criteria"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/criteria"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 // --- REST adapter (follows Share/Library pattern) ---

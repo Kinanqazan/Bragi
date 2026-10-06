@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/log"
 )
 
 // sensitiveFieldsPartialMask contains configuration field names that should be redacted

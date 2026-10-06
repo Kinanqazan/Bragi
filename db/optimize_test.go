@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/db"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/db"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

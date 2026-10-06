@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 const (

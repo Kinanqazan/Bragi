@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/artwork/dominant"
-	"github.com/navidrome/navidrome/core/artwork/thumbhash"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/artwork/dominant"
+	"github.com/kinanqaz/bragi/core/artwork/thumbhash"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
 	xdraw "golang.org/x/image/draw"
 )
 

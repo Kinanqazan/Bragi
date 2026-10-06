@@ -15,29 +15,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/core/auth"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/server/events"
+	"github.com/kinanqaz/bragi/ui"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/core/auth"
-	"github.com/navidrome/navidrome/core/metrics"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/server/events"
-	"github.com/navidrome/navidrome/ui"
 )
 
 type Server struct {
-	router   chi.Router
-	ds       model.DataStore
-	appRoot  string
-	broker   events.Broker
-	insights metrics.Insights
+	router  chi.Router
+	ds      model.DataStore
+	appRoot string
+	broker  events.Broker
 }
 
-func New(ds model.DataStore, broker events.Broker, insights metrics.Insights) *Server {
-	s := &Server{ds: ds, broker: broker, insights: insights}
+func New(ds model.DataStore, broker events.Broker) *Server {
+	s := &Server{ds: ds, broker: broker}
 	initialSetup(ds)
 	auth.Init(s.ds)
 	s.initRoutes()
@@ -120,7 +118,7 @@ func (s *Server) Run(ctx context.Context, addr string, port int, tlsCert string,
 		log.Error(ctx, "Could not start server. Aborting", err)
 		return fmt.Errorf("starting server: %w", err)
 	case <-time.After(50 * time.Millisecond):
-		log.Info(ctx, "----> Navidrome server is ready!", "address", addr, "startupTime", startupTime, "tlsEnabled", tlsEnabled)
+		log.Info(ctx, "----> Bragi server is ready!", "address", addr, "startupTime", startupTime, "tlsEnabled", tlsEnabled)
 	}
 
 	// Wait for a signal to terminate
@@ -264,7 +262,7 @@ func validateTLSCertificates(certFile, keyFile string) error {
 	// Check for encrypted private key indicators
 	if isEncryptedPEM(block, keyData) {
 		return errors.New("TLS private key is encrypted (password-protected). " +
-			"Navidrome does not support encrypted private keys. " +
+			"Bragi does not support encrypted private keys. " +
 			"Please decrypt your key using: openssl pkey -in <encrypted-key> -out <decrypted-key>")
 	}
 

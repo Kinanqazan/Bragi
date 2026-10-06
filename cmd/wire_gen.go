@@ -8,37 +8,37 @@ package cmd
 
 import (
 	"context"
+	"github.com/kinanqaz/bragi/adapters/lastfm"
+	"github.com/kinanqaz/bragi/adapters/listenbrainz"
+	"github.com/kinanqaz/bragi/core"
+	"github.com/kinanqaz/bragi/core/agents"
+	"github.com/kinanqaz/bragi/core/artwork"
+	"github.com/kinanqaz/bragi/core/external"
+	"github.com/kinanqaz/bragi/core/ffmpeg"
+	"github.com/kinanqaz/bragi/core/lyrics"
+	"github.com/kinanqaz/bragi/core/matcher"
+	"github.com/kinanqaz/bragi/core/metrics"
+	"github.com/kinanqaz/bragi/core/playback"
+	"github.com/kinanqaz/bragi/core/playlists"
+	"github.com/kinanqaz/bragi/core/scrobbler"
+	"github.com/kinanqaz/bragi/core/stream"
+	"github.com/kinanqaz/bragi/db"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/persistence"
+	"github.com/kinanqaz/bragi/scanner"
+	"github.com/kinanqaz/bragi/server"
+	"github.com/kinanqaz/bragi/server/events"
+	"github.com/kinanqaz/bragi/server/nativeapi"
+	"github.com/kinanqaz/bragi/server/public"
+	"github.com/kinanqaz/bragi/server/subsonic"
 	"github.com/google/wire"
-	"github.com/navidrome/navidrome/adapters/lastfm"
-	"github.com/navidrome/navidrome/adapters/listenbrainz"
-	"github.com/navidrome/navidrome/core"
-	"github.com/navidrome/navidrome/core/agents"
-	"github.com/navidrome/navidrome/core/artwork"
-	"github.com/navidrome/navidrome/core/external"
-	"github.com/navidrome/navidrome/core/ffmpeg"
-	"github.com/navidrome/navidrome/core/lyrics"
-	"github.com/navidrome/navidrome/core/matcher"
-	"github.com/navidrome/navidrome/core/metrics"
-	"github.com/navidrome/navidrome/core/playback"
-	"github.com/navidrome/navidrome/core/playlists"
-	"github.com/navidrome/navidrome/core/scrobbler"
-	"github.com/navidrome/navidrome/core/stream"
-	"github.com/navidrome/navidrome/db"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/persistence"
-	"github.com/navidrome/navidrome/scanner"
-	"github.com/navidrome/navidrome/server"
-	"github.com/navidrome/navidrome/server/events"
-	"github.com/navidrome/navidrome/server/nativeapi"
-	"github.com/navidrome/navidrome/server/public"
-	"github.com/navidrome/navidrome/server/subsonic"
 )
 
 import (
-	_ "github.com/navidrome/navidrome/adapters/deezer"
-	_ "github.com/navidrome/navidrome/adapters/gotaglib"
-	_ "github.com/navidrome/navidrome/adapters/lastfm"
-	_ "github.com/navidrome/navidrome/adapters/listenbrainz"
+	_ "github.com/kinanqaz/bragi/adapters/deezer"
+	_ "github.com/kinanqaz/bragi/adapters/gotaglib"
+	_ "github.com/kinanqaz/bragi/adapters/lastfm"
+	_ "github.com/kinanqaz/bragi/adapters/listenbrainz"
 )
 
 // Injectors from wire_injectors.go:
@@ -53,8 +53,7 @@ func CreateServer() *server.Server {
 	sqlDB := db.Db()
 	dataStore := persistence.New(sqlDB)
 	broker := events.GetBroker()
-	insights := metrics.GetInstance(dataStore)
-	serverServer := server.New(dataStore, broker, insights)
+	serverServer := server.New(dataStore, broker)
 	return serverServer
 }
 
@@ -64,7 +63,6 @@ func CreateNativeAPIRouter(ctx context.Context) *nativeapi.Router {
 	share := core.NewShare(dataStore)
 	uploader := artwork.NewUploader(dataStore)
 	playlistsPlaylists := playlists.NewPlaylists(dataStore, uploader)
-	insights := metrics.GetInstance(dataStore)
 	broker := events.GetBroker()
 	metricsMetrics := metrics.GetPrometheusInstance(dataStore)
 	modelScanner := scanner.New(ctx, dataStore, broker, playlistsPlaylists, metricsMetrics)
@@ -72,7 +70,7 @@ func CreateNativeAPIRouter(ctx context.Context) *nativeapi.Router {
 	library := core.NewLibrary(dataStore, modelScanner, watcher, broker)
 	user := core.NewUser(dataStore)
 	maintenance := core.NewMaintenance(dataStore, modelScanner)
-	router := nativeapi.New(dataStore, share, playlistsPlaylists, insights, library, user, maintenance, uploader)
+	router := nativeapi.New(dataStore, share, playlistsPlaylists, library, user, maintenance, uploader)
 	return router
 }
 
@@ -131,13 +129,6 @@ func CreateListenBrainzRouter() *listenbrainz.Router {
 	dataStore := persistence.New(sqlDB)
 	router := listenbrainz.NewRouter(dataStore)
 	return router
-}
-
-func CreateInsights() metrics.Insights {
-	sqlDB := db.Db()
-	dataStore := persistence.New(sqlDB)
-	insights := metrics.GetInstance(dataStore)
-	return insights
 }
 
 func CreatePrometheus() metrics.Metrics {

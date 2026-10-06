@@ -184,6 +184,7 @@ export const PlayerLoveButton = ({ id, isRadio, className }) => {
       record={songRecord}
       resource={'song'}
       size={isDesktop ? undefined : 'inherit'}
+      immediateTouch
       disabled={loading || toggling || !effectiveId || isRadio}
       className={clsx(
         buttonClass,

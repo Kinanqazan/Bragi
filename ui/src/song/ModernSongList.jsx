@@ -717,6 +717,30 @@ export const ModernTrackRows = ({
   const classes = useStyles()
   const press = useRef()
   const suppressClick = useRef()
+  const suppressClickTimer = useRef()
+
+  const clearSuppressedClick = () => {
+    if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)
+    suppressClick.current = undefined
+    suppressClickTimer.current = undefined
+  }
+
+  const suppressNextClick = (songId) => {
+    clearSuppressedClick()
+    suppressClick.current = songId
+    suppressClickTimer.current = setTimeout(() => {
+      suppressClick.current = undefined
+      suppressClickTimer.current = undefined
+    }, 500)
+  }
+
+  const activateSong = (song) => {
+    if (selectionMode) {
+      onToggleSelection(song.id)
+    } else {
+      onPlay(song)
+    }
+  }
 
   const cancelLongPress = () => {
     if (press.current?.timer) clearTimeout(press.current.timer)
@@ -726,17 +750,17 @@ export const ModernTrackRows = ({
   const startLongPress = (event, songId) => {
     if (event.button !== undefined && event.button !== 0) return
 
-    suppressClick.current = undefined
+    clearSuppressedClick()
     cancelLongPress()
     const pointerId = event.pointerId
     const startX = event.clientX
     const startY = event.clientY
     const timer = setTimeout(() => {
-      suppressClick.current = songId
+      suppressNextClick(songId)
       press.current = undefined
       onStartSelection(songId)
     }, LONG_PRESS_DELAY)
-    press.current = { pointerId, startX, startY, timer }
+    press.current = { pointerId, startX, startY, timer, moved: false }
   }
 
   const moveLongPress = (event) => {
@@ -747,13 +771,40 @@ export const ModernTrackRows = ({
       movedX > LONG_PRESS_MOVE_TOLERANCE ||
       movedY > LONG_PRESS_MOVE_TOLERANCE
     ) {
-      cancelLongPress()
+      if (press.current.timer) clearTimeout(press.current.timer)
+      press.current.timer = undefined
+      press.current.moved = true
     }
+  }
+
+  const handlePointerUp = (event, song) => {
+    const activePress = press.current
+    if (!activePress || event.pointerId !== activePress.pointerId) return
+
+    if (activePress.timer) clearTimeout(activePress.timer)
+    press.current = undefined
+
+    const target = event.target
+    const isNestedControl = target?.closest?.(
+      'button, a, input, select, textarea, [role="checkbox"], [data-row-interactive]',
+    )
+    if (
+      event.pointerType === 'mouse' ||
+      activePress.moved ||
+      isNestedControl
+    ) {
+      return
+    }
+
+    event.preventDefault()
+    suppressNextClick(song.id)
+    activateSong(song)
   }
 
   useEffect(
     () => () => {
       if (press.current?.timer) clearTimeout(press.current.timer)
+      if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)
     },
     [],
   )
@@ -778,29 +829,21 @@ export const ModernTrackRows = ({
         aria-pressed={selectionMode ? selectedIds.includes(song.id) : undefined}
         onClick={() => {
           if (suppressClick.current === song.id) {
-            suppressClick.current = undefined
+            clearSuppressedClick()
             return
           }
-          if (selectionMode) {
-            onToggleSelection(song.id)
-          } else {
-            onPlay(song)
-          }
+          activateSong(song)
         }}
         onPointerDown={(event) => startLongPress(event, song.id)}
         onPointerMove={moveLongPress}
-        onPointerUp={cancelLongPress}
+        onPointerUp={(event) => handlePointerUp(event, song)}
         onPointerCancel={cancelLongPress}
         onPointerLeave={cancelLongPress}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            if (selectionMode) {
-              onToggleSelection(song.id)
-            } else {
-              onPlay(song)
-            }
+            activateSong(song)
           }
         }}
       >

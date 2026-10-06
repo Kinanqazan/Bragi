@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/utils/req"
-	"github.com/navidrome/navidrome/utils/str"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/utils/req"
+	"github.com/kinanqaz/bragi/utils/str"
 )
 
 func (pub *Router) handleDownloads(w http.ResponseWriter, r *http.Request) {

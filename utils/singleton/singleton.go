@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/navidrome/navidrome/log"
+	"github.com/kinanqaz/bragi/log"
 )
 
 var (

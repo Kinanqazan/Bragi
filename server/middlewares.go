@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kinanqaz/bragi/conf"
+	"github.com/kinanqaz/bragi/consts"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/request"
+	"github.com/kinanqaz/bragi/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/navidrome/navidrome/conf"
-	"github.com/navidrome/navidrome/consts"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/request"
-	"github.com/navidrome/navidrome/utils"
 	"github.com/unrolled/secure"
 )
 
@@ -88,7 +88,7 @@ func corsHandler() func(http.Handler) http.Handler {
 	return cors.Handler(cors.Options{
 		// Return the requesting origin instead of a wildcard. Cast receivers
 		// reject wildcard CORS for protected media, while reflecting the
-		// origin keeps this working for any internal Navidrome hostname.
+		// origin keeps this working for any internal Bragi hostname.
 		AllowOriginFunc: func(_ *http.Request, origin string) bool {
 			return origin != ""
 		},
@@ -171,7 +171,7 @@ func clientUniqueIDMiddleware(next http.Handler) http.Handler {
 }
 
 // realIPMiddleware applies middleware.RealIP, and additionally saves the request's original RemoteAddr to the request's
-// context if navidrome is behind a trusted reverse proxy.
+// context if Bragi is behind a trusted reverse proxy.
 func realIPMiddleware(next http.Handler) http.Handler {
 	if conf.Server.ExtAuth.TrustedSources != "" {
 		return chi.Chain(
@@ -181,7 +181,7 @@ func realIPMiddleware(next http.Handler) http.Handler {
 	}
 
 	// The middleware is applied without a trusted reverse proxy to support other use-cases such as multiple clients
-	// behind a caching proxy. In this case, navidrome only uses the request's RemoteAddr for logging, so the security
+	// behind a caching proxy. In this case, Bragi only uses the request's RemoteAddr for logging, so the security
 	// impact of reading the headers from untrusted sources is limited.
 	return middleware.RealIP(next)
 }

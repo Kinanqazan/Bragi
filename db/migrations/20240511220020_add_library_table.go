@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/navidrome/navidrome/conf"
+	"github.com/kinanqaz/bragi/conf"
 	"github.com/pressly/goose/v3"
 )
 

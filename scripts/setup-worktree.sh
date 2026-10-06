@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Setup a git worktree for Navidrome development.
+# Setup a git worktree for Bragi development.
 # This script is called automatically by `make worktree` and by Claude Code's
 # worktree isolation, but can also be run standalone:
 #
@@ -41,10 +41,15 @@ fi
 # 3. Create required directories
 mkdir -p data
 
-# 4. Copy navidrome.toml from main worktree if it exists and not already present
-if [ ! -f navidrome.toml ] && [ -f "$MAIN_WORKTREE/navidrome.toml" ]; then
-    echo "==> Copying navidrome.toml from main worktree..."
-    cp "$MAIN_WORKTREE/navidrome.toml" navidrome.toml
+# 4. Copy the main worktree config when this worktree has no config yet.
+if [ ! -f bragi.toml ] && [ ! -f navidrome.toml ]; then
+    if [ -f "$MAIN_WORKTREE/bragi.toml" ]; then
+        echo "==> Copying bragi.toml from main worktree..."
+        cp "$MAIN_WORKTREE/bragi.toml" bragi.toml
+    elif [ -f "$MAIN_WORKTREE/navidrome.toml" ]; then
+        echo "==> Copying legacy navidrome.toml from main worktree..."
+        cp "$MAIN_WORKTREE/navidrome.toml" navidrome.toml
+    fi
 fi
 
 # 5. Copy existing database from main worktree (already migrated and scanned)

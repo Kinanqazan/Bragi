@@ -2,8 +2,10 @@ const CAST_SENDER_SDK_URL =
   'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'
 const CAST_SDK_TIMEOUT_MS = 10000
 const CAST_REQUEST_TIMEOUT_MS = 10000
-const CAST_SESSION_STORAGE_KEY = 'navidrome.cast.sessionId'
-const CAST_SESSION_TIMESTAMP_KEY = 'navidrome.cast.sessionTimestamp'
+const CAST_SESSION_STORAGE_KEY = 'bragi.cast.sessionId'
+const CAST_SESSION_TIMESTAMP_KEY = 'bragi.cast.sessionTimestamp'
+const LEGACY_CAST_SESSION_STORAGE_KEY = 'navidrome.cast.sessionId'
+const LEGACY_CAST_SESSION_TIMESTAMP_KEY = 'navidrome.cast.sessionTimestamp'
 const MAX_SESSION_AGE_MS = 1000 * 60 * 60 * 24 // 24 hours
 
 const initialState = {
@@ -71,7 +73,20 @@ const getDeviceName = (session) => {
 
 const getSessionStorage = () => {
   try {
-    return getWindow()?.localStorage || null
+    const storage = getWindow()?.localStorage || null
+    if (storage) {
+      if (!storage.getItem(CAST_SESSION_STORAGE_KEY)) {
+        const legacySessionId = storage.getItem(LEGACY_CAST_SESSION_STORAGE_KEY)
+        if (legacySessionId) storage.setItem(CAST_SESSION_STORAGE_KEY, legacySessionId)
+      }
+      if (!storage.getItem(CAST_SESSION_TIMESTAMP_KEY)) {
+        const legacyTimestamp = storage.getItem(LEGACY_CAST_SESSION_TIMESTAMP_KEY)
+        if (legacyTimestamp) storage.setItem(CAST_SESSION_TIMESTAMP_KEY, legacyTimestamp)
+      }
+      storage.removeItem(LEGACY_CAST_SESSION_STORAGE_KEY)
+      storage.removeItem(LEGACY_CAST_SESSION_TIMESTAMP_KEY)
+    }
+    return storage
   } catch {
     return null
   }
@@ -209,32 +224,37 @@ export const loadCastSenderSdk = () => {
       settled = true
       currentWindow.clearTimeout(timeoutId)
       currentWindow.clearInterval(pollId)
-      if (currentWindow.__onGCastApiAvailable === navidromeCallback) {
+      if (currentWindow.__onGCastApiAvailable === bragiCallback) {
         currentWindow.__onGCastApiAvailable = previousCallback
       }
       if (available && hasCastFramework()) {
         resolve(true)
       } else {
-        if (script.dataset.navidromeCastSdk === 'true') script.remove()
+        if (
+          script.dataset.bragiCastSdk === 'true' ||
+          script.dataset.navidromeCastSdk === 'true'
+        ) {
+          script.remove()
+        }
         sdkPromise = null
         resolve(false)
       }
     }
 
-    const navidromeCallback = (isAvailable) => {
+    const bragiCallback = (isAvailable) => {
       if (typeof previousCallback === 'function') {
         try {
           previousCallback(isAvailable)
         } catch {
-          // A host callback must not prevent Navidrome from initializing Cast.
+          // A host callback must not prevent Bragi from initializing Cast.
         }
       }
       finish(Boolean(isAvailable))
     }
-    currentWindow.__onGCastApiAvailable = navidromeCallback
+    currentWindow.__onGCastApiAvailable = bragiCallback
 
     const existingScript = currentWindow.document.querySelector(
-      'script[data-navidrome-cast-sdk="true"]',
+      'script[data-bragi-cast-sdk="true"], script[data-navidrome-cast-sdk="true"]',
     )
     const script =
       existingScript || currentWindow.document.createElement('script')
@@ -249,7 +269,7 @@ export const loadCastSenderSdk = () => {
     if (!existingScript) {
       script.async = true
       script.src = CAST_SENDER_SDK_URL
-      script.dataset.navidromeCastSdk = 'true'
+      script.dataset.bragiCastSdk = 'true'
       currentWindow.document.head?.appendChild(script)
     }
 

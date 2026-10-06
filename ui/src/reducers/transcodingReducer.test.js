@@ -11,7 +11,7 @@ describe('transcodingReducer', () => {
 
   it('handles TRANSCODING_SET_PROFILE', () => {
     const profile = {
-      name: 'NavidromeUI',
+      name: 'BragiWeb',
       directPlayProfiles: [{ containers: ['mp3'] }],
     }
     const state = transcodingReducer(initialState, {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ButtonBase,
   CircularProgress,
@@ -319,21 +319,32 @@ export const ListeningStats = ({
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const statsRequestRef = useRef(null)
 
   const refreshStats = useCallback(async () => {
+    statsRequestRef.current?.abort()
+    const controller = new AbortController()
+    statsRequestRef.current = controller
+
     try {
       setError(false)
-      const { json } = await httpClient(`${REST_URL}/listening-stats`)
+      const { json } = await httpClient(`${REST_URL}/listening-stats`, {
+        signal: controller.signal,
+      })
+      if (controller.signal.aborted) return
       setStats(json)
     } catch {
+      if (controller.signal.aborted) return
       setError(true)
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
+      if (statsRequestRef.current === controller) statsRequestRef.current = null
     }
   }, [])
 
   useEffect(() => {
     refreshStats()
+    return () => statsRequestRef.current?.abort()
   }, [refreshStats])
 
   useRefreshOnEvents({ events: refreshEvents, onRefresh: refreshStats })

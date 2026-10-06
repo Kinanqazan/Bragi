@@ -50,7 +50,7 @@ export const logCastMediaFailure = (error, details = {}) => {
   // Cast failures are otherwise invisible because the receiver runs outside
   // the sender page. Keep this one structured log as the debugging boundary.
   // eslint-disable-next-line no-console
-  console.error('[Navidrome Cast] Media load failed', {
+  console.error('[Bragi Cast] Media load failed', {
     code: error?.code || getCastErrorCode(error),
     mediaUrl: error?.mediaUrl || sanitizeCastMediaUrl(details.mediaUrl),
     contentType: error?.contentType || details.contentType || 'unknown',

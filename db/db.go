@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/mattn/go-sqlite3"
-	"github.com/navidrome/navidrome/conf"
-	_ "github.com/navidrome/navidrome/db/migrations"
-	"github.com/navidrome/navidrome/log"
-	"github.com/navidrome/navidrome/utils/hasher"
-	"github.com/navidrome/navidrome/utils/singleton"
+	"github.com/kinanqaz/bragi/conf"
+	_ "github.com/kinanqaz/bragi/db/migrations"
+	"github.com/kinanqaz/bragi/log"
+	"github.com/kinanqaz/bragi/utils/hasher"
+	"github.com/kinanqaz/bragi/utils/singleton"
 	"github.com/pressly/goose/v3"
 )
 

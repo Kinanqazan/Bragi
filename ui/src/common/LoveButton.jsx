@@ -9,6 +9,7 @@ import { useToggleLove } from './useToggleLove'
 import { useRecordContext } from 'react-admin'
 import config from '../config'
 import { isDateSet } from '../utils/validations'
+import { useImmediateControlPress } from '../audioplayer/controlPress'
 
 const useStyles = makeStyles(
   {
@@ -33,6 +34,7 @@ export const LoveButton = ({
   component: Button,
   addLabel,
   disabled,
+  immediateTouch = false,
   className,
   record: recordProp,
   ...rest
@@ -44,19 +46,22 @@ export const LoveButton = ({
 
   const handleToggleLove = useCallback(
     (e) => {
-      e.preventDefault()
+      e?.preventDefault?.()
       toggleLove()
-      e.stopPropagation()
+      e?.stopPropagation?.()
     },
     [toggleLove],
   )
+  const immediatePress = useImmediateControlPress(handleToggleLove, {
+    stopPropagation: true,
+    preventDefaultOnClick: true,
+  })
 
   if (!loveableSong || !config.enableFavourites) {
     return <></>
   }
   return (
     <Button
-      onClick={handleToggleLove}
       size={'small'}
       disabled={disabled || loading || record.missing}
       className={clsx(classes.love, className)}
@@ -65,6 +70,9 @@ export const LoveButton = ({
           ? new Date(record.starredAt).toLocaleString()
           : undefined
       }
+      {...(immediateTouch
+        ? immediatePress
+        : { onClick: handleToggleLove })}
       {...rest}
     >
       {record.starred ? (
@@ -84,6 +92,7 @@ LoveButton.propTypes = {
   size: PropTypes.string,
   component: PropTypes.object,
   disabled: PropTypes.bool,
+  immediateTouch: PropTypes.bool,
 }
 
 LoveButton.defaultProps = {

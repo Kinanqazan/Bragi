@@ -139,7 +139,7 @@ export default {
   },
 
   /**
-   * Component overrides for Material-UI and custom Navidrome components.
+   * Component overrides for Material-UI and custom Bragi components.
    * Customizes the appearance and behavior of various UI components.
    * @type {Object}
    */
@@ -345,7 +345,7 @@ export default {
       },
     },
 
-    // Navidrome Custom Components
+    // Bragi Custom Components
     NDAlbumDetails: {
       root: {
         boxShadow: 'none',

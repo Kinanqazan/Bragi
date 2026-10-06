@@ -83,7 +83,7 @@ describe('resolveCastMedia', () => {
     expect(bareMedia.contentType).toBe('audio/mpeg')
   })
 
-  it('rebases Navidrome media onto the receiver-accessible URL', async () => {
+  it('rebases Bragi media onto the receiver-accessible URL', async () => {
     config.castMediaBaseURL = 'http://192.168.2.11:4533'
 
     const media = await resolveCastMedia({ trackId: 'song-2' })
@@ -94,10 +94,10 @@ describe('resolveCastMedia', () => {
 
   it('supports matching application paths without duplicating them', () => {
     config.baseURL = '/music'
-    config.castMediaBaseURL = 'http://navidrome.local:4533/music/'
+    config.castMediaBaseURL = 'http://bragi.local:4533/music/'
 
     expect(toCastReceiverUrl('/music/rest/stream?id=song-3&format=mp3')).toBe(
-      'http://navidrome.local:4533/music/rest/stream?id=song-3&format=mp3',
+      'http://bragi.local:4533/music/rest/stream?id=song-3&format=mp3',
     )
   })
 

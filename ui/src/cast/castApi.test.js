@@ -21,7 +21,7 @@ describe('Cast sender SDK loading', () => {
   it('removes a failed SDK script so a later attempt can recover', async () => {
     const firstAttempt = castApi.loadCastSenderSdk()
     const firstScript = document.querySelector(
-      'script[data-navidrome-cast-sdk="true"]',
+      'script[data-bragi-cast-sdk="true"]',
     )
     expect(firstScript).not.toBeNull()
 
@@ -31,7 +31,7 @@ describe('Cast sender SDK loading', () => {
 
     const secondAttempt = castApi.loadCastSenderSdk()
     const secondScript = document.querySelector(
-      'script[data-navidrome-cast-sdk="true"]',
+      'script[data-bragi-cast-sdk="true"]',
     )
     expect(secondScript).not.toBe(firstScript)
 
@@ -69,7 +69,7 @@ describe('Cast sender SDK loading', () => {
     }
 
     await castApi.initializeCast()
-    expect(localStorage.getItem('navidrome.cast.sessionId')).toBe(
+    expect(localStorage.getItem('bragi.cast.sessionId')).toBe(
       'cast-session-1',
     )
 
@@ -82,7 +82,7 @@ describe('Cast sender SDK loading', () => {
   })
 
   it('keeps a remembered session while Cast is initially reporting no session', async () => {
-    localStorage.setItem('navidrome.cast.sessionId', 'cast-session-1')
+    localStorage.setItem('bragi.cast.sessionId', 'cast-session-1')
     const requestSessionById = vi.fn()
     const castContext = {
       addEventListener: vi.fn(),
@@ -145,13 +145,13 @@ describe('Cast sender SDK loading', () => {
     vi.resetModules()
     castApi = await import('./castApi')
     await castApi.initializeCast()
-    expect(localStorage.getItem('navidrome.cast.sessionId')).toBe(
+    expect(localStorage.getItem('bragi.cast.sessionId')).toBe(
       'cast-session-1',
     )
 
     await castApi.endCastSession(true)
     expect(castContext.endCurrentSession).toHaveBeenCalledWith(true)
-    expect(localStorage.getItem('navidrome.cast.sessionId')).toBeNull()
+    expect(localStorage.getItem('bragi.cast.sessionId')).toBeNull()
   })
 
   it('rejects with TIMEOUT when castContext.requestSession hangs', async () => {
@@ -188,9 +188,9 @@ describe('Cast sender SDK loading', () => {
   })
 
   it('discards an expired session from localStorage (>24h)', async () => {
-    localStorage.setItem('navidrome.cast.sessionId', 'old-session-id')
+    localStorage.setItem('bragi.cast.sessionId', 'old-session-id')
     localStorage.setItem(
-      'navidrome.cast.sessionTimestamp',
+      'bragi.cast.sessionTimestamp',
       String(Date.now() - 1000 * 60 * 60 * 25), // 25 hours ago
     )
     const requestSessionById = vi.fn()
@@ -222,7 +222,7 @@ describe('Cast sender SDK loading', () => {
     await castApi.initializeCast()
 
     expect(requestSessionById).not.toHaveBeenCalled()
-    expect(localStorage.getItem('navidrome.cast.sessionId')).toBeNull()
+    expect(localStorage.getItem('bragi.cast.sessionId')).toBeNull()
   })
 
   it('detects native Cast and does not inject web SDK in Android WebView', async () => {
@@ -236,7 +236,7 @@ describe('Cast sender SDK loading', () => {
     expect(castApi.isNativeCastAvailable()).toBe(true)
     const result = await castApi.loadCastSenderSdk()
     expect(result).toBe(true)
-    expect(document.querySelector('script[data-navidrome-cast-sdk="true"]')).toBeNull()
+    expect(document.querySelector('script[data-bragi-cast-sdk="true"]')).toBeNull()
 
     await castApi.requestCastSession()
     expect(window.BragiNative.requestCastSession).toHaveBeenCalled()

@@ -3,9 +3,9 @@ package tests
 import (
 	"errors"
 
-	"github.com/navidrome/navidrome/model"
-	"github.com/navidrome/navidrome/model/id"
-	"github.com/navidrome/navidrome/utils/slice"
+	"github.com/kinanqaz/bragi/model"
+	"github.com/kinanqaz/bragi/model/id"
+	"github.com/kinanqaz/bragi/utils/slice"
 )
 
 type MockedRadioRepo struct {

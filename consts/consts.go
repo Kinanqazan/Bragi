@@ -5,12 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/navidrome/navidrome/model/id"
+	"github.com/kinanqaz/bragi/model/id"
 )
 
 const (
-	AppName = "navidrome"
+	AppName = "bragi"
 
+	// Keep this established filename so existing persistent Docker volumes are reused.
 	DefaultDbPath                 = "navidrome.db?cache=shared&_busy_timeout=15000&_journal_mode=WAL&_foreign_keys=on&synchronous=normal"
 	InitialSetupFlagKey           = "InitialSetup"
 	FullScanAfterMigrationFlagKey = "FullScanAfterMigration"
@@ -44,7 +45,7 @@ const (
 	ArtworkPostBackfillPruneDelay     = 10 * time.Minute
 
 	// DefaultEncryptionKey This is the encryption key used if none is specified in the `PasswordEncryptionKey` option
-	// Never ever change this! Or it will break all Navidrome installations that don't set the config option
+	// Keep this stable: changing it can break existing Bragi installs without an explicit config value.
 	DefaultEncryptionKey  = "just for obfuscation"
 	PasswordsEncryptedKey = "PasswordsEncryptedKey"
 	PasswordAutogenPrefix = "__NAVIDROME_AUTOGEN__" //nolint:gosec
@@ -58,8 +59,7 @@ const (
 	URLPathPublic       = "/share"
 	URLPathPublicImages = URLPathPublic + "/img"
 
-	// DefaultUILoginBackgroundURL uses Navidrome curated background images collection,
-	// available at https://unsplash.com/collections/20072696/navidrome
+	// DefaultUILoginBackgroundURL serves the built-in offline login background.
 	DefaultUILoginBackgroundURL = "/backgrounds"
 
 	// DefaultUILoginBackgroundOffline Background image used in case external integrations are disabled
@@ -149,13 +149,6 @@ const (
 )
 
 const (
-	InsightsIDKey          = "InsightsID"
-	InsightsEndpoint       = "https://insights.navidrome.org/collect"
-	InsightsUpdateInterval = 24 * time.Hour
-	InsightsInitialDelay   = 30 * time.Minute
-)
-
-const (
 	PurgeMissingNever  = "never"
 	PurgeMissingAlways = "always"
 	PurgeMissingFull   = "full"
@@ -196,7 +189,7 @@ var (
 	}
 )
 
-var HTTPUserAgent = "Navidrome" + "/" + Version
+var HTTPUserAgent = "Bragi" + "/" + Version
 
 var (
 	VariousArtists = "Various Artists"
@@ -215,9 +208,11 @@ var (
 	ServerStart = time.Now()
 
 	InContainer = func() bool {
-		// Check if the /.nddockerenv file exists
-		if _, err := os.Stat("/.nddockerenv"); err == nil {
-			return true
+		// Keep recognizing existing custom images while using Bragi's marker going forward.
+		for _, marker := range []string{"/.bragidockerenv", "/.nddockerenv"} {
+			if _, err := os.Stat(marker); err == nil {
+				return true
+			}
 		}
 		return false
 	}()
