@@ -68,19 +68,21 @@ describe('<MobileBottomNav />', () => {
     expect(history.location.pathname).toBe('/song')
   })
 
-  it('navigates on the first touch release without replaying the synthetic click', () => {
+  it('navigates through the browser click after a touch release', () => {
     const history = createMemoryHistory({ initialEntries: ['/song'] })
     const onChange = vi.fn()
     history.listen(onChange)
     render(
       <Router history={history}>
-        <MobileBottomNav />
+        <div onPointerUpCapture={(event) => event.preventDefault()}>
+          <MobileBottomNav />
+        </div>
       </Router>,
     )
 
     const artists = screen.getByRole('link', { name: 'Artists' })
     fireEvent.pointerUp(artists, { pointerType: 'touch', button: 0 })
-    expect(history.location.pathname).toBe('/artist')
+    expect(history.location.pathname).toBe('/song')
 
     fireEvent.click(artists)
     expect(onChange).toHaveBeenCalledTimes(1)

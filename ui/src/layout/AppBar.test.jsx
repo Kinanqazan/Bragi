@@ -96,7 +96,7 @@ describe('<AppBar />', () => {
     expect(screen.getByPlaceholderText('Search your music')).toBeInTheDocument()
   })
 
-  it('toggles the mobile sidebar on the first touch release', () => {
+  it('toggles the mobile sidebar with the browser click activation', () => {
     useMediaQuery.mockReturnValue(true)
     const dispatch = vi.spyOn(store, 'dispatch')
     render(
@@ -108,10 +108,11 @@ describe('<AppBar />', () => {
     )
 
     const menu = screen.getByLabelText('Open menu')
+    fireEvent.pointerDown(menu, { pointerType: 'touch', button: 0 })
     fireEvent.pointerUp(menu, { pointerType: 'touch', button: 0 })
-    expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_SIDEBAR' })
-
+    expect(dispatch).not.toHaveBeenCalledWith({ type: 'TOGGLE_SIDEBAR' })
     fireEvent.click(menu)
+    expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_SIDEBAR' })
     expect(dispatch).toHaveBeenCalledTimes(1)
   })
 

@@ -142,41 +142,7 @@ const MobileBottomNavLink = ({
   linkClassName,
   iconContainerClassName,
 }) => {
-  const skipClickRef = React.useRef(false)
-  const resetClickTimerRef = React.useRef(null)
-
-  React.useEffect(
-    () => () => {
-      if (resetClickTimerRef.current != null)
-        window.clearTimeout(resetClickTimerRef.current)
-    },
-    [],
-  )
-
-  const handlePointerUp = (event) => {
-    if (event.pointerType === 'mouse') return
-
-    skipClickRef.current = true
-    if (resetClickTimerRef.current != null)
-      window.clearTimeout(resetClickTimerRef.current)
-    resetClickTimerRef.current = window.setTimeout(() => {
-      skipClickRef.current = false
-      resetClickTimerRef.current = null
-    }, 500)
-    onNavigate(event, item, active)
-    event.stopPropagation()
-  }
-
   const handleClick = (event) => {
-    if (skipClickRef.current) {
-      skipClickRef.current = false
-      if (resetClickTimerRef.current != null) {
-        window.clearTimeout(resetClickTimerRef.current)
-        resetClickTimerRef.current = null
-      }
-      event.preventDefault()
-      return
-    }
     onNavigate(event, item, active)
   }
 
@@ -187,7 +153,6 @@ const MobileBottomNavLink = ({
       aria-label={label}
       title={label}
       aria-current={active ? 'page' : undefined}
-      onPointerUp={handlePointerUp}
       onClick={handleClick}
     >
       <div className={iconContainerClassName}>

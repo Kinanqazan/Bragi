@@ -178,6 +178,42 @@ describe('TrackIdentity', () => {
     )
   })
 
+  it('keeps a title tap active when the finger drifts slightly before release', () => {
+    const onTitleClick = vi.fn()
+    render(
+      <MemoryRouter>
+        <TrackIdentity
+          track={{ song: { id: 'song-7', title: 'Slight Drift Song' } }}
+          mobile
+          onTitleClick={onTitleClick}
+        />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Slight Drift Song' })
+    fireEvent(link, pointerEvent('pointerdown', {
+      pointerId: 7,
+      pointerType: 'touch',
+      clientX: 10,
+      clientY: 10,
+    }))
+    fireEvent(link, pointerEvent('pointermove', {
+      pointerId: 7,
+      pointerType: 'touch',
+      clientX: 20,
+      clientY: 10,
+    }))
+    fireEvent(link, pointerEvent('pointerup', {
+      pointerId: 7,
+      pointerType: 'touch',
+      clientX: 20,
+      clientY: 10,
+    }))
+    fireEvent.click(link)
+
+    expect(onTitleClick).toHaveBeenCalledOnce()
+  })
+
   it('does not wrap artist in the song page link', () => {
     const track = {
       song: {

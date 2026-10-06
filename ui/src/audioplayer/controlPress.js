@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 const CLICK_SUPPRESSION_MS = 500
-const LINK_MOVE_TOLERANCE = 8
 
 export const useImmediateControlPress = (command, stopPropagation = false) => {
   const options =
@@ -86,88 +85,6 @@ export const useImmediateControlPress = (command, stopPropagation = false) => {
 }
 
 export const useImmediateLinkPress = (action) => {
-  const pointerRef = useRef(null)
-  const suppressClickRef = useRef(false)
-  const resetTimerRef = useRef(null)
-
-  const clearPointerState = useCallback(() => {
-    if (resetTimerRef.current != null) {
-      window.clearTimeout(resetTimerRef.current)
-      resetTimerRef.current = null
-    }
-    pointerRef.current = null
-    suppressClickRef.current = false
-  }, [])
-
-  const onPointerDown = useCallback(
-    (event) => {
-      clearPointerState()
-      if (event.pointerType === 'mouse') {
-        return
-      }
-      pointerRef.current = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-        moved: false,
-      }
-    },
-    [clearPointerState],
-  )
-
-  const onPointerMove = useCallback((event) => {
-    const pointer = pointerRef.current
-    if (!pointer || pointer.pointerId !== event.pointerId) return
-    if (
-      Math.abs(event.clientX - pointer.x) > LINK_MOVE_TOLERANCE ||
-      Math.abs(event.clientY - pointer.y) > LINK_MOVE_TOLERANCE
-    ) {
-      pointer.moved = true
-    }
-  }, [])
-
-  const onPointerUp = useCallback(
-    (event) => {
-      const pointer = pointerRef.current
-      pointerRef.current = null
-      if (
-        event.pointerType === 'mouse' ||
-        !pointer ||
-        pointer.pointerId !== event.pointerId ||
-        pointer.moved
-      ) {
-        return
-      }
-
-      if (!pointer.moved) return
-      suppressClickRef.current = true
-      resetTimerRef.current = window.setTimeout(clearPointerState, CLICK_SUPPRESSION_MS)
-    },
-    [clearPointerState],
-  )
-
-  const onClick = useCallback(
-    (event) => {
-      if (suppressClickRef.current) {
-        event.preventDefault()
-        clearPointerState()
-        return
-      }
-      action?.(event)
-    },
-    [action, clearPointerState],
-  )
-
-  const onPointerCancel = useCallback(() => {
-    clearPointerState()
-  }, [clearPointerState])
-
-  useEffect(
-    () => () => {
-      clearPointerState()
-    },
-    [clearPointerState],
-  )
-
-  return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onClick }
+  const onClick = useCallback((event) => action?.(event), [action])
+  return { onClick }
 }
