@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import TrackIdentity from './TrackIdentity'
 
@@ -94,7 +94,7 @@ describe('TrackIdentity', () => {
     expect(screen.getByTestId('artist-link-field')).toHaveTextContent('Mobile Artist')
   })
 
-  it('runs the mobile title action on touch release and suppresses its duplicate click', () => {
+  it('runs the mobile title action on click, after touch release', () => {
     const onTitleClick = vi.fn((event) => event.preventDefault())
     render(
       <MemoryRouter>
@@ -121,7 +121,7 @@ describe('TrackIdentity', () => {
     })
     fireEvent(link, release)
 
-    expect(onTitleClick).toHaveBeenCalledOnce()
+    expect(onTitleClick).not.toHaveBeenCalled()
     const click = new MouseEvent('click', {
       bubbles: true,
       cancelable: true,
@@ -129,6 +129,53 @@ describe('TrackIdentity', () => {
     fireEvent(link, click)
     expect(onTitleClick).toHaveBeenCalledOnce()
     expect(click.defaultPrevented).toBe(true)
+  })
+
+  it('waits for the link click before running an action that can move the player', () => {
+    const LinkRaceHarness = () => {
+      const [visible, setVisible] = React.useState(true)
+      const location = useLocation()
+      return (
+        <>
+          <span data-testid="current-path">{location.pathname}</span>
+          {visible && (
+            <TrackIdentity
+              track={{ song: { id: 'song-6', title: 'Moving Song' } }}
+              mobile
+              onTitleClick={() => setVisible(false)}
+            />
+          )}
+        </>
+      )
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/player']}>
+        <LinkRaceHarness />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Moving Song' })
+    fireEvent(link, pointerEvent('pointerdown', {
+      pointerId: 6,
+      pointerType: 'touch',
+      clientX: 10,
+      clientY: 10,
+    }))
+    fireEvent(link, pointerEvent('pointerup', {
+      pointerId: 6,
+      pointerType: 'touch',
+      clientX: 10,
+      clientY: 10,
+    }))
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/player')
+    expect(link).toBeInTheDocument()
+    fireEvent.click(link)
+
+    expect(screen.getByTestId('current-path')).toHaveTextContent(
+      '/song/song-6/show',
+    )
   })
 
   it('does not wrap artist in the song page link', () => {

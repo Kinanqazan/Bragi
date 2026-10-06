@@ -207,7 +207,7 @@ const PlayerToolbar = ({ id, isRadio, showLove = true }) => {
   )
   const effectiveId =
     id || currentSong?.id || currentSong?.mediaFileId || currentSong?.trackId
-  const { data, loading } = useGetOne('song', effectiveId, {
+  const { data } = useGetOne('song', effectiveId, {
     enabled: !!effectiveId && !isRadio,
   })
   const songRecord = effectiveId
@@ -226,7 +226,7 @@ const PlayerToolbar = ({ id, isRadio, showLove = true }) => {
         className={clsx(classes.cornerMenu, 'player-corner-menu')}
         buttonClassName={classes.cornerButton}
         buttonSize="medium"
-        disabled={loading || !effectiveId}
+        disabled={!effectiveId}
         data-testid="player-context-menu"
       />
     ) : null

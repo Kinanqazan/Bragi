@@ -115,6 +115,21 @@ describe('SongContextMenu', () => {
     )
   })
 
+  it('renders the download action before the full song record has loaded', async () => {
+    render(
+      <TestContext>
+        <SongContextMenu record={{ id: 'song1' }} resource="song" />
+      </TestContext>,
+    )
+
+    fireEvent.click(screen.getAllByRole('button')[1])
+
+    expect(
+      await screen.findByText(/resources\.song\.actions\.download|download/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
+  })
+
   it('stops event propagation when playlist submenu is closed', async () => {
     const mockOnClick = vi.fn()
     render(

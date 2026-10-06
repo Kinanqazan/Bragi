@@ -149,6 +149,14 @@ describe('<PlayerToolbar />', () => {
       ).not.toBeInTheDocument()
     })
 
+    it('keeps the overflow menu enabled while song details are loading', () => {
+      useGetOne.mockReturnValue({ data: undefined, loading: true })
+
+      render(<PlayerToolbar id="song-1" />)
+
+      expect(screen.getByTestId('more-button')).toBeEnabled()
+    })
+
     it('renders context menu when id is not provided as prop but song is present in player queue', () => {
       useSelector.mockImplementation((selector) =>
         selector({

@@ -148,7 +148,10 @@ export const SongContextMenu = ({
     },
     download: {
       enabled: config.enableDownloads,
-      label: `${translate('ra.action.download')} (${formatBytes(record.size)})`,
+      label:
+        record.size == null
+          ? translate('ra.action.download')
+          : `${translate('ra.action.download')} (${formatBytes(record.size)})`,
       action: (record) =>
         dispatch(openDownloadMenu(record, DOWNLOAD_MENU_SONG)),
     },

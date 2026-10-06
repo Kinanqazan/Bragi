@@ -914,7 +914,6 @@ const MobilePlayerSurface = ({
     }
 
     if (!gesture.moved && isInteractiveTarget(event?.target)) {
-      if (event.immediateLinkActionHandled) return
       // Small finger drift is still a tap. Let the browser synthesize its click
       // instead of settling the layer and cancelling the control activation.
       setThemeColorActive(expanded)
