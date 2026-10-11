@@ -34,6 +34,7 @@ import CloseIcon from '@material-ui/icons/Close'
 import { MdTrendingUp, MdShuffle, MdHistory } from 'react-icons/md'
 import { playTracks } from '../actions'
 import config from '../config'
+import { SongBulkActions } from './SongBulkActions'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const modernFilterStyles = (theme) => {
@@ -79,6 +80,15 @@ export const modernFilterStyles = (theme) => {
       [theme.breakpoints.down('sm')]: {
         display: 'none !important',
       },
+    },
+    toolbarSelectionActive: {
+      position: 'sticky',
+      top: 0,
+      zIndex: 12,
+      backgroundColor: theme.palette.background.default,
+      paddingBottom: theme.spacing(1.5),
+      marginBottom: theme.spacing(1.5),
+      boxSizing: 'border-box',
     },
     // Mobile Quick Action Circle Buttons at the top of scrollable content
     mobileQuickActionsRow: {
@@ -300,7 +310,7 @@ export const modernFilterStyles = (theme) => {
       },
     },
     facetMoodChip: {
-      borderRadius: 9,
+      borderRadius: 15,
       borderColor: alpha(theme.palette.text.primary, isDark ? 0.2 : 0.14),
       backgroundColor: alpha(theme.palette.text.primary, isDark ? 0.14 : 0.08),
       '&:hover': {
@@ -324,6 +334,35 @@ export const modernFilterStyles = (theme) => {
       maxHeight: 36,
       gap: theme.spacing(1),
       boxSizing: 'border-box',
+    },
+    selectionToolbarActions: {
+      marginRight: theme.spacing(2),
+      '& .MuiIconButton-root': {
+        width: 36,
+        height: 36,
+        padding: 7,
+        borderRadius: 18,
+      },
+      '& .selectionClearButton': {
+        width: 28,
+        height: 28,
+        padding: 4,
+      },
+    },
+    selectionCountGroup: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(0.25),
+      marginRight: theme.spacing(0.5),
+      whiteSpace: 'nowrap',
+    },
+    selectionCountLabel: {
+      color: theme.palette.text.secondary,
+      fontSize: '0.875rem',
+      fontWeight: 600,
+    },
+    selectionClearButton: {
+      color: theme.palette.text.secondary,
     },
     songToolbarActions: {
       '& .MuiIconButton-root, & .MuiButton-root': {
@@ -723,7 +762,14 @@ export const ModernFilterBar = ({
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
 
   const listContext = useListContext()
-  const { filterValues, setFilters, displayedFilters, basePath } = listContext
+  const {
+    filterValues,
+    selectedIds = [],
+    onUnselectItems = () => undefined,
+    setFilters,
+    displayedFilters,
+    basePath,
+  } = listContext
 
   const [anchorEl, setAnchorEl] = useState(null)
   const isFilterOpen = Boolean(anchorEl)
@@ -904,7 +950,14 @@ export const ModernFilterBar = ({
   return (
     <>
       {/* Desktop Toolbar */}
-      <div className={classes.toolbarRoot}>
+      <div
+        className={clsx(
+          classes.toolbarRoot,
+          resource === 'song' &&
+            selectedIds.length > 0 &&
+            classes.toolbarSelectionActive,
+        )}
+      >
         <div className={classes.leftGroup}>
           <div className={classes.searchSection}>
             <Filter
@@ -969,49 +1022,82 @@ export const ModernFilterBar = ({
           className={clsx(
             classes.toolbarActions,
             resource === 'song' && classes.songToolbarActions,
+            resource === 'song' &&
+              selectedIds.length > 0 &&
+              classes.selectionToolbarActions,
           )}
         >
-          {config.enableFavourites && (
-            <IconButton
-              className={clsx(
-                classes.favoriteToggleButton,
-                Boolean(filterValues?.starred) &&
-                  classes.favoriteToggleButtonActive,
+          {resource === 'song' && selectedIds.length > 0 ? (
+            <>
+              <div className={classes.selectionCountGroup}>
+                <Typography className={classes.selectionCountLabel}>
+                  {`${selectedIds.length} selected`}
+                </Typography>
+                <IconButton
+                  className="selectionClearButton"
+                  size="small"
+                  onClick={onUnselectItems}
+                  aria-label="Clear selection"
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+              <SongBulkActions
+                resource="song"
+                selectedIds={selectedIds}
+                compact
+              />
+            </>
+          ) : (
+            <>
+              {config.enableFavourites && (
+                <IconButton
+                  className={clsx(
+                    classes.favoriteToggleButton,
+                    Boolean(filterValues?.starred) &&
+                      classes.favoriteToggleButtonActive,
+                  )}
+                  onClick={() =>
+                    handleFilterChange(
+                      'starred',
+                      filterValues?.starred ? undefined : true,
+                    )
+                  }
+                  aria-label={
+                    filterValues?.starred ? 'Show all' : 'Favorites only'
+                  }
+                  title={filterValues?.starred ? 'Show all' : 'Favorites only'}
+                >
+                  {filterValues?.starred ? (
+                    <FavoriteIcon
+                      fontSize="small"
+                      style={{ color: '#e91e63' }}
+                    />
+                  ) : (
+                    <FavoriteBorderIcon fontSize="small" />
+                  )}
+                </IconButton>
               )}
-              onClick={() =>
-                handleFilterChange(
-                  'starred',
-                  filterValues?.starred ? undefined : true,
-                )
-              }
-              aria-label={filterValues?.starred ? 'Show all' : 'Favorites only'}
-              title={filterValues?.starred ? 'Show all' : 'Favorites only'}
-            >
-              {filterValues?.starred ? (
-                <FavoriteIcon fontSize="small" style={{ color: '#e91e63' }} />
-              ) : (
-                <FavoriteBorderIcon fontSize="small" />
-              )}
-            </IconButton>
-          )}
 
-          {hasFilterOptions && (
-            <IconButton
-              className={clsx(
-                classes.filterButton,
-                activeCount > 0 && classes.filterButtonActive,
+              {hasFilterOptions && (
+                <IconButton
+                  className={clsx(
+                    classes.filterButton,
+                    activeCount > 0 && classes.filterButtonActive,
+                  )}
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                  aria-label="Filters"
+                >
+                  <FilterListIcon fontSize="small" />
+                  {activeCount > 0 && (
+                    <span className={classes.badge}>{activeCount}</span>
+                  )}
+                </IconButton>
               )}
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              aria-label="Filters"
-            >
-              <FilterListIcon fontSize="small" />
-              {activeCount > 0 && (
-                <span className={classes.badge}>{activeCount}</span>
-              )}
-            </IconButton>
-          )}
 
-          <div className={classes.rightGroup}>{children}</div>
+              <div className={classes.rightGroup}>{children}</div>
+            </>
+          )}
         </div>
       </div>
 

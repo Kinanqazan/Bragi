@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { IconButton } from '@material-ui/core'
 import {
   Button,
   useDataProvider,
@@ -17,6 +18,7 @@ export const BatchPlayButton = ({
   label,
   icon,
   className,
+  compact = false,
 }) => {
   const dispatch = useDispatch()
   const translate = useTranslate()
@@ -40,6 +42,19 @@ export const BatchPlayButton = ({
   }
 
   const caption = translate(label)
+  if (compact) {
+    return (
+      <IconButton
+        aria-label={caption}
+        title={caption}
+        onClick={addToQueue}
+        className={className}
+      >
+        {icon}
+      </IconButton>
+    )
+  }
+
   return (
     <Button
       aria-label={caption}
@@ -56,4 +71,5 @@ BatchPlayButton.propTypes = {
   action: PropTypes.func.isRequired,
   label: PropTypes.string.isRequired,
   icon: PropTypes.object.isRequired,
+  compact: PropTypes.bool,
 }

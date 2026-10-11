@@ -1,5 +1,4 @@
-import React, { Fragment, useEffect } from 'react'
-import { useUnselectAll } from 'react-admin'
+import React, { Fragment } from 'react'
 import { addTracks, playNext, playTracks } from '../actions'
 import { RiPlayList2Fill, RiPlayListAddFill } from 'react-icons/ri'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
@@ -15,10 +14,6 @@ const useStyles = makeStyles((theme) => ({
 
 export const SongBulkActions = (props) => {
   const classes = useStyles()
-  const unselectAll = useUnselectAll()
-  useEffect(() => {
-    unselectAll(props.resource)
-  }, [unselectAll, props.resource])
   return (
     <Fragment>
       <BatchPlayButton
@@ -27,6 +22,7 @@ export const SongBulkActions = (props) => {
         label={'resources.song.actions.playNow'}
         icon={<PlayArrowIcon />}
         className={classes.button}
+        compact={props.compact}
       />
       <BatchPlayButton
         {...props}
@@ -34,6 +30,7 @@ export const SongBulkActions = (props) => {
         label={'resources.song.actions.playNext'}
         icon={<RiPlayList2Fill />}
         className={classes.button}
+        compact={props.compact}
       />
       <BatchPlayButton
         {...props}
@@ -41,8 +38,13 @@ export const SongBulkActions = (props) => {
         label={'resources.song.actions.addToQueue'}
         icon={<RiPlayListAddFill />}
         className={classes.button}
+        compact={props.compact}
       />
-      <AddToPlaylistButton {...props} className={classes.button} />
+      <AddToPlaylistButton
+        {...props}
+        className={classes.button}
+        compact={props.compact}
+      />
     </Fragment>
   )
 }

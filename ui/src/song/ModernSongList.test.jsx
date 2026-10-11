@@ -130,32 +130,74 @@ describe('<ModernTrackRows />', () => {
     expect(onPlay).not.toHaveBeenCalled()
   })
 
-  it('starts multi-selection by holding a song', () => {
+  it('starts selection during a hold and suppresses the retargeted click', () => {
     vi.useFakeTimers()
     const onPlay = vi.fn()
     const onStartSelection = vi.fn()
-    render(
-      <ThemeProvider theme={createTheme()}>
-        <ModernTrackRows
-          songs={[song]}
-          onPlay={onPlay}
-          onOpen={vi.fn()}
-          onStartSelection={onStartSelection}
-        />
-      </ThemeProvider>,
-    )
+    const Harness = () => {
+      const [selectedIds, setSelectedIds] = React.useState([])
+      return (
+        <ThemeProvider theme={createTheme()}>
+          <ModernTrackRows
+            songs={[song]}
+            onPlay={onPlay}
+            selectedIds={selectedIds}
+            selectionMode={selectedIds.length > 0}
+            onStartSelection={(id) => {
+              onStartSelection(id)
+              setSelectedIds([id])
+            }}
+            onToggleSelection={(id) =>
+              setSelectedIds((current) =>
+                current.includes(id)
+                  ? current.filter((selectedId) => selectedId !== id)
+                  : [...current, id],
+              )
+            }
+          />
+        </ThemeProvider>
+      )
+    }
+    render(<Harness />)
 
     const row = screen.getByRole('button', { name: 'Play Playable song' })
     fireEvent(row, pointerEvent('pointerdown', {
       button: 0,
       clientX: 10,
       clientY: 10,
+      pointerId: 3,
+      pointerType: 'touch',
     }))
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_DELAY)
     })
 
+    expect(onStartSelection).toHaveBeenCalledTimes(1)
     expect(onStartSelection).toHaveBeenCalledWith(song.id)
+    expect(
+      screen.getByRole('checkbox', { name: 'Select Playable song' }),
+    ).toBeChecked()
+
+    const release = pointerEvent('pointerup', {
+      clientX: 10,
+      clientY: 10,
+      pointerId: 3,
+      pointerType: 'touch',
+    })
+    fireEvent(row, release)
+
+    expect(onStartSelection).toHaveBeenCalledTimes(1)
+    expect(onPlay).not.toHaveBeenCalled()
+    expect(release.defaultPrevented).toBe(true)
+
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'Select Playable song',
+    })
+    expect(checkbox).toBeChecked()
+    fireEvent.click(checkbox)
+    expect(
+      screen.getByRole('checkbox', { name: 'Select Playable song' }),
+    ).toBeChecked()
     expect(onPlay).not.toHaveBeenCalled()
   })
 
@@ -203,6 +245,33 @@ describe('<ModernTrackRows />', () => {
       pointerId: 2,
       pointerType: 'touch',
     }))
+
+    expect(onPlay).not.toHaveBeenCalled()
+  })
+
+  it('does not play a song when a horizontal swipe is followed by a click', () => {
+    const onPlay = renderRows()
+    const row = screen.getByRole('button', { name: 'Play Playable song' })
+    fireEvent(row, pointerEvent('pointerdown', {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 3,
+      pointerType: 'touch',
+    }))
+    fireEvent(row, pointerEvent('pointermove', {
+      clientX: 48,
+      clientY: 10,
+      pointerId: 3,
+      pointerType: 'touch',
+    }))
+    fireEvent(row, pointerEvent('pointerup', {
+      clientX: 48,
+      clientY: 10,
+      pointerId: 3,
+      pointerType: 'touch',
+    }))
+    fireEvent.click(row)
 
     expect(onPlay).not.toHaveBeenCalled()
   })

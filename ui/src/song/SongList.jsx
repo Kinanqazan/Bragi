@@ -210,6 +210,7 @@ const SongList = (props) => {
     <>
       <List
         {...props}
+        className="song-list-page"
         sort={{ field: 'random', order: 'ASC' }}
         filter={{ seed }}
         exporter={false}

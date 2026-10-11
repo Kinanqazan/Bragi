@@ -4,6 +4,7 @@ import { MdClose } from 'react-icons/md'
 import MenuIcon from '@material-ui/icons/Menu'
 import SearchIcon from '@material-ui/icons/Search'
 import ArrowBackIcon from '@material-ui/icons/ArrowBack'
+import BragiLogo from '../icons/BragiLogo'
 import { useDispatch, useSelector } from 'react-redux'
 import { useHistory, useLocation } from 'react-router-dom'
 import {
@@ -106,9 +107,9 @@ const useStyles = makeStyles(
           background: `linear-gradient(
             to bottom,
             #000 0,
-            rgba(0, 0, 0, 0.96) calc(env(safe-area-inset-top, 0px) + 8px),
-            rgba(0, 0, 0, 0.76) calc(env(safe-area-inset-top, 0px) + 32px),
-            rgba(0, 0, 0, 0.34) calc(env(safe-area-inset-top, 0px) + 64px),
+            rgba(0, 0, 0, 0.93) calc(env(safe-area-inset-top, 0px) + 8px),
+            rgba(0, 0, 0, 0.67) calc(env(safe-area-inset-top, 0px) + 32px),
+            rgba(0, 0, 0, 0.28) calc(env(safe-area-inset-top, 0px) + 64px),
             transparent 100%
           )`,
         },
@@ -153,6 +154,18 @@ const useStyles = makeStyles(
         display: 'flex',
         alignItems: 'center',
         gap: 10,
+      },
+      leftGroup: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+      },
+      mobileBrandLogo: {
+        width: 32,
+        height: 32,
+        flexShrink: 0,
+        color: theme.brandColor || theme.palette.primary.main,
+        filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
       },
       floatingActionButton: {
         width: 64,
@@ -554,14 +567,17 @@ const MobileTopBar = () => {
           </ClickAwayListener>
         ) : (
           <>
-            <IconButton
-              className={classes.floatingActionButton}
-              onClick={handleMenuClick}
-              aria-label="Open menu"
-              title="Open menu"
-            >
-              <MenuIcon style={{ fontSize: 28 }} />
-            </IconButton>
+            <div className={classes.leftGroup}>
+              <IconButton
+                className={classes.floatingActionButton}
+                onClick={handleMenuClick}
+                aria-label="Open menu"
+                title="Open menu"
+              >
+                <MenuIcon style={{ fontSize: 28 }} />
+              </IconButton>
+              <BragiLogo className={classes.mobileBrandLogo} />
+            </div>
 
             {/* Right: Search Icon + Cast Button */}
             <div className={classes.rightGroup}>

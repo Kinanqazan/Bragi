@@ -6,7 +6,23 @@ import { Provider } from 'react-redux'
 import { createStore } from 'redux'
 import { setSidebarVisibility } from 'react-admin'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { LONG_PRESS_DELAY, ModernTrackRows } from '../song/ModernSongList'
 import Sidebar from './Sidebar'
+
+vi.mock('../common/Artwork', () => ({
+  Artwork: () => <div />,
+}))
+
+vi.mock('../common', () => ({
+  DateField: () => null,
+  DurationField: () => null,
+  LoveButton: () => null,
+  QualityInfo: () => null,
+  RatingField: () => null,
+  SongBulkActions: () => null,
+  SongContextMenu: () => <button aria-label="Song actions" />,
+  MobileQuickActions: () => null,
+}))
 
 vi.mock('@material-ui/core', async () => ({
   ...(await vi.importActual('@material-ui/core')),
@@ -24,7 +40,7 @@ const Menu = ({ sidebarOpen }) => (
   <div>{sidebarOpen ? 'Expanded menu' : 'Collapsed menu'}</div>
 )
 
-const renderSidebar = (open = false) => {
+const renderSidebar = (open = false, content = null) => {
   const store = createStore(
     (state = { admin: { ui: { sidebarOpen: open } } }, action) =>
       action.type === setSidebarVisibility(true).type
@@ -44,6 +60,7 @@ const renderSidebar = (open = false) => {
         <input aria-label="Search" />
         <div role="slider" aria-label="Seek" />
         <div className="nd-artwork-carousel">Artwork</div>
+        {content}
         <Sidebar>
           <Menu />
         </Sidebar>
@@ -163,6 +180,37 @@ describe('Sidebar swipes', () => {
     pointer(control, 'pointermove', 235)
     pointer(document, 'pointerup', 235)
     expect(isOpen(store)).toBe(true)
+  })
+
+  it('cancels a song long-press when the sidebar swipe claims the touch', () => {
+    const onPlay = vi.fn()
+    const onStartSelection = vi.fn()
+    const song = {
+      id: 'song-1',
+      title: 'Swipe target',
+      artist: 'Test artist',
+      album: 'Test album',
+      duration: 180,
+    }
+    const { store } = renderSidebar(
+      false,
+      <ModernTrackRows
+        songs={[song]}
+        onPlay={onPlay}
+        onStartSelection={onStartSelection}
+      />,
+    )
+    const row = screen.getByRole('button', { name: 'Play Swipe target' })
+
+    pointer(row, 'pointerdown', 20, 300)
+    tick(LONG_PRESS_DELAY - 1)
+    pointer(row, 'pointermove', 50, 300)
+    pointer(row, 'pointerup', 50, 300)
+    tick(1)
+
+    expect(isOpen(store)).toBe(true)
+    expect(onStartSelection).not.toHaveBeenCalled()
+    expect(onPlay).not.toHaveBeenCalled()
   })
 
   it('reverses immediately after dragging past the fully open edge', () => {

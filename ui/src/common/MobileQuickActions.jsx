@@ -60,9 +60,11 @@ const useStyles = makeStyles((theme) => {
     },
     // Tags and Genres Carousel Row
     tagsRow: {
-      width: '100%',
-      maxWidth: '100%',
+      width: 'calc(100% + 32px)',
+      maxWidth: 'none',
       minWidth: 0,
+      marginLeft: -16,
+      marginRight: -16,
       display: 'flex',
       flexDirection: 'row',
       alignItems: 'center',
@@ -75,7 +77,7 @@ const useStyles = makeStyles((theme) => {
       },
       WebkitOverflowScrolling: 'touch',
       boxSizing: 'border-box',
-      padding: '4px 0 8px 0',
+      padding: '4px 16px 8px',
       gap: 8,
       userSelect: 'none',
       position: 'relative',

@@ -63,6 +63,13 @@ const useStyles = makeStyles((theme) => {
       height: '100%',
       maxHeight: '100%',
       overflow: 'hidden',
+      [theme.breakpoints.down('md')]: {
+        width: 'calc(100% + 32px) !important',
+        maxWidth: 'calc(100% + 32px) !important',
+        marginLeft: '-16px !important',
+        paddingLeft: '16px !important',
+        paddingRight: '16px !important',
+      },
     },
     rootUnconstrained: {
       flex: '0 0 auto',
@@ -97,13 +104,18 @@ const useStyles = makeStyles((theme) => {
         maxWidth: '100% !important',
         overflowX: 'hidden !important',
       },
+      [theme.breakpoints.down('md')]: {
+        width: 'calc(100% + 32px) !important',
+        maxWidth: 'calc(100% + 32px) !important',
+        marginLeft: '-16px !important',
+        paddingLeft: '16px !important',
+        paddingRight: '16px !important',
+      },
       [theme.breakpoints.down('xs')]: {
         flex: '1 1 auto',
         minHeight: 0,
         height: '100%',
         maxHeight: '100% !important',
-        width: '100% !important',
-        maxWidth: '100% !important',
         overflowX: 'hidden !important',
       },
     },
@@ -123,13 +135,18 @@ const useStyles = makeStyles((theme) => {
         width: '100% !important',
         maxWidth: '100% !important',
         minWidth: '0 !important',
-        overflowX: 'hidden !important',
+        overflowX: 'visible !important',
         boxSizing: 'border-box !important',
         paddingBottom: 0,
         paddingTop: 'var(--nd-mobile-top-offset, 82px)',
       },
     },
     tableWrapperUnconstrained: {
+      [theme.breakpoints.down('sm')]: {
+        paddingTop: '0 !important',
+      },
+    },
+    tableWrapperSelection: {
       [theme.breakpoints.down('sm')]: {
         paddingTop: '0 !important',
       },
@@ -194,64 +211,21 @@ const useStyles = makeStyles((theme) => {
         display: 'none',
       },
     },
-    summary: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      minHeight: 48,
-      padding: theme.spacing(0.75, 2),
-      borderRadius: 24,
-      backgroundColor: isDark
-        ? 'rgba(26, 26, 32, 0.95)'
-        : 'rgba(245, 245, 248, 0.95)',
-      border: `1px solid ${controlBorder}`,
-      boxShadow: isDark
-        ? '0 8px 32px rgba(0, 0, 0, 0.45)'
-        : '0 8px 24px rgba(0, 0, 0, 0.08)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      marginBottom: theme.spacing(1.5),
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    mobileSelectionToolbar: {
+      display: 'none',
       [theme.breakpoints.down('sm')]: {
-        backdropFilter: 'none',
-        WebkitBackdropFilter: 'none',
-        padding: theme.spacing(0.75, 1.25),
-        flexWrap: 'wrap',
-        gap: theme.spacing(1),
-        borderRadius: 16,
-        '& .MuiButton-root': {
-          backdropFilter: 'none',
-          WebkitBackdropFilter: 'none',
-        },
-      },
-      '& .MuiButton-root': {
-        borderRadius: '19px !important',
-        height: '38px !important',
-        boxSizing: 'border-box !important',
-        margin: '0 !important',
-        padding: '0 15px !important',
-        textTransform: 'none !important',
-        fontSize: '0.875rem !important',
-        fontWeight: '500 !important',
-        backgroundColor: `${controlBackground} !important`,
-        color: `${theme.palette.text.primary} !important`,
-        border: `1px solid ${controlBorder} !important`,
-        boxShadow: 'none !important',
-        backdropFilter: 'blur(10px)',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important',
-        display: 'inline-flex !important',
-        alignItems: 'center !important',
-        justifyContent: 'center !important',
-        gap: 6,
-        '&:hover': {
-          backgroundColor: `${controlHoverBackground} !important`,
-          borderColor: `${controlHoverBorder} !important`,
-          transform: 'translateY(-1px)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25) !important',
-        },
-        '& svg': {
-          fontSize: '1.15rem',
-        },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'sticky',
+        top: 'var(--nd-mobile-top-offset, 92px)',
+        zIndex: 11,
+        width: '100%',
+        minHeight: 36,
+        marginTop: 'var(--nd-mobile-top-offset, 92px)',
+        marginBottom: theme.spacing(1.5),
+        gap: theme.spacing(0.75),
+        boxSizing: 'border-box',
       },
     },
     summaryLabel: {
@@ -260,9 +234,15 @@ const useStyles = makeStyles((theme) => {
       fontWeight: 600,
       letterSpacing: '0.01em',
     },
+    summaryMeta: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: theme.spacing(0.5),
+      minWidth: 0,
+    },
     clearButton: {
       padding: 4,
-      marginLeft: theme.spacing(0.5),
+      flex: '0 0 auto',
       color: theme.palette.text.secondary,
       '&:hover': {
         color: theme.palette.text.primary,
@@ -274,6 +254,34 @@ const useStyles = makeStyles((theme) => {
       alignItems: 'center',
       gap: theme.spacing(1),
       flexWrap: 'wrap',
+      '& .MuiIconButton-root': {
+        width: 38,
+        height: 38,
+        padding: 8,
+        borderRadius: '19px',
+        color: `${theme.palette.text.primary} !important`,
+        backgroundColor: `${controlBackground} !important`,
+        border: `1px solid ${controlBorder} !important`,
+        '&:hover': {
+          backgroundColor: `${controlHoverBackground} !important`,
+        },
+        '& svg': {
+          fontSize: '1.15rem',
+        },
+      },
+      [theme.breakpoints.down('sm')]: {
+        minWidth: 0,
+        flex: '1 1 auto',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: theme.spacing(0.75),
+        '& .MuiIconButton-root': {
+          flex: '0 0 34px',
+          width: 34,
+          height: 34,
+          padding: 6,
+        },
+      },
     },
     headerRow: {
       position: 'sticky',
@@ -296,6 +304,10 @@ const useStyles = makeStyles((theme) => {
         padding: theme.spacing(0.5, 1, 0.5, 1),
         gap: 16,
       },
+    },
+    headerRowSelection: {
+      visibility: 'hidden',
+      pointerEvents: 'none',
     },
     headerCell: {
       display: 'inline-flex',
@@ -756,11 +768,20 @@ export const ModernTrackRows = ({
     const startX = event.clientX
     const startY = event.clientY
     const timer = setTimeout(() => {
+      if (press.current?.pointerId !== pointerId) return
+      press.current.timer = undefined
+      press.current.longPressed = true
       suppressNextClick(songId)
-      press.current = undefined
       onStartSelection(songId)
     }, LONG_PRESS_DELAY)
-    press.current = { pointerId, startX, startY, timer, moved: false }
+    press.current = {
+      pointerId,
+      startX,
+      startY,
+      timer,
+      moved: false,
+      longPressed: false,
+    }
   }
 
   const moveLongPress = (event) => {
@@ -784,15 +805,25 @@ export const ModernTrackRows = ({
     if (activePress.timer) clearTimeout(activePress.timer)
     press.current = undefined
 
+    // The sidebar swipe handler prevents the claimed pointer release. Let this
+    // row clear its long-press timer without also activating the song.
+    if (event.defaultPrevented) return
+
     const target = event.target
     const isNestedControl = target?.closest?.(
       'button, a, input, select, textarea, [role="checkbox"], [data-row-interactive]',
     )
-    if (
-      event.pointerType === 'mouse' ||
-      activePress.moved ||
-      isNestedControl
-    ) {
+    if (activePress.longPressed) {
+      event.preventDefault()
+      suppressNextClick(song.id)
+      return
+    }
+    if (activePress.moved && event.pointerType !== 'mouse') {
+      event.preventDefault()
+      suppressNextClick(song.id)
+      return
+    }
+    if (event.pointerType === 'mouse' || isNestedControl) {
       return
     }
 
@@ -801,13 +832,22 @@ export const ModernTrackRows = ({
     activateSong(song)
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const suppressGeneratedClick = (event) => {
+      if (suppressClick.current === undefined) return
+      if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)
+      suppressClick.current = undefined
+      suppressClickTimer.current = undefined
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    document.addEventListener('click', suppressGeneratedClick, true)
+    return () => {
+      document.removeEventListener('click', suppressGeneratedClick, true)
       if (press.current?.timer) clearTimeout(press.current.timer)
       if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)
-    },
-    [],
-  )
+    }
+  }, [])
 
   const defaultGrid = selectionMode
     ? '36px 56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
@@ -1033,37 +1073,17 @@ export const ModernSongList = ({
 
   if (loading && songs.length === 0) return <LinearProgress />
 
-  const allVisibleSelected =
-    songs.length > 0 && songs.every((song) => selectedIds.includes(song.id))
-  const someVisibleSelected = songs.some((song) =>
-    selectedIds.includes(song.id),
-  )
-
-  const handleSelectAll = () => {
-    const visibleIds = songs.map((song) => song.id)
-    onSelect(
-      allVisibleSelected
-        ? selectedIds.filter((id) => !visibleIds.includes(id))
-        : [...new Set([...selectedIds, ...visibleIds])],
-    )
-  }
-
   return (
     <div
       className={`${classes.root} ${
         !scrollable ? classes.rootUnconstrained : ''
       }`}
     >
-      {selectionMode && (
-        <div className={classes.summary}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Checkbox
-              checked={allVisibleSelected}
-              color="primary"
-              indeterminate={!allVisibleSelected && someVisibleSelected}
-              inputProps={{ 'aria-label': 'Select visible songs' }}
-              onChange={handleSelectAll}
-            />
+      {selectionMode && isMobile && (
+        <div className={classes.mobileSelectionToolbar}>
+          <Box
+            className={classes.summaryMeta}
+          >
             <Typography className={classes.summaryLabel}>
               {`${selectedIds.length} selected`}
             </Typography>
@@ -1077,7 +1097,11 @@ export const ModernSongList = ({
             </IconButton>
           </Box>
           <Box className={classes.bulkActionsGroup}>
-            <SongBulkActions />
+            <SongBulkActions
+              resource="song"
+              selectedIds={selectedIds}
+              compact
+            />
           </Box>
         </div>
       )}
@@ -1090,46 +1114,60 @@ export const ModernSongList = ({
         <div
           className={`${classes.tableWrapper} ${
             !scrollable ? classes.tableWrapperUnconstrained : ''
-          }`}
+          } ${selectionMode ? classes.tableWrapperSelection : ''}`}
         >
-          {isMobile && showQuickActions && (
-            <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>
+          {isMobile && showQuickActions && !selectionMode && (
+            <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'visible' }}>
               <MobileQuickActions resource="song" />
             </div>
           )}
-          {!selectionMode && !isMobile && (
-            <div className={classes.headerRow} style={{ gridTemplateColumns }}>
-              <div />
-              <div
-                className={`${classes.headerCell} ${
-                  currentSort?.field === 'title' ? classes.headerCellActive : ''
-                }`}
-                onClick={handleSort('title')}
-              >
-                {translate('resources.song.fields.title', { _: 'Title' })}
-                {renderSortIndicator('title')}
-              </div>
-              {activeColumns.map((col) => {
-                const isColActive = currentSort?.field === col.sortField
-                return (
+          {!isMobile && (
+            <div
+              className={`${classes.headerRow} ${
+                selectionMode ? classes.headerRowSelection : ''
+              }`}
+              style={{ gridTemplateColumns }}
+              aria-hidden={selectionMode}
+            >
+              {!selectionMode && (
+                <>
+                  <div />
                   <div
-                    key={col.id}
                     className={`${classes.headerCell} ${
-                      isColActive ? classes.headerCellActive : ''
+                      currentSort?.field === 'title'
+                        ? classes.headerCellActive
+                        : ''
                     }`}
-                    onClick={handleSort(col.sortField, col.defaultDesc)}
-                    title={translate(col.labelKey, { _: col.defaultLabel })}
+                    onClick={handleSort('title')}
                   >
-                    {col.id === 'starred' ? (
-                      <FavoriteBorderIcon fontSize="small" />
-                    ) : (
-                      translate(col.labelKey, { _: col.defaultLabel })
-                    )}
-                    {renderSortIndicator(col.sortField)}
+                    {translate('resources.song.fields.title', { _: 'Title' })}
+                    {renderSortIndicator('title')}
                   </div>
-                )
-              })}
-              <div />
+                  {activeColumns.map((col) => {
+                    const isColActive = currentSort?.field === col.sortField
+                    return (
+                      <div
+                        key={col.id}
+                        className={`${classes.headerCell} ${
+                          isColActive ? classes.headerCellActive : ''
+                        }`}
+                        onClick={handleSort(col.sortField, col.defaultDesc)}
+                        title={translate(col.labelKey, {
+                          _: col.defaultLabel,
+                        })}
+                      >
+                        {col.id === 'starred' ? (
+                          <FavoriteBorderIcon fontSize="small" />
+                        ) : (
+                          translate(col.labelKey, { _: col.defaultLabel })
+                        )}
+                        {renderSortIndicator(col.sortField)}
+                      </div>
+                    )
+                  })}
+                  <div />
+                </>
+              )}
             </div>
           )}
 

@@ -83,6 +83,9 @@ const useStyles = makeStyles((theme) => ({
           margin: '0 !important',
           padding: '0 !important',
         },
+      '& .song-list-page, & .song-list-page [class*="RaList-main"], & .song-list-page [class*="RaList-content"], & .song-list-page .MuiCard-root': {
+        overflow: 'visible !important',
+      },
     },
     '& #main-content': {
       width: '100%',

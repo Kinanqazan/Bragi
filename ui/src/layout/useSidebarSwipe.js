@@ -207,7 +207,6 @@ export default function useSidebarSwipe(open, onChange) {
       gestureRef.current = null
       if (!gesture.claimed) return
       event.preventDefault()
-      event.stopPropagation()
       suppressClickRef.current = true
       if (frameRef.current != null) {
         window.cancelAnimationFrame(frameRef.current)
@@ -228,7 +227,6 @@ export default function useSidebarSwipe(open, onChange) {
     const handleCancel = (event) => {
       if (gestureRef.current?.pointerId === event.pointerId) {
         if (gestureRef.current.claimed) {
-          event.stopPropagation()
           suppressClickRef.current = true
         }
         cancelGesture()
