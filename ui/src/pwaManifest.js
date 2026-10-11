@@ -8,6 +8,7 @@ export function createPwaManifest({ development = false } = {}) {
       'Bragi, a modern music collection server and streamer',
     categories: ['music', 'entertainment'],
     display: 'standalone',
+    orientation: 'portrait',
     ...(development
       ? {
           id: '/app/',

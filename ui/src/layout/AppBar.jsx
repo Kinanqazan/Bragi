@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import clsx from 'clsx'
 import { toggleSidebar, changeListParams, useTranslate } from 'react-admin'
 import { MdClose } from 'react-icons/md'
 import MenuIcon from '@material-ui/icons/Menu'
@@ -19,7 +18,6 @@ import {
 import { alpha } from '@material-ui/core/styles'
 import { Dialogs } from '../dialogs/Dialogs'
 import CastButton from '../cast/CastButton'
-import BragiLogo from '../icons/BragiLogo'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
 import { getStoredPerPage } from '../common/perPageStore'
 import { createSongListResetAction } from '../song/songListNavigation'
@@ -73,48 +71,47 @@ const useStyles = makeStyles(
           color: 'inherit',
         },
       },
-      // Fixed YouTube Music Style Collapsible Mobile Header
+      // The fade and controls share this fixed layer so controls paint above it.
       mobileAppBar: {
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-        paddingBottom: '8px',
-        paddingLeft: '14px',
-        paddingRight: '14px',
-        background: `${MOBILE_BACKGROUND_COLOR} !important`,
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        background: 'transparent !important',
+        backgroundColor: 'transparent !important',
         color: `${theme.palette.text.primary} !important`,
         boxShadow: 'none !important',
         border: 'none !important',
         borderBottom: 'none !important',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
         position: 'fixed !important',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: `${theme.zIndex.drawer + 1} !important`,
+        zIndex: `${theme.zIndex.modal - 2} !important`,
         width: '100vw',
         maxWidth: '100vw',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        transition: 'none',
-        transform: 'translateY(0)',
-        opacity: 1,
-        '&::after': {
+        pointerEvents: 'none',
+        '&::before': {
           content: '""',
-          position: 'absolute',
-          top: '100%',
-          left: 0,
+          position: 'fixed',
+          zIndex: 0,
+          top: 0,
           right: 0,
-          height: 14,
-          background: `linear-gradient(to bottom, ${MOBILE_BACKGROUND_COLOR}, transparent)`,
+          left: 0,
+          height: 'calc(env(safe-area-inset-top, 0px) + 150px)',
           pointerEvents: 'none',
+          background: `linear-gradient(
+            to bottom,
+            #000 0,
+            rgba(0, 0, 0, 0.96) calc(env(safe-area-inset-top, 0px) + 8px),
+            rgba(0, 0, 0, 0.76) calc(env(safe-area-inset-top, 0px) + 42px),
+            rgba(0, 0, 0, 0.34) calc(env(safe-area-inset-top, 0px) + 88px),
+            transparent 100%
+          )`,
         },
-      },
-      mobileAppBarHidden: {
-        transform: 'translateY(-100%) !important',
-        opacity: 0,
-        pointerEvents: 'none !important',
       },
       mobileBackBar: {
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
@@ -140,46 +137,35 @@ const useStyles = makeStyles(
         fontWeight: 600,
       },
       topRow: {
+        position: 'relative',
+        zIndex: 1,
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '100%',
-        height: 48,
-        minHeight: 48,
+        height: 56,
+        minHeight: 56,
         boxSizing: 'border-box',
-      },
-      leftGroup: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-      },
-      brandContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        cursor: 'pointer',
-        userSelect: 'none',
-        WebkitTapHighlightColor: 'transparent',
-      },
-      brandLogo: {
-        width: 28,
-        height: 28,
-        color: theme.brandColor || theme.palette.primary.main,
-        flexShrink: 0,
-      },
-      brandTitle: {
-        fontSize: '1.3rem',
-        fontWeight: 700,
-        letterSpacing: '-0.02em',
-        color: theme.palette.text.primary,
-        lineHeight: 1,
+        willChange: 'opacity, transform',
       },
       rightGroup: {
         display: 'flex',
         alignItems: 'center',
-        gap: 4,
-        marginRight: 8,
+        gap: 10,
+      },
+      floatingActionButton: {
+        width: 64,
+        height: 48,
+        padding: 0,
+        borderRadius: 24,
+        color: '#f5f5f5',
+        backgroundColor: '#242424',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 3px 12px rgba(0, 0, 0, 0.22)',
+        '&:hover': {
+          backgroundColor: '#323232',
+        },
       },
       headerIconButton: {
         padding: 8,
@@ -199,13 +185,14 @@ const useStyles = makeStyles(
         width: '100%',
         height: 46,
         borderRadius: 23,
-        backgroundColor: isDark
-          ? 'rgba(255, 255, 255, 0.12)'
-          : 'rgba(0, 0, 0, 0.06)',
+        backgroundColor: '#242424',
         padding: '0 4px',
         boxSizing: 'border-box',
         transition: 'all 0.2s ease',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'}`,
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        '& .MuiIconButton-root': {
+          color: '#f5f5f5',
+        },
       },
       expandedSearchInput: {
         flex: 1,
@@ -213,12 +200,12 @@ const useStyles = makeStyles(
         marginLeft: 8,
         marginRight: 8,
         fontSize: '1rem',
-        color: theme.palette.text.primary,
+        color: '#f5f5f5',
         '& input': {
           padding: '8px 0',
-          color: `${theme.palette.text.primary} !important`,
+          color: '#f5f5f5 !important',
           '&::placeholder': {
-            color: theme.palette.text.secondary,
+            color: 'rgba(245, 245, 245, 0.68)',
             opacity: 0.85,
           },
         },
@@ -237,26 +224,27 @@ const useStyles = makeStyles(
   },
 )
 
-// Track scroll movement across any child scrollable container (capture phase).
-const useHeaderCollapse = (headerRef, enabled = true, resetKey = '') => {
-  const [offset, setOffset] = useState(0)
+// Track vertical page-scroll movement in the direction the controls reveal.
+const useScrollRevealProgress = (headerRef, enabled = true, resetKey = '') => {
+  const [offset, setOffset] = useState(null)
   const offsetRef = useRef(0)
   const lastScrollY = useRef(0)
   const lastScrollTarget = useRef(null)
 
-  // AppBar survives route changes. Do not carry a hidden state or a scroll
-  // baseline from the previous page into the next one.
+  // The layout persists across routes; reset the motion baseline on navigation.
   useEffect(() => {
-    offsetRef.current = 0
-    setOffset(0)
+    const maxOffset = headerRef.current?.getBoundingClientRect().height || 82
+    offsetRef.current = maxOffset
+    setOffset(maxOffset)
     lastScrollY.current = 0
     lastScrollTarget.current = null
-  }, [resetKey])
+  }, [headerRef, resetKey])
 
   useEffect(() => {
     if (!enabled) {
-      offsetRef.current = 0
-      setOffset(0)
+      const maxOffset = headerRef.current?.getBoundingClientRect().height || 82
+      offsetRef.current = maxOffset
+      setOffset(maxOffset)
       return
     }
 
@@ -271,24 +259,34 @@ const useHeaderCollapse = (headerRef, enabled = true, resetKey = '') => {
 
       if (currentScrollY === undefined) return
 
-      // Different pages can own different scroll containers. Establish a
-      // baseline for a new container instead of comparing it with the old page.
+      const isRootScroller = target === document || target === window
+      if (
+        !isRootScroller &&
+        !/auto|scroll/.test(window.getComputedStyle(target).overflowY)
+      ) {
+        return
+      }
+
+      // Don't apply another scroll container's position as a sudden movement.
       if (target !== lastScrollTarget.current) {
+        const hasPreviousTarget = lastScrollTarget.current !== null
         lastScrollTarget.current = target
-        lastScrollY.current = 0
+        lastScrollY.current = hasPreviousTarget ? currentScrollY : 0
+        if (hasPreviousTarget && currentScrollY > 0) return
       }
 
       const diff = currentScrollY - lastScrollY.current
       lastScrollY.current = currentScrollY
       const maxOffset = headerRef.current?.getBoundingClientRect().height || 82
+      // Reveal controls as content moves down (scrollTop decreases), and
+      // retract them as content moves up (scrollTop increases).
       const nextOffset = Math.max(
         0,
-        Math.min(maxOffset, offsetRef.current + diff),
+        Math.min(maxOffset, offsetRef.current - diff),
       )
 
-      // At the top, restore the full bar even if the browser reports a small
-      // negative scroll position during overscroll.
-      offsetRef.current = currentScrollY <= 0 ? 0 : nextOffset
+      // Keep controls fully revealed at the top, including during overscroll.
+      offsetRef.current = currentScrollY <= 0 ? maxOffset : nextOffset
       setOffset(offsetRef.current)
     }
 
@@ -331,24 +329,37 @@ const MobileTopBar = () => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(Boolean(searchQuery))
   const debounceTimerRef = useRef(null)
-  const headerOffset = useHeaderCollapse(
+  const headerOffset = useScrollRevealProgress(
     headerRef,
     !isSearchOpen,
     location.key || `${location.pathname}${location.search}${location.hash}`,
   )
   const headerHeight = headerRef.current?.getBoundingClientRect().height || 82
-  const isHeaderFullyCollapsed = headerOffset >= headerHeight
+  const controlsProgress =
+    isSearchOpen || headerOffset === null
+      ? 1
+      : Math.max(0, Math.min(1, headerOffset / headerHeight))
 
-  const isSongPage =
-    location.pathname === '/' || location.pathname.startsWith('/song')
-
-  // Set CSS top offset property dynamically so list content starts cleanly below fixed top bar with a generous gap
+  // Keep the scroll content below the safe area and floating control row.
   useEffect(() => {
-    const topOffset = 'calc(env(safe-area-inset-top, 0px) + 82px)'
-    document.documentElement.style.setProperty(
+    const topOffset = 'calc(env(safe-area-inset-top, 0px) + 92px)'
+    const rootStyle = document.documentElement.style
+    const previousOffset = rootStyle.getPropertyValue('--nd-mobile-top-offset')
+    const previousPriority = rootStyle.getPropertyPriority(
       '--nd-mobile-top-offset',
-      topOffset,
     )
+    rootStyle.setProperty('--nd-mobile-top-offset', topOffset)
+    return () => {
+      if (previousOffset) {
+        rootStyle.setProperty(
+          '--nd-mobile-top-offset',
+          previousOffset,
+          previousPriority,
+        )
+      } else {
+        rootStyle.removeProperty('--nd-mobile-top-offset')
+      }
+    }
   }, [])
 
   const handleMenuClick = useCallback(() => {
@@ -486,17 +497,24 @@ const MobileTopBar = () => {
     <MuiAppBar
       position="fixed"
       ref={headerRef}
-      className={clsx(
-        classes.mobileAppBar,
-        isHeaderFullyCollapsed && classes.mobileAppBarHidden,
-      )}
-      style={{ transform: `translateY(-${headerOffset}px)` }}
+      className={classes.mobileAppBar}
+      style={{
+        pointerEvents: 'none',
+      }}
     >
       {/* Hidden React-Admin Title Portal anchor */}
       <span id="react-admin-title" style={{ display: 'none' }} />
 
       {/* Row 1: YouTube Music Style Top Bar */}
-      <div className={classes.topRow}>
+      <div
+        className={classes.topRow}
+        style={{
+          opacity: controlsProgress,
+          transform: `translateY(${(controlsProgress - 1) * 24}px)`,
+          visibility: controlsProgress > 0 ? 'visible' : 'hidden',
+          pointerEvents: controlsProgress > 0 ? 'auto' : 'none',
+        }}
+      >
         {isSearchOpen ? (
           <ClickAwayListener onClickAway={handleCloseSearch}>
             <div className={classes.expandedSearchRow}>
@@ -536,41 +554,28 @@ const MobileTopBar = () => {
           </ClickAwayListener>
         ) : (
           <>
-            {/* Left: Menu Hamburger + App Branding */}
-            <div className={classes.leftGroup}>
-              <IconButton
-                className={classes.headerIconButton}
-                onClick={handleMenuClick}
-                aria-label="Open menu"
-                tabIndex={-1}
-              >
-                <MenuIcon style={{ fontSize: 28 }} />
-              </IconButton>
-
-              <div
-                className={classes.brandContainer}
-                onClick={() => history.push('/song')}
-                role="button"
-                tabIndex={0}
-                title="Bragi"
-              >
-                <BragiLogo className={classes.brandLogo} />
-                <Typography className={classes.brandTitle}>Bragi</Typography>
-              </div>
-            </div>
+            <IconButton
+              className={classes.floatingActionButton}
+              onClick={handleMenuClick}
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              <MenuIcon style={{ fontSize: 28 }} />
+            </IconButton>
 
             {/* Right: Search Icon + Cast Button */}
             <div className={classes.rightGroup}>
               <IconButton
-                className={classes.headerIconButton}
+                className={classes.floatingActionButton}
                 onClick={() => setIsSearchOpen(true)}
                 aria-label="Search your music"
+                title="Search your music"
               >
                 <SearchIcon style={{ fontSize: 27 }} />
               </IconButton>
 
               <CastButton
-                className={classes.headerIconButton}
+                className={classes.floatingActionButton}
                 size={27}
                 tabIndex={-1}
               />

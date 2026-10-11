@@ -76,7 +76,7 @@ describe('<AppBar />', () => {
     expect(container.querySelector('#react-admin-title')).toBeInTheDocument()
   })
 
-  it('renders mobile YouTube Music header and expands search on mobile screens on music pages', async () => {
+  it('renders floating mobile controls and expands search on music pages', async () => {
     useMediaQuery.mockReturnValue(true) // isMobile = true
     const { fireEvent } = await import('@testing-library/react')
     render(
@@ -89,7 +89,7 @@ describe('<AppBar />', () => {
     expect(screen.getByLabelText('Search your music')).toBeInTheDocument()
     expect(screen.getByLabelText('Cast to device')).toBeInTheDocument()
     expect(screen.getByLabelText('Open menu')).toBeInTheDocument()
-    expect(screen.getByLabelText('Bragi')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Bragi')).not.toBeInTheDocument()
 
     // Clicking search icon expands search input
     fireEvent.click(screen.getByLabelText('Search your music'))
@@ -175,10 +175,9 @@ describe('<AppBar />', () => {
     )
     expect(screen.queryByPlaceholderText('Search your music')).toBeNull()
     unmountUser()
-
   })
 
-  it('restores the fixed header when navigating after it was hidden by scrolling', () => {
+  it('reveals controls with reverse scroll progress and restores them at the top or after navigation', () => {
     useMediaQuery.mockReturnValue(true)
 
     const RouteControls = () => {
@@ -190,7 +189,7 @@ describe('<AppBar />', () => {
           <button onClick={() => history.push('/song')}>Songs</button>
           <div
             data-testid="scroll-source"
-            style={{ height: 2000, overflow: 'auto' }}
+            style={{ height: 2000, overflowY: 'auto' }}
           />
         </>
       )
@@ -207,16 +206,33 @@ describe('<AppBar />', () => {
 
     const header = () =>
       screen.getByLabelText('Open menu').closest('.MuiAppBar-root')
+    const controls = () => header().querySelector('[class*="topRow"]')
 
     fireEvent.scroll(screen.getByTestId('scroll-source'), {
       target: { scrollTop: 100 },
     })
-    expect(header().className).toMatch(/mobileAppBarHidden/)
+    expect(Number(controls().style.opacity)).toBe(0)
+
+    fireEvent.scroll(screen.getByTestId('scroll-source'), {
+      target: { scrollTop: 70 },
+    })
+    expect(Number(controls().style.opacity)).toBeGreaterThan(0)
+    expect(Number(controls().style.opacity)).toBeLessThan(1)
+
+    fireEvent.scroll(screen.getByTestId('scroll-source'), {
+      target: { scrollTop: 0 },
+    })
+    expect(Number(controls().style.opacity)).toBe(1)
+
+    fireEvent.scroll(screen.getByTestId('scroll-source'), {
+      target: { scrollTop: 100 },
+    })
+    expect(Number(controls().style.opacity)).toBe(0)
 
     fireEvent.click(screen.getByRole('button', { name: 'Genres' }))
-    expect(header().className).not.toMatch(/mobileAppBarHidden/)
+    expect(Number(controls().style.opacity)).toBe(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Songs' }))
-    expect(header().className).not.toMatch(/mobileAppBarHidden/)
+    expect(Number(controls().style.opacity)).toBe(1)
   })
 })

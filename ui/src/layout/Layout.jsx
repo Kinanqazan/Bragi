@@ -8,13 +8,17 @@ import {
   createTheme,
 } from '@material-ui/core/styles'
 import Menu from './Menu'
+import Sidebar from './Sidebar'
 import AppBar from './AppBar'
 import Notification from './Notification'
 import MobileBottomNav from './MobileBottomNav'
 import useCurrentTheme from '../themes/useCurrentTheme'
 import { useSearchRefocus } from '../common'
 import { desktopPlayerMediaQuery } from '../audioplayer/playerLayout'
-import { MOBILE_BACKGROUND_COLOR } from '../consts'
+import {
+  MOBILE_BACKGROUND_COLOR,
+  MOBILE_SIDEBAR_BACKGROUND_COLOR,
+} from '../consts'
 
 const useStyles = makeStyles((theme) => ({
   root: (props) => ({
@@ -45,8 +49,8 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: `${theme.palette.background?.default || '#0d0d0f'} !important`,
       background: `${theme.palette.background?.default || '#0d0d0f'} !important`,
       '@media (max-width: 959.95px)': {
-        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
-        background: `${MOBILE_BACKGROUND_COLOR} !important`,
+        backgroundColor: `${MOBILE_SIDEBAR_BACKGROUND_COLOR} !important`,
+        background: `${MOBILE_SIDEBAR_BACKGROUND_COLOR} !important`,
       },
     },
     '& [class*="appFrame"], & [class*="contentWithSidebar"], & [class*="RaLayout-appFrame"], & [class*="RaLayout-content"], & [class*="RaLayout-children"], & .RaSidebar-root, & [class*="RaSidebar"], & .MuiDrawer-docked':
@@ -457,6 +461,7 @@ const Layout = (props) => {
           content: classes.content,
         }}
         menu={Menu}
+        sidebar={Sidebar}
         appBar={AppBar}
         theme={themeConfig}
         notification={Notification}

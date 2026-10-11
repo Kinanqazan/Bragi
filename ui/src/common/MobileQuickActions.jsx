@@ -96,20 +96,20 @@ const useStyles = makeStyles((theme) => {
     },
     actionBtn: {
       flex: '0 1 22%',
-      height: 44,
+      height: 36,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 14,
+      borderRadius: 18,
       cursor: 'pointer',
       userSelect: 'none',
       WebkitTapHighlightColor: 'transparent',
       transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
       backgroundColor: isDark
-        ? 'rgba(255, 255, 255, 0.06)'
-        : 'rgba(0, 0, 0, 0.04)',
+        ? 'rgba(255, 255, 255, 0.12)'
+        : 'rgba(0, 0, 0, 0.06)',
       color: theme.palette.text.primary,
-      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.09)'}`,
+      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
       position: 'relative',
       '@media (hover: hover)': {
         '&:hover': {
@@ -142,9 +142,9 @@ const useStyles = makeStyles((theme) => {
       alignItems: 'center',
       justifyContent: 'center',
       height: 36,
-      padding: '0 16px',
+      padding: '0 18px',
       borderRadius: 18,
-      fontSize: '0.88rem',
+      fontSize: '1rem',
       fontWeight: 500,
       whiteSpace: 'nowrap',
       cursor: 'pointer',
@@ -161,11 +161,6 @@ const useStyles = makeStyles((theme) => {
       '&:active': {
         transform: 'scale(0.94)',
       },
-    },
-    moodTagChip: {
-      borderRadius: 11,
-      backgroundColor: alpha(theme.palette.text.primary, isDark ? 0.14 : 0.08),
-      border: `1px solid ${alpha(theme.palette.text.primary, isDark ? 0.2 : 0.14)}`,
     },
     tagChipActive: {
       backgroundColor: isDark
@@ -562,7 +557,6 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
                 <div
                   className={clsx(
                     classes.tagChip,
-                    tag.type === 'mood' && classes.moodTagChip,
                     active && classes.tagChipActive,
                   )}
                   onClick={() => handleTagClick(tag)}

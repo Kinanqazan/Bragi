@@ -11,6 +11,7 @@ import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined'
 import WbSunnyIcon from '@material-ui/icons/WbSunny'
 import clsx from 'clsx'
 import { useTranslate } from 'react-admin'
+import { MOBILE_SIDEBAR_BACKGROUND_COLOR } from '../consts'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -29,12 +30,8 @@ const useStyles = makeStyles((theme) => {
       height: 54,
       paddingBottom: 'env(safe-area-inset-bottom)',
       boxSizing: 'content-box',
-      backgroundColor: isDark
-        ? 'rgba(13, 13, 15, 0.92)'
-        : 'rgba(255, 255, 255, 0.92)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+      backgroundColor: MOBILE_SIDEBAR_BACKGROUND_COLOR,
+      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
       boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.35)',
       userSelect: 'none',
       [theme.breakpoints.up('md')]: {
@@ -51,10 +48,10 @@ const useStyles = makeStyles((theme) => {
       alignItems: 'center',
       justifyContent: 'center',
       textDecoration: 'none',
-      color: isDark ? 'rgba(255, 255, 255, 0.52)' : 'rgba(0, 0, 0, 0.5)',
+      color: 'rgba(255, 255, 255, 0.52)',
       padding: '4px',
       boxSizing: 'border-box',
-      transition: 'color 0.2s ease, transform 0.16s ease',
+      transition: 'transform 0.1s ease',
       WebkitTapHighlightColor: 'transparent',
       '&:active': {
         transform: 'scale(0.88)',
@@ -76,7 +73,8 @@ const useStyles = makeStyles((theme) => {
       height: 34,
       borderRadius: 17,
       backgroundColor: 'transparent',
-      transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+      // Match the route immediately; animate only the small scale feedback.
+      transition: 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
       '& svg': {
         fontSize: 25,
       },
@@ -172,10 +170,7 @@ const MobileBottomNav = () => {
   React.useEffect(
     () =>
       history.listen((nextLocation, action) => {
-        if (
-          action === 'POP' ||
-          !bottomNavPaths.has(nextLocation.pathname)
-        ) {
+        if (action === 'POP' || !bottomNavPaths.has(nextLocation.pathname)) {
           hasBottomTabLayer.current = false
         }
       }),

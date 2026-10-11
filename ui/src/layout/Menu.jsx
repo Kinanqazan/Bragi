@@ -53,7 +53,7 @@ import authProvider from '../authProvider'
 import config from '../config'
 import { startEventStream } from '../eventStream'
 import { useInitialScanStatus } from './useInitialScanStatus'
-import { MOBILE_BACKGROUND_COLOR } from '../consts'
+import { MOBILE_SIDEBAR_BACKGROUND_COLOR } from '../consts'
 
 const EMPTY_SIDEBAR_LINK = { label: '', url: '' }
 
@@ -103,13 +103,13 @@ const useStyles = makeStyles((theme) => {
       [theme.breakpoints.down('sm')]: {
         height: '100%',
         minHeight: '100vh',
-        paddingTop: 'max(20px, calc(env(safe-area-inset-top, 0px) + 16px))',
+        paddingTop: 'max(32px, calc(env(safe-area-inset-top, 0px) + 28px))',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
-        paddingLeft: theme.spacing(1.5),
+        paddingLeft: theme.spacing(2.5),
         paddingRight: theme.spacing(1.5),
         marginBottom: 0,
         borderRight: 'none',
-        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+        backgroundColor: `${MOBILE_SIDEBAR_BACKGROUND_COLOR} !important`,
       },
     },
     brandHeader: {
@@ -154,8 +154,8 @@ const useStyles = makeStyles((theme) => {
       color: theme.brandColor || theme.palette.primary.main,
       filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
       [theme.breakpoints.down('sm')]: {
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
       },
     },
     brandLogoSmall: {
@@ -174,7 +174,7 @@ const useStyles = makeStyles((theme) => {
       color: theme.palette.text.primary,
       lineHeight: 1,
       [theme.breakpoints.down('sm')]: {
-        fontSize: '1.2rem',
+        fontSize: '1.3rem',
       },
     },
     brandToggleButton: {
@@ -282,9 +282,18 @@ const useStyles = makeStyles((theme) => {
       },
       [theme.breakpoints.down('sm')]: {
         margin: '3px 0',
-        padding: '9px 12px',
-        '& .RaMenuItemLink-icon': {
-          minWidth: 38,
+        padding: '10px 12px',
+        fontSize: '1.0625rem',
+        '& .MuiListItemText-primary': {
+          fontSize: '1.0625rem',
+        },
+        '& .RaMenuItemLink-icon, & .MuiListItemIcon-root': {
+          minWidth: 40,
+        },
+        '& svg': {
+          width: 26,
+          height: 26,
+          fontSize: 26,
         },
       },
     },
@@ -348,8 +357,8 @@ const useStyles = makeStyles((theme) => {
       backgroundColor: alpha(theme.palette.primary.main, 0.2),
       color: theme.palette.primary.main,
       [theme.breakpoints.down('sm')]: {
-        width: 36,
-        height: 36,
+        width: 38,
+        height: 38,
       },
     },
     userNameWrapper: {
@@ -366,7 +375,7 @@ const useStyles = makeStyles((theme) => {
       color: theme.palette.text.primary,
       lineHeight: 1.2,
       [theme.breakpoints.down('sm')]: {
-        fontSize: '0.92rem',
+        fontSize: '1rem',
       },
     },
     syncButton: {
@@ -393,8 +402,8 @@ const useStyles = makeStyles((theme) => {
       [theme.breakpoints.down('sm')]: {
         padding: 10,
         '& svg': {
-          width: 24,
-          height: 24,
+          width: 26,
+          height: 26,
         },
       },
     },
@@ -534,10 +543,11 @@ const settingsResources = (resource) =>
   resource.options &&
   resource.options.subMenu === 'settings'
 
-const Menu = ({ dense = false }) => {
+const Menu = ({ dense = false, sidebarOpen }) => {
   const dispatch = useDispatch()
   const history = useHistory()
-  const open = useSelector((state) => state.admin.ui.sidebarOpen)
+  const storedOpen = useSelector((state) => state.admin.ui.sidebarOpen)
+  const open = sidebarOpen ?? storedOpen
   const isMobile = useMediaQuery((theme) => theme.breakpoints.down('sm'))
   const translate = useTranslate()
   const notify = useNotify()

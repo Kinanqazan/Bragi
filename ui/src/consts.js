@@ -8,6 +8,8 @@ export const AUTO_THEME_CONFIG_VALUE = 'Auto'
 
 export const MOBILE_BACKGROUND_COLOR = '#121214'
 
+export const MOBILE_SIDEBAR_BACKGROUND_COLOR = '#1a1a1e'
+
 export const DEFAULT_SHARE_BITRATE = 128
 
 export const BITRATE_CHOICES = [
