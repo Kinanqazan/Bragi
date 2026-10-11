@@ -73,7 +73,7 @@ const useStyles = makeStyles(
       },
       // The fade and controls share this fixed layer so controls paint above it.
       mobileAppBar: {
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
         paddingLeft: '16px',
         paddingRight: '16px',
         background: 'transparent !important',
@@ -101,14 +101,14 @@ const useStyles = makeStyles(
           top: 0,
           right: 0,
           left: 0,
-          height: 'calc(env(safe-area-inset-top, 0px) + 150px)',
+          height: 'calc(env(safe-area-inset-top, 0px) + 112px)',
           pointerEvents: 'none',
           background: `linear-gradient(
             to bottom,
             #000 0,
             rgba(0, 0, 0, 0.96) calc(env(safe-area-inset-top, 0px) + 8px),
-            rgba(0, 0, 0, 0.76) calc(env(safe-area-inset-top, 0px) + 42px),
-            rgba(0, 0, 0, 0.34) calc(env(safe-area-inset-top, 0px) + 88px),
+            rgba(0, 0, 0, 0.76) calc(env(safe-area-inset-top, 0px) + 32px),
+            rgba(0, 0, 0, 0.34) calc(env(safe-area-inset-top, 0px) + 64px),
             transparent 100%
           )`,
         },
