@@ -150,6 +150,7 @@ const DesktopPlayer = ({ bridge, queue, onClear, lyrics }) => {
       {queueOpen && (
         <QueueDrawer
           queue={queue}
+          snapshot={snapshot}
           currentIndex={snapshot.currentIndex}
           commands={commands}
           onClose={() => setQueueOpen(false)}

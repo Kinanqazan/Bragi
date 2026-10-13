@@ -1,6 +1,7 @@
 import {
   PLAYER_ADD_TRACKS,
   PLAYER_CLEAR_QUEUE,
+  PLAYER_REMOVE_TRACK,
   PLAYER_CURRENT,
   PLAYER_PLAY_NEXT,
   PLAYER_PLAY_TRACKS,
@@ -24,6 +25,30 @@ const tracksFromData = (data = {}) =>
   Object.keys(data).map((id) => toQueueTrack(data[id]))
 
 const reduceClearQueue = () => ({ ...initialState, clear: true })
+
+const reduceRemoveTrack = (state, { data }) => {
+  if (!data?.uuid) return state
+  const index = state.queue.findIndex((track) => track.uuid === data.uuid)
+  if (index < 0) return state
+  const queue = state.queue.filter((_, position) => position !== index)
+  const activeIndex =
+    Number.isInteger(data.currentIndex) && data.currentIndex >= 0
+      ? data.currentIndex
+      : (state.playIndex ?? state.savedPlayIndex ?? 0)
+  const removedCurrent = index === activeIndex
+  const nextIndex = queue.length
+    ? Math.min(activeIndex - (index < activeIndex ? 1 : 0), queue.length - 1)
+    : undefined
+  return {
+    ...state,
+    queue,
+    playIndex: removedCurrent ? nextIndex : undefined,
+    savedPlayIndex: nextIndex ?? 0,
+    current: removedCurrent || !queue.length ? {} : state.current,
+    clear: false,
+    autoPlay: Boolean(queue.length && removedCurrent && data.playing),
+  }
+}
 
 const reducePlayTracks = (state, { data, id, ids }) => {
   let playIndex = 0
@@ -141,6 +166,8 @@ export const playerReducer = (previousState = initialState, payload) => {
   switch (payload.type) {
     case PLAYER_CLEAR_QUEUE:
       return reduceClearQueue()
+    case PLAYER_REMOVE_TRACK:
+      return reduceRemoveTrack(previousState, payload)
     case PLAYER_PLAY_TRACKS:
       return reducePlayTracks(previousState, payload)
     case PLAYER_SET_TRACK:

@@ -53,16 +53,27 @@ vi.mock('./MobilePlayerBar', () => ({
   ),
 }))
 vi.mock('./PlayerControls', () => ({
-  default: ({ snapshot, commands }) => (
-    <button
-      type="button"
-      aria-label={snapshot.playing ? 'Pause' : 'Play'}
-      onClick={snapshot.playing ? commands.pause : commands.play}
-    />
+  default: ({ snapshot, commands, onQueue }) => (
+    <>
+      <button
+        type="button"
+        aria-label={snapshot.playing ? 'Pause' : 'Play'}
+        onClick={snapshot.playing ? commands.pause : commands.play}
+      />
+      <button type="button" aria-label="Open queue" onClick={onQueue} />
+    </>
   ),
 }))
 vi.mock('./ProgressBar', () => ({ default: () => null }))
-vi.mock('./QueueDrawer', () => ({ default: () => null }))
+vi.mock('./QueueDrawer', () => ({
+  default: () => (
+    <aside
+      className="nd-player-queue-drawer"
+      aria-label="Playback queue"
+      data-testid="queue-drawer"
+    />
+  ),
+}))
 vi.mock('./TrackIdentity', () => ({
   default: ({ shared, titleRef, artistRef, gestureHandlers, track }) =>
     shared ? (
@@ -187,6 +198,26 @@ describe('MobilePlayerSurface gestures', () => {
     const shell = screen.getByTestId('mobile-player-shell')
 
     expect(Number(getComputedStyle(shell).zIndex)).toBe(1400)
+  })
+
+  it('opens the queue above shared playback controls without starting playback', () => {
+    const commands = {
+      play: vi.fn(),
+      pause: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+    }
+    renderSurface(vi.fn(), true, commands)
+
+    screen.getByRole('button', { name: 'Open queue' }).click()
+
+    const drawer = screen.getByTestId('queue-drawer')
+    const shell = screen.getByTestId('mobile-player-shell')
+    expect(drawer.parentElement).toBe(shell)
+    expect(
+      screen.getByRole('region', { name: 'Full-screen player' }).contains(drawer),
+    ).toBe(false)
+    expect(commands.play).not.toHaveBeenCalled()
   })
 
   it('provides ambient artwork color to the backdrop and mobile player bar', () => {

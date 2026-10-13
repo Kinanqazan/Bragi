@@ -196,8 +196,7 @@ code {
 
 .nd-player-controls .MuiIconButton-root:focus-visible,
 .nd-player-queue-drawer button:focus-visible,
-.nd-player-volume button:focus-visible,
-.nd-player-queue-drawer:focus-visible {
+.nd-player-volume button:focus-visible {
   outline: 2px solid var(--nd-player-accent, currentColor);
   outline-offset: 2px;
 }
@@ -360,8 +359,7 @@ code {
   gap: 8px;
 }
 
-.nd-player-volume button,
-.nd-player-queue-drawer header button {
+.nd-player-volume button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -373,70 +371,194 @@ code {
 }
 
 .nd-player-queue-drawer {
-  position: absolute;
-  inset: 12px;
-  z-index: 4;
-  overflow: auto;
-  padding: 12px;
+  position: fixed;
+  z-index: 1600;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 680px);
+  height: min(82dvh, 760px);
+  max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 8px));
+  margin: 0 auto;
+  overflow: hidden;
+  outline: none;
+  padding: 8px max(env(safe-area-inset-right, 0px), 18px)
+    max(env(safe-area-inset-bottom, 0px), 16px)
+    max(env(safe-area-inset-left, 0px), 18px);
   color: inherit;
   background: var(--nd-player-surface, #202027);
-  border: 1px solid var(--nd-player-muted, currentColor);
-  border-radius: 10px;
+  border: 1px solid var(--nd-player-divider, currentColor);
+  border-bottom: 0;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
+  animation: nd-player-queue-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition:
+    height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: height, transform;
+  touch-action: pan-y;
 }
 
-.nd-player-queue-drawer header {
+.nd-player-queue-drawer.is-expanded {
+  height: calc(100dvh - max(env(safe-area-inset-top, 0px), 8px));
+}
+
+.nd-player-queue-drawer-handle {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex: 0 0 20px;
+  align-items: flex-start;
+  justify-content: center;
+  touch-action: none;
+  cursor: grab;
 }
 
-.nd-player-queue-drawer h2 {
-  margin: 0;
-  font-size: 1rem;
+.nd-player-queue-drawer-handle span {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--nd-player-muted, currentColor);
+  opacity: 0.7;
+}
+
+.nd-player-queue-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 4px 2px 10px;
+  border-bottom: 1px solid var(--nd-player-divider, currentColor);
+}
+
+.nd-player-queue-toolbar button {
+  display: inline-flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--nd-player-accent, currentColor);
+  background: var(--nd-player-tint, transparent);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.16s ease, transform 0.16s ease;
+}
+
+.nd-player-queue-toolbar button:hover {
+  background: var(--nd-player-tint-hover, var(--nd-player-tint, transparent));
+  transform: scale(1.04);
+}
+
+.nd-player-queue-toolbar button svg {
+  font-size: 28px;
+}
+
+.nd-player-queue-toolbar .nd-player-queue-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 3px;
+}
+
+.nd-player-queue-toolbar .nd-player-queue-action {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  color: var(--nd-player-muted, currentColor);
+  background: transparent;
+}
+
+.nd-player-queue-toolbar .nd-player-queue-action svg {
+  font-size: 20px;
 }
 
 .nd-player-queue-drawer ol {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
 }
 
+.nd-player-queue-drawer li {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.nd-player-queue-drawer li[data-swiping='true'] {
+  background: var(--nd-player-remove-tint);
+}
+
+.nd-player-queue-remove-hint {
+  position: absolute;
+  inset: 0 auto 0 14px;
+  display: flex;
+  align-items: center;
+  color: var(--nd-player-remove);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nd-player-queue-drawer li[data-swiping='true'] .nd-player-queue-remove-hint {
+  opacity: 1;
+}
+
 .nd-player-queue-drawer li button {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
   padding: 9px;
-  color: inherit;
+  color: var(--nd-player-text, inherit);
   text-align: left;
-  background: transparent;
+  background: var(--nd-player-surface, #202027);
   border: 0;
   border-radius: 6px;
   cursor: pointer;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nd-player-queue-drawer li button:hover {
+  background:
+    linear-gradient(var(--nd-player-tint-hover), var(--nd-player-tint-hover)),
+    var(--nd-player-surface, #202027);
 }
 
 .nd-player-queue-drawer li button.is-current {
   color: var(--nd-player-accent, #3f8cff);
-  background: rgba(127, 127, 127, 0.14);
-}
-
-.nd-player-queue-drawer > button {
-  margin: 8px 4px 0 0;
-  padding: 7px 10px;
-  color: inherit;
-  background: transparent;
-  border: 1px solid var(--nd-player-muted, currentColor);
-  border-radius: 6px;
-  cursor: pointer;
+  background:
+    linear-gradient(var(--nd-player-tint), var(--nd-player-tint)),
+    var(--nd-player-surface, #202027);
 }
 
 .nd-player-queue-drawer small {
   margin-top: 2px;
-  opacity: 0.7;
+  color: var(--nd-player-muted, currentColor);
 }
 
-@media (max-width: 809px) {
+@keyframes nd-player-queue-rise {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
   .nd-player-queue-drawer {
-    top: max(64px, calc(env(safe-area-inset-top) + 48px));
+    animation-duration: 1ms;
+    transition-duration: 1ms;
   }
 }
 
@@ -477,14 +599,7 @@ body.is-resizing [role="separator"] {
   }
 }
 
-#main-content > .list-page,
-#main-content > [class*="RaList-root"],
-#main-content > [class*="RaShow-root"],
-#main-content > [class*="RaEdit-root"],
-#main-content > [class*="RaCreate-root"],
-#main-content > [class*="personal-root"],
-#main-content > .MuiCard-root,
-#main-content > div:not(.MuiDialog-root) {
+#main-content > *:not(.MuiDialog-root) {
   animation: nd-page-fade-in 0.16s cubic-bezier(0.2, 0, 0.2, 1) both;
 }
 

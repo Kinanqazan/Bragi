@@ -1143,17 +1143,18 @@ const MobilePlayerSurface = ({
               </div>
             )}
           </div>
-          {queueOpen && (
-            <QueueDrawer
-              queue={queue}
-              currentIndex={snapshot.currentIndex}
-              commands={commands}
-              onClose={() => setQueueOpen(false)}
-              onClear={onClear}
-            />
-          )}
         </section>
       </div>
+      {queueOpen && (
+        <QueueDrawer
+          queue={queue}
+          currentIndex={snapshot.currentIndex}
+          snapshot={snapshot}
+          commands={commands}
+          onClose={() => setQueueOpen(false)}
+          onClear={onClear}
+        />
+      )}
       <MobilePlayerBar
         rootRef={miniRef}
         artworkRef={miniArtworkRef}

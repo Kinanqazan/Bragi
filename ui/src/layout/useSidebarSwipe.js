@@ -10,6 +10,8 @@ import {
 const intentThreshold = 12
 const clamp = (value) => Math.max(0, Math.min(1, value))
 const snapEasing = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const sidebarSwipeLocked = () =>
+  Boolean(document.querySelector('[data-sidebar-swipe-lock="true"]'))
 
 const ownsHorizontalGesture = (target) => {
   if (
@@ -128,6 +130,7 @@ export default function useSidebarSwipe(open, onChange) {
         cancelGesture()
         return
       }
+      if (sidebarSwipeLocked()) return
       if (
         event.isPrimary === false ||
         (event.pointerType === 'mouse' && event.button !== 0)
@@ -159,6 +162,10 @@ export default function useSidebarSwipe(open, onChange) {
     const handleMove = (event) => {
       const gesture = gestureRef.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
+      if (sidebarSwipeLocked()) {
+        cancelGesture()
+        return
+      }
       const dx = event.clientX - gesture.startX
       const dy = event.clientY - gesture.startY
       if (!gesture.claimed) {
@@ -205,6 +212,10 @@ export default function useSidebarSwipe(open, onChange) {
     const handleUp = (event) => {
       const gesture = gestureRef.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
+      if (sidebarSwipeLocked()) {
+        cancelGesture()
+        return
+      }
       gestureRef.current = null
       if (!gesture.claimed) return
       event.preventDefault()

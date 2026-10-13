@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createTheme, ThemeProvider } from '@material-ui/core/styles'
 import { useMediaQuery } from '@material-ui/core'
@@ -8,6 +8,7 @@ import { setSidebarVisibility } from 'react-admin'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LONG_PRESS_DELAY, ModernTrackRows } from '../song/ModernSongList'
 import Sidebar from './Sidebar'
+import QueueDrawer from '../audioplayer/QueueDrawer'
 
 vi.mock('../common/Artwork', () => ({
   Artwork: () => <div />,
@@ -126,6 +127,42 @@ describe('Sidebar swipes', () => {
     cleanup()
     vi.restoreAllMocks()
     vi.useRealTimers()
+  })
+
+  it('blocks sidebar swipes across the app while the queue is open and restores them after closing', () => {
+    const QueueFixture = () => {
+      const [visible, setVisible] = useState(true)
+      return (
+        <>
+          <button onClick={() => setVisible(false)}>Close test queue</button>
+          {visible && (
+            <QueueDrawer
+              queue={[{ uuid: 'queued-1', title: 'Queued song' }]}
+              commands={{ select: vi.fn() }}
+              onClose={() => setVisible(false)}
+            />
+          )}
+        </>
+      )
+    }
+    const { store, paper, control } = renderSidebar(false, <QueueFixture />)
+    const row = screen.getByRole('button', { name: 'Queued song' })
+    for (const target of [row, control]) {
+      pointer(target, 'pointerdown', 20)
+      tick(20)
+      pointer(target, 'pointermove', 180)
+      tick()
+      pointer(target, 'pointerup', 180)
+      expect(isOpen(store)).toBe(false)
+      expect(paper).not.toBeVisible()
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Close test queue' }))
+    pointer(control, 'pointerdown', 20)
+    tick(20)
+    pointer(control, 'pointermove', 180)
+    tick()
+    pointer(control, 'pointerup', 180)
+    expect(isOpen(store)).toBe(true)
   })
 
   it('tracks partial movement from the middle of the app without committing Redux', () => {

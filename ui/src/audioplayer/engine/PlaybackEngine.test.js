@@ -28,6 +28,23 @@ const makeEngine = (options = {}) => {
 }
 
 describe('PlaybackEngine', () => {
+  it.each([true, false])(
+    'keeps the current stream and position when an earlier song is removed (playing=%s)',
+    async (playing) => {
+      const { audio, engine, resolveStreamUrl } = makeEngine()
+      await engine.setQueue(tracks, 1, { autoplay: playing })
+      engine.seek(45)
+      await engine.setQueue([tracks[1], tracks[2]], 0, { autoplay: false })
+      expect(resolveStreamUrl).toHaveBeenCalledTimes(1)
+      expect(audio.currentTime).toBe(45)
+      expect(engine.getSnapshot()).toMatchObject({
+        currentIndex: 0,
+        currentTrack: tracks[1],
+        playing,
+      })
+      engine.destroy()
+    },
+  )
   it('loads and plays the selected track', async () => {
     const { audio, engine } = makeEngine()
     const listener = vi.fn()

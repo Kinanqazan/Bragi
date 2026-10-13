@@ -470,8 +470,9 @@ export const createPlaybackEngine = ({
       return Promise.resolve(true)
     }
 
-    if (sameTrack && currentIndex === nextIndex) {
+    if (sameTrack) {
       currentTrack = normalizedQueue[nextIndex]
+      currentIndex = nextIndex
       if (Number.isFinite(options.position) && options.position >= 0) {
         seek(options.position)
       }

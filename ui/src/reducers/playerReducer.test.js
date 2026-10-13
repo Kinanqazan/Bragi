@@ -8,6 +8,7 @@ import {
   playTracks,
   setTrack,
   updateTrackMetadata,
+  removeQueuedTrack,
 } from '../actions'
 
 const song = (id, title = id) => ({
@@ -19,6 +20,70 @@ const song = (id, title = id) => ({
 })
 
 describe('playerReducer', () => {
+  it('removes only the swiped occurrence of a repeated song and reindexes the current entry', () => {
+    let state = playerReducer(
+      undefined,
+      playTracks({ a: song('a'), b: song('b') }, ['a', 'a', 'b'], 'b'),
+    )
+    state = playerReducer(state, currentPlaying(state.queue[2]))
+    const next = playerReducer(
+      state,
+      removeQueuedTrack(state.queue[0].uuid, 2, true),
+    )
+    expect(next.queue.map((track) => track.uuid)).toEqual([
+      state.queue[1].uuid,
+      state.queue[2].uuid,
+    ])
+    expect(next.current.uuid).toBe(state.current.uuid)
+    expect(next.savedPlayIndex).toBe(1)
+    expect(next.playIndex).toBeUndefined()
+    expect(next.autoPlay).toBe(false)
+    expect(
+      playerReducer(next, removeQueuedTrack(state.queue[0].uuid, 1, true)),
+    ).toBe(next)
+  })
+
+  it.each([true, false])(
+    'removes the current song and preserves playing=%s for its successor',
+    (playing) => {
+      const state = playerReducer(
+        undefined,
+        playTracks(
+          { a: song('a'), b: song('b'), c: song('c') },
+          undefined,
+          'b',
+        ),
+      )
+      const next = playerReducer(
+        state,
+        removeQueuedTrack(state.queue[1].uuid, 1, playing),
+      )
+      expect(next.queue.map((track) => track.trackId)).toEqual(['a', 'c'])
+      expect(next.playIndex).toBe(1)
+      expect(next.autoPlay).toBe(playing)
+      expect(next.current).toEqual({})
+    },
+  )
+
+  it('removes the final queue item without resetting player preferences', () => {
+    const state = {
+      ...playerReducer(undefined, setTrack(song('a'))),
+      volume: 0.42,
+      mode: 'shuffle',
+    }
+    const next = playerReducer(
+      state,
+      removeQueuedTrack(state.queue[0].uuid, 0, true),
+    )
+    expect(next).toMatchObject({
+      queue: [],
+      current: {},
+      autoPlay: false,
+      volume: 0.42,
+      mode: 'shuffle',
+    })
+    expect(next.playIndex).toBeUndefined()
+  })
   it('stores serializable tracks without stream resolver functions', () => {
     const state = playerReducer(undefined, playTracks({ first: song('first') }))
     expect(state.queue).toHaveLength(1)
