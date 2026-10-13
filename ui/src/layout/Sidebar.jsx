@@ -1,4 +1,4 @@
-import React, { cloneElement, useCallback, useRef } from 'react'
+import React, { cloneElement, useCallback, useLayoutEffect, useRef } from 'react'
 import { Backdrop, Modal, Paper, useMediaQuery } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import { Sidebar as RASidebar, setSidebarVisibility } from 'react-admin'
@@ -45,15 +45,22 @@ const MobileSidebar = ({ children }) => {
     (value) => dispatch(setSidebarVisibility(value)),
     [dispatch],
   )
-  const { paperRef, present, dragging } = useSidebarSwipe(open, changeOpen)
+  const { paperRef, present } = useSidebarSwipe(open, changeOpen)
+
+  useLayoutEffect(() => {
+    if (!present) return
+    const paper = paperRef.current
+    if (!paper || paper.contains(document.activeElement)) return
+
+    // Move focus before Material UI hides #root from assistive technology.
+    paper.focus()
+  }, [paperRef, present])
 
   return (
     <Modal
       className={`MuiDrawer-root MuiDrawer-modal ${classes.modal}`}
       open={present}
       keepMounted
-      disableAutoFocus={dragging || !open}
-      disableEnforceFocus={dragging || !open}
       onClose={() => changeOpen(false)}
       BackdropComponent={Backdrop}
       BackdropProps={{ invisible: true, transitionDuration: 0 }}

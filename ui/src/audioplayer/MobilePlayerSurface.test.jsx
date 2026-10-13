@@ -148,6 +148,7 @@ const dispatchPointer = (element, type, properties) => {
 
 describe('MobilePlayerSurface gestures', () => {
   beforeEach(() => {
+    artworkColorMocks.useArtworkColor.mockClear()
     const rect = (left, top, width, height) => ({
       left,
       top,

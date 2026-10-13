@@ -15,6 +15,7 @@ import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -81,6 +82,7 @@ import com.google.android.gms.common.images.WebImage;
 import com.google.android.material.button.MaterialButton;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int FILE_CHOOSER_REQUEST_CODE = 4102;
     private static final String PREFS_NAME = "bragi_prefs";
     private static final String KEY_SERVER_URL = "server_url";
     private static final String KEY_DEV_MODE = "dev_mode_enabled";
@@ -90,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private volatile int exitDialogAccentColor = Color.parseColor("#90CAF9");
 
     private WebView webView;
+    private ValueCallback<Uri[]> fileChooserCallback;
     private View serverConnectLayout;
     private EditText serverUrlInput;
     private CheckBox devModeCheckbox;
@@ -785,6 +788,27 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onShowFileChooser(
+                    WebView view,
+                    ValueCallback<Uri[]> filePathCallback,
+                    FileChooserParams fileChooserParams) {
+                if (fileChooserCallback != null) {
+                    fileChooserCallback.onReceiveValue(null);
+                }
+                fileChooserCallback = filePathCallback;
+
+                try {
+                    Intent intent = fileChooserParams.createIntent();
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                    return true;
+                } catch (android.content.ActivityNotFoundException exception) {
+                    fileChooserCallback.onReceiveValue(null);
+                    fileChooserCallback = null;
+                    return false;
+                }
+            }
+
+            @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 if (newProgress < 100) {
                     loadingProgress.setVisibility(View.VISIBLE);
@@ -856,6 +880,18 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != FILE_CHOOSER_REQUEST_CODE || fileChooserCallback == null) {
+            return;
+        }
+
+        Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        fileChooserCallback.onReceiveValue(results);
+        fileChooserCallback = null;
     }
 
     private void injectAudioListeners() {
@@ -1313,6 +1349,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (fileChooserCallback != null) {
+            fileChooserCallback.onReceiveValue(null);
+            fileChooserCallback = null;
+        }
         stopMediaRouteDiscovery();
         releaseMulticastLock();
         if (castContext != null && castContext.getSessionManager() != null) {

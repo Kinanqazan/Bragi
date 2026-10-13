@@ -89,7 +89,9 @@ describe('<AppBar />', () => {
     expect(screen.getByLabelText('Search your music')).toBeInTheDocument()
     expect(screen.getByLabelText('Cast to device')).toBeInTheDocument()
     expect(screen.getByLabelText('Open menu')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Bragi')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Bragi').parentElement).toContainElement(
+      screen.getByLabelText('Open menu'),
+    )
 
     // Clicking search icon expands search input
     fireEvent.click(screen.getByLabelText('Search your music'))

@@ -135,7 +135,9 @@ describe('<Menu />', () => {
     expect(screen.queryByText('Administrator')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Refresh App')).toBeInTheDocument()
     expect(screen.queryByLabelText('Sync / Quick scan')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Settings & Activity')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('User profile & system settings'),
+    ).toBeInTheDocument()
   })
 
   it('renders menu links in correct desktop order (Genres and Moods under Artists, Playlist under Most Played)', () => {
@@ -161,6 +163,7 @@ describe('<Menu />', () => {
       '/song/recentlyPlayed',
       '/song/mostPlayed',
       '/playlist',
+      '/statistics',
     ])
   })
 
@@ -232,7 +235,7 @@ describe('<Menu />', () => {
     expect(subsonic.startScan).toHaveBeenCalledWith({ fullScan: false })
   })
 
-  it('opens unified popover menu with activity stats, settings, and full scan when card is clicked', () => {
+  it('opens unified popover menu with scan actions and settings when card is clicked', () => {
     render(
       <Provider store={store}>
         <MemoryRouter>
@@ -245,8 +248,6 @@ describe('<Menu />', () => {
     fireEvent.click(userCard)
 
     // Check popover content
-    expect(screen.getByText('Server & Sync Status')).toBeInTheDocument()
-    expect(screen.getByText('1500')).toBeInTheDocument()
     expect(screen.getByText('Quick Scan')).toBeInTheDocument()
     expect(screen.getByText('Full Scan')).toBeInTheDocument()
     expect(screen.getByText('Personal Settings')).toBeInTheDocument()

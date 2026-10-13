@@ -3,6 +3,7 @@ package org.bragi.app;
 import android.content.Context;
 import android.os.Bundle;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -60,6 +61,8 @@ public class BragiCastChooserDialogFragment extends MediaRouteChooserDialogFragm
                     return;
                 }
                 routeListView = (ListView) list;
+                routeListView.setDivider(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+                routeListView.setDividerHeight(dp(context, 8));
                 routeListView.setOnScrollListener(new AbsListView.OnScrollListener() {
                     @Override
                     public void onScrollStateChanged(AbsListView view, int scrollState) {
@@ -93,13 +96,6 @@ public class BragiCastChooserDialogFragment extends MediaRouteChooserDialogFragm
                 }
 
                 String connectedDevice = activity.getCastDeviceNameForPicker();
-                if (TextUtils.isEmpty(connectedDevice)) {
-                    return;
-                }
-                String currentTitle = activity.getCastMediaTitleForPicker();
-                String subtitle = !TextUtils.isEmpty(currentTitle)
-                        ? currentTitle
-                        : formatRouteDescription(activity.getCastRouteDescriptionForPicker());
                 int nameId = context.getResources().getIdentifier(
                         "mr_chooser_route_name", "id", context.getPackageName());
                 int descriptionId = context.getResources().getIdentifier(
@@ -113,39 +109,16 @@ public class BragiCastChooserDialogFragment extends MediaRouteChooserDialogFragm
                         continue;
                     }
 
-                    boolean active = connectedDevice.equalsIgnoreCase(name.getText().toString().trim());
-                    row.setBackground(active
-                            ? ContextCompat.getDrawable(context, R.drawable.cast_picker_connected_row)
-                            : null);
+                    boolean active = !TextUtils.isEmpty(connectedDevice)
+                            && connectedDevice.equalsIgnoreCase(name.getText().toString().trim());
+                    row.setBackground(ContextCompat.getDrawable(context, active
+                            ? R.drawable.cast_picker_connected_row
+                            : R.drawable.cast_picker_device_row));
                     name.setTextColor(ContextCompat.getColor(context, active
                             ? R.color.cast_picker_accent
                             : R.color.cast_picker_text_primary));
-                    if (active) {
-                        description.setVisibility(TextUtils.isEmpty(subtitle) ? View.GONE : View.VISIBLE);
-                        if (!TextUtils.isEmpty(subtitle)
-                                && !subtitle.contentEquals(description.getText())) {
-                            description.setText(subtitle);
-                        }
-                    }
+                    description.setVisibility(View.GONE);
                 }
-            }
-
-            private String formatRouteDescription(String description) {
-                if (TextUtils.isEmpty(description)) {
-                    return "";
-                }
-                String formatted = description.trim();
-                if (formatted.length() > 1 && formatted.startsWith("(") && formatted.endsWith(")")) {
-                    formatted = formatted.substring(1, formatted.length() - 1).trim();
-                }
-                int separator = formatted.indexOf(':');
-                if (separator > 0) {
-                    String prefix = formatted.substring(0, separator).trim();
-                    if ("diffusion".equalsIgnoreCase(prefix) || "bragi".equalsIgnoreCase(prefix)) {
-                        formatted = formatted.substring(separator + 1).trim();
-                    }
-                }
-                return formatted;
             }
 
             private void addLocalPlaybackOption(Context context) {

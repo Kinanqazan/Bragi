@@ -15,6 +15,7 @@ const ffmpeg = path.join(
   'ffmpeg.exe',
 );
 const brandBackground = '#5B805F';
+const androidLauncherBackground = '#6B946F';
 const faviconColor = '#66B76D';
 const androidLauncherOnly = process.argv.includes('--android-launcher-only');
 
@@ -91,7 +92,7 @@ try {
     '-f',
     'lavfi',
     '-i',
-    `color=c=${brandBackground}:s=512x512:r=1:d=1`,
+    `color=c=${androidLauncherBackground}:s=512x512:r=1:d=1`,
     '-i',
     dynamicLogoMask,
     '-filter_complex',

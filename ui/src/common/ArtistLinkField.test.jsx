@@ -50,7 +50,7 @@ describe('ArtistLinkField', () => {
   })
 
   describe('when rendering artists', () => {
-    it('runs the supplied mobile artist action on touch release only once', () => {
+    it('runs the supplied mobile artist action on click after touch release', () => {
       const onArtistClick = vi.fn((event) => event.preventDefault())
       render(
         <ArtistLinkField
@@ -74,7 +74,7 @@ describe('ArtistLinkField', () => {
         clientY: 12,
       }))
 
-      expect(onArtistClick).toHaveBeenCalledOnce()
+      expect(onArtistClick).not.toHaveBeenCalled()
       const click = new MouseEvent('click', {
         bubbles: true,
         cancelable: true,

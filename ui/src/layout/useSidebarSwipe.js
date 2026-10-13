@@ -6,7 +6,8 @@ import {
   useState,
 } from 'react'
 
-const intentThreshold = 6
+// Leave enough movement for ordinary finger drift on menu links to remain a tap.
+const intentThreshold = 12
 const clamp = (value) => Math.max(0, Math.min(1, value))
 const snapEasing = 'cubic-bezier(0.22, 1, 0.36, 1)'
 

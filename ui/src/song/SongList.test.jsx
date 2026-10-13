@@ -7,6 +7,7 @@ const createTheme = (type = 'dark') => ({
   palette: {
     type,
     text: { primary: type === 'dark' ? '#fff' : '#111' },
+    background: { default: type === 'dark' ? '#121214' : '#fff' },
   },
   spacing: (value) => value * 8,
 })

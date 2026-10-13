@@ -36,8 +36,12 @@ vi.mock('react-admin', async () => ({
   ),
 }))
 
+const onMenuItemClick = vi.fn()
 const Menu = ({ sidebarOpen }) => (
-  <div>{sidebarOpen ? 'Expanded menu' : 'Collapsed menu'}</div>
+  <div>
+    {sidebarOpen ? 'Expanded menu' : 'Collapsed menu'}
+    <button onClick={onMenuItemClick}>Artists</button>
+  </div>
 )
 
 const renderSidebar = (open = false, content = null) => {
@@ -110,6 +114,7 @@ const isOpen = (store) => store.getState().admin.ui.sidebarOpen
 describe('Sidebar swipes', () => {
   beforeEach(() => {
     useMediaQuery.mockReturnValue(true)
+    onMenuItemClick.mockClear()
     vi.useFakeTimers()
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) =>
       setTimeout(callback, 16),
@@ -204,8 +209,8 @@ describe('Sidebar swipes', () => {
 
     pointer(row, 'pointerdown', 20, 300)
     tick(LONG_PRESS_DELAY - 1)
-    pointer(row, 'pointermove', 50, 300)
-    pointer(row, 'pointerup', 50, 300)
+    pointer(row, 'pointermove', 160, 300)
+    pointer(row, 'pointerup', 160, 300)
     tick(1)
 
     expect(isOpen(store)).toBe(true)
@@ -290,6 +295,19 @@ describe('Sidebar swipes', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  it('keeps the first menu item tap when the finger drifts toward drawer close', () => {
+    const { paper } = renderSidebar(true)
+    const artists = screen.getByRole('button', { name: 'Artists' })
+    expect(paper).toBeVisible()
+
+    pointer(artists, 'pointerdown', 100)
+    expect(pointer(artists, 'pointermove', 93).defaultPrevented).toBe(false)
+    pointer(document, 'pointerup', 93)
+    fireEvent.click(artists, { detail: 1 })
+
+    expect(onMenuItemClick).toHaveBeenCalledOnce()
+  })
+
   it.each(['Search', 'Seek', 'Artwork'])(
     'preserves the %s interaction',
     (label) => {
@@ -324,6 +342,18 @@ describe('Sidebar swipes', () => {
     tick(300)
     fireEvent.click(document.querySelector('.MuiBackdrop-root'))
     expect(isOpen(store)).toBe(false)
+  })
+
+  it('keeps focus in the drawer until its close transition finishes', () => {
+    const { store, paper, control } = renderSidebar(true)
+    act(() => {
+      store.dispatch(setSidebarVisibility(false))
+    })
+
+    // The modal remains present during the exit animation, so focus must not
+    // return to an element inside the aria-hidden app root yet.
+    control.focus()
+    expect(paper.contains(document.activeElement)).toBe(true)
   })
 
   it('ignores other pointers and unwinds a second touch', () => {

@@ -167,6 +167,19 @@ const useStyles = makeStyles(
         color: theme.brandColor || theme.palette.primary.main,
         filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25))',
       },
+      menuBrandPill: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        height: 48,
+        padding: '0 10px 0 4px',
+        borderRadius: 24,
+        backgroundColor: '#242424',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 3px 12px rgba(0, 0, 0, 0.22)',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+      },
       floatingActionButton: {
         width: 64,
         height: 48,
@@ -568,15 +581,17 @@ const MobileTopBar = () => {
         ) : (
           <>
             <div className={classes.leftGroup}>
-              <IconButton
-                className={classes.floatingActionButton}
-                onClick={handleMenuClick}
-                aria-label="Open menu"
-                title="Open menu"
-              >
-                <MenuIcon style={{ fontSize: 28 }} />
-              </IconButton>
-              <BragiLogo className={classes.mobileBrandLogo} />
+              <div className={classes.menuBrandPill}>
+                <IconButton
+                  className={classes.headerIconButton}
+                  onClick={handleMenuClick}
+                  aria-label="Open menu"
+                  title="Open menu"
+                >
+                  <MenuIcon style={{ fontSize: 28 }} />
+                </IconButton>
+                <BragiLogo className={classes.mobileBrandLogo} />
+              </div>
             </div>
 
             {/* Right: Search Icon + Cast Button */}

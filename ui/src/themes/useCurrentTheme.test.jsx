@@ -174,7 +174,7 @@ describe('useCurrentTheme', () => {
         ),
       })
 
-      expect(document.body.style.backgroundColor).toBe('rgb(13, 13, 15)')
+      expect(document.body.style.backgroundColor).toBe('rgb(18, 18, 20)')
     })
   })
 })

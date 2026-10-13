@@ -32,19 +32,15 @@ describe('CastButton', () => {
     mockedRequestCastSession.mockClear()
   })
 
-  it('offers Play on this device and ends casting when selected', async () => {
+  it('opens the playback-device picker when already connected', async () => {
     render(<CastButton />)
 
-    fireEvent.click(screen.getByRole('button', { name: /cast options/i }))
     fireEvent.click(
-      screen.getByRole('menuitem', { name: /play on this device/i }),
+      screen.getByRole('button', { name: /choose playback device/i }),
     )
 
-    await waitFor(() =>
-      expect(mockedEndCastSession).toHaveBeenCalledWith(true, {
-        resumeLocal: true,
-      }),
-    )
+    await waitFor(() => expect(mockedRequestCastSession).toHaveBeenCalledOnce())
+    expect(mockedEndCastSession).not.toHaveBeenCalled()
   })
 
   it('does not submit duplicate discovery requests while opening the picker', async () => {
