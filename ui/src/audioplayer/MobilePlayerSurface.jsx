@@ -190,7 +190,9 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: `${theme.palette.primary.main} !important`,
       filter: 'brightness(1.08)',
     },
-    '& svg': { fontSize: 36 },
+    // Scale the glyph with its circle so playback changes and gesture starts
+    // cannot reset it to a different size.
+    '& svg': { fontSize: 52 },
   },
   bottomSection: {
     position: 'relative',
@@ -532,9 +534,6 @@ const MobilePlayerSurface = ({
     const progress = clamp(value)
     const bounds = sharedRects.current
     if (!bounds) return
-
-    const playIcon = sharedPlayRef.current?.querySelector('svg')
-    if (playIcon) playIcon.style.fontSize = `${36 + 12 * progress}px`
 
     const update = (element, start, end) => {
       if (!element || !start || !end) return

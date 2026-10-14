@@ -56,8 +56,31 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     justifyContent: 'center',
     marginTop: 16,
+    '& .nd-player-controls-primary': {
+      gap: 8,
+    },
+    '& .nd-player-btn-prev, & .nd-player-btn-next': {
+      width: '80px !important',
+      height: '80px !important',
+      padding: '0 !important',
+      backgroundColor: 'transparent !important',
+      '&:hover': {
+        backgroundColor: 'transparent !important',
+      },
+    },
+    '& .nd-player-btn-prev svg, & .nd-player-btn-next svg': {
+      fontSize: 56,
+    },
+    '& .nd-player-primary-control': {
+      color: `${theme.palette.text.primary} !important`,
+    },
   },
-  volume: { position: 'relative', zIndex: 1, marginTop: 28 },
+  volume: {
+    position: 'relative',
+    zIndex: 1,
+    width: 'min(100%, 300px)',
+    margin: '28px auto 0',
+  },
   error: {
     position: 'relative',
     zIndex: 1,
@@ -130,6 +153,8 @@ const DesktopPlayer = ({ bridge, queue, onClear, lyrics }) => {
           favoriteButton={
             <PlayerLoveButton id={track.trackId} isRadio={track.isRadio} />
           }
+          compact
+          roundedSkipIcons
         />
       </div>
       <div className={classes.volume}>
