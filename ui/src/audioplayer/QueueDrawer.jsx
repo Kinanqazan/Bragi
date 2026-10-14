@@ -4,8 +4,17 @@ import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined'
 import DeleteOutlineIcon from '@material-ui/icons/DeleteOutline'
 import PauseIcon from '@material-ui/icons/Pause'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
+import DragIndicatorIcon from '@material-ui/icons/DragIndicator'
+import MusicNoteIcon from '@material-ui/icons/MusicNote'
+import CloseIcon from '@material-ui/icons/Close'
 import { alpha, useTheme } from '@material-ui/core/styles'
-import { openSaveQueueDialog, removeQueuedTrack } from '../actions'
+import {
+  openSaveQueueDialog,
+  removeQueuedTrack,
+  reorderQueuedTrack,
+} from '../actions'
+import { Artwork } from '../common/Artwork'
+import { useQueueReorder } from './useQueueReorder'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
 
 const QueueDrawer = ({
@@ -15,6 +24,7 @@ const QueueDrawer = ({
   commands,
   onClose,
   onClear,
+  mobile = true,
 }) => {
   const dispatch = useDispatch()
   const theme = useTheme()
@@ -25,27 +35,50 @@ const QueueDrawer = ({
   const skipClickRef = useRef(false)
   const closingRef = useRef(false)
   const closeTimerRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const [expanded, setExpanded] = useState(false)
   const isDark = theme.palette.type === 'dark'
-  const playerTextColor = isDark ? theme.palette.text.primary : '#f5f5f5'
-  const playerMutedColor = isDark
-    ? theme.palette.text.secondary
-    : 'rgba(255, 255, 255, 0.68)'
+  const playerTextColor =
+    !mobile || isDark ? theme.palette.text.primary : '#f5f5f5'
+  const playerMutedColor =
+    !mobile || isDark
+      ? theme.palette.text.secondary
+      : 'rgba(255, 255, 255, 0.68)'
+  const playbackIntent = Boolean(
+    snapshot?.playbackIntent ?? (snapshot?.playing || snapshot?.loading),
+  )
+  const reorder = useQueueReorder(
+    listRef,
+    (uuid, beforeUuid) =>
+      dispatch(reorderQueuedTrack(uuid, beforeUuid, currentIndex)),
+    () => {
+      skipClickRef.current = true
+    },
+  )
 
   useEffect(() => {
+    const previousFocus = document.activeElement
     drawerRef.current?.focus()
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.()
+      if (event.key === 'Escape') onCloseRef.current?.()
     }
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [])
 
   const handleSwipeStart = (event, nativeTouch = false) => {
     const drawer = drawerRef.current
     if (!drawer || closingRef.current) return
     skipClickRef.current = false
     if (event.target?.closest?.('[data-queue-action]')) return
+    if (reorder.start(event)) {
+      if (!nativeTouch) drawer.setPointerCapture?.(event.pointerId)
+      return
+    }
     const rect = drawer.getBoundingClientRect()
     const row = event.target?.closest?.('[data-queue-row]')
     swipeRef.current = {
@@ -64,6 +97,7 @@ const QueueDrawer = ({
     }
   }
   const handleSwipeMove = (event) => {
+    if (reorder.move(event)) return
     const swipe = swipeRef.current
     const drawer = drawerRef.current
     if (
@@ -86,9 +120,13 @@ const QueueDrawer = ({
         // above the finger or the fully expanded list is swiped upward.
         swipe.mode =
           swipe.inList &&
-          (swipe.startScrollTop > 0 || (deltaY < 0 && swipe.startExpanded))
+          (!mobile ||
+            swipe.startScrollTop > 0 ||
+            (deltaY < 0 && swipe.startExpanded))
             ? 'scroll'
-            : 'drag'
+            : mobile
+              ? 'drag'
+              : 'ignore'
       }
       if (swipe.mode === 'drag' || swipe.mode === 'remove') {
         if (swipe.mode === 'drag') {
@@ -142,11 +180,14 @@ const QueueDrawer = ({
     onClose?.()
   }
   const finishSwipe = (event, cancelled = false) => {
+    if (reorder.finish(event, cancelled)) return
     const swipe = swipeRef.current
     const drawer = drawerRef.current
     if (
       !swipe ||
-      (event?.pointerId != null && swipe.pointerId !== event.pointerId)
+      (!cancelled &&
+        event?.pointerId != null &&
+        swipe.pointerId !== event.pointerId)
     )
       return
 
@@ -163,7 +204,7 @@ const QueueDrawer = ({
           removeQueuedTrack(
             swipe.row.dataset.queueId,
             currentIndex,
-            snapshot?.playing,
+            playbackIntent,
           ),
         )
       }
@@ -172,7 +213,13 @@ const QueueDrawer = ({
     if (swipe.mode !== 'drag') return
     if (event.cancelable) event.preventDefault()
     const deltaY = (event?.clientY ?? swipe.startY) - swipe.startY
-    const shouldClose = !cancelled && deltaY > 80
+    const heightReduction = swipe.startExpanded
+      ? Math.min(
+          Math.max(0, deltaY),
+          Math.max(0, swipe.startHeight - swipe.baseHeight),
+        )
+      : 0
+    const shouldClose = !cancelled && deltaY - heightReduction > 80
     const shouldExpand = !cancelled && deltaY < -64
     const shouldCollapse = !cancelled && swipe.startExpanded && deltaY > 48
     drawer?.style.removeProperty('transition')
@@ -201,7 +248,10 @@ const QueueDrawer = ({
   useEffect(() => {
     const drawer = drawerRef.current
     const point = (event) => {
-      const touch = event.changedTouches[0]
+      const touch =
+        Array.from(event.changedTouches).find(
+          (candidate) => candidate.identifier === swipeRef.current?.pointerId,
+        ) || event.changedTouches[0]
       return {
         target: event.target,
         clientX: touch.clientX,
@@ -212,7 +262,10 @@ const QueueDrawer = ({
       }
     }
     const start = (event) => {
-      if (event.touches.length !== 1) return
+      if (event.touches.length !== 1) {
+        gestureHandlersRef.current.finish(point(event), true)
+        return
+      }
       gestureHandlersRef.current.start(point(event), true)
     }
     const move = (event) => {
@@ -245,13 +298,15 @@ const QueueDrawer = ({
   return (
     <aside
       ref={drawerRef}
-      className={`nd-player-queue-drawer${expanded ? ' is-expanded' : ''}`}
+      className={`nd-player-queue-drawer${expanded ? ' is-expanded' : ''}${mobile ? '' : ' is-desktop'}`}
       aria-label="Playback queue"
       data-sidebar-swipe-lock="true"
       tabIndex={-1}
       style={{
         color: playerTextColor,
-        '--nd-player-surface': MOBILE_BACKGROUND_COLOR,
+        '--nd-player-surface': mobile
+          ? MOBILE_BACKGROUND_COLOR
+          : theme.palette.background.paper,
         '--nd-player-text': playerTextColor,
         '--nd-player-muted': playerMutedColor,
         '--nd-player-accent': theme.palette.primary.main,
@@ -284,6 +339,9 @@ const QueueDrawer = ({
       onPointerCancel={(event) => {
         if (event.pointerType !== 'touch') finishSwipe(event, true)
       }}
+      onLostPointerCapture={(event) => {
+        if (event.pointerType !== 'touch') finishSwipe(event, true)
+      }}
       onClickCapture={(event) => {
         if (!skipClickRef.current || event.detail === 0) return
         event.preventDefault()
@@ -299,10 +357,25 @@ const QueueDrawer = ({
         }
       }}
     >
-      <div className="nd-player-queue-drawer-handle" aria-hidden="true">
+      <div
+        className="nd-player-queue-drawer-handle"
+        aria-hidden="true"
+        hidden={!mobile}
+      >
         <span />
       </div>
       <div className="nd-player-queue-toolbar" aria-label="Queue controls">
+        {!mobile && (
+          <button
+            type="button"
+            className="nd-player-queue-action"
+            data-queue-action="true"
+            aria-label="Close queue"
+            onClick={onClose}
+          >
+            <CloseIcon />
+          </button>
+        )}
         <div className="nd-player-queue-actions" data-queue-action="true">
           {queue.length > 0 && (
             <button
@@ -345,31 +418,78 @@ const QueueDrawer = ({
             <span className="nd-player-queue-remove-hint" aria-hidden="true">
               <DeleteOutlineIcon />
             </span>
-            <button
-              type="button"
+            <div
               data-queue-track="true"
-              className={index === currentIndex ? 'is-current' : ''}
-              aria-current={index === currentIndex ? 'true' : undefined}
-              onClick={() => commands.select(index)}
-              onKeyDown={(event) => {
-                if (event.key !== 'Delete' || !track.uuid) return
-                event.preventDefault()
-                dispatch(
-                  removeQueuedTrack(
-                    track.uuid,
-                    currentIndex,
-                    snapshot?.playing,
-                  ),
-                )
-              }}
+              className={`nd-player-queue-row-content${index === currentIndex ? ' is-current' : ''}`}
             >
-              <span>
-                {track.title || track.name || track.song?.title || 'Untitled'}
-              </span>
-              <small>
-                {track.artist || track.singer || track.song?.artist || ''}
-              </small>
-            </button>
+              <button
+                type="button"
+                className="nd-player-queue-song"
+                aria-current={index === currentIndex ? 'true' : undefined}
+                onClick={() => commands.select(index)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Delete' || !track.uuid) return
+                  event.preventDefault()
+                  dispatch(
+                    removeQueuedTrack(track.uuid, currentIndex, playbackIntent),
+                  )
+                }}
+              >
+                <span
+                  className="nd-player-queue-cover"
+                  aria-hidden="true"
+                  onDragStart={(event) => event.preventDefault()}
+                >
+                  <MusicNoteIcon />
+                  {!track.isRadio && (
+                    <Artwork
+                      className="nd-player-queue-artwork"
+                      record={track.song || { ...track, id: track.trackId }}
+                      size={84}
+                      fit="cover"
+                      title=""
+                    />
+                  )}
+                </span>
+                <span className="nd-player-queue-details">
+                  <span>
+                    {track.title ||
+                      track.name ||
+                      track.song?.title ||
+                      'Untitled'}
+                  </span>
+                  <small>
+                    {track.artist || track.singer || track.song?.artist || ''}
+                  </small>
+                </span>
+              </button>
+              <button
+                type="button"
+                data-queue-reorder="true"
+                className="nd-player-queue-reorder"
+                disabled={!track.uuid}
+                aria-label={`Reorder ${track.title || track.name || track.song?.title || 'Untitled'}`}
+                title="Drag to reorder"
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')
+                    return
+                  event.preventDefault()
+                  const to = index + (event.key === 'ArrowUp' ? -1 : 1)
+                  if (to < 0 || to >= queue.length) return
+                  dispatch(
+                    reorderQueuedTrack(
+                      track.uuid,
+                      event.key === 'ArrowUp'
+                        ? queue[to].uuid
+                        : (queue[to + 1]?.uuid ?? null),
+                      currentIndex,
+                    ),
+                  )
+                }}
+              >
+                <DragIndicatorIcon />
+              </button>
+            </div>
           </li>
         ))}
       </ol>

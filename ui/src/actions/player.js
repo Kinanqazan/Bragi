@@ -4,6 +4,7 @@ export const PLAYER_SET_TRACK = 'PLAYER_SET_TRACK'
 export const PLAYER_UPDATE_TRACK_METADATA = 'PLAYER_UPDATE_TRACK_METADATA'
 export const PLAYER_CLEAR_QUEUE = 'PLAYER_CLEAR_QUEUE'
 export const PLAYER_REMOVE_TRACK = 'PLAYER_REMOVE_TRACK'
+export const PLAYER_REORDER_TRACK = 'PLAYER_REORDER_TRACK'
 export const PLAYER_PLAY_TRACKS = 'PLAYER_PLAY_TRACKS'
 export const PLAYER_CURRENT = 'PLAYER_CURRENT'
 export const PLAYER_SET_VOLUME = 'PLAYER_SET_VOLUME'
@@ -92,6 +93,11 @@ export const clearQueue = () => ({
 export const removeQueuedTrack = (uuid, currentIndex, playing) => ({
   type: PLAYER_REMOVE_TRACK,
   data: { uuid, currentIndex, playing },
+})
+
+export const reorderQueuedTrack = (uuid, beforeUuid, currentIndex) => ({
+  type: PLAYER_REORDER_TRACK,
+  data: { uuid, beforeUuid, currentIndex },
 })
 
 export const currentPlaying = (audioInfo) => ({

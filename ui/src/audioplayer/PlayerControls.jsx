@@ -4,6 +4,8 @@ import PauseIcon from '@material-ui/icons/Pause'
 import PlayArrowIcon from '@material-ui/icons/PlayArrow'
 import SkipNextIcon from '@material-ui/icons/SkipNext'
 import SkipPreviousIcon from '@material-ui/icons/SkipPrevious'
+import SkipNextRoundedIcon from '@material-ui/icons/SkipNextRounded'
+import SkipPreviousRoundedIcon from '@material-ui/icons/SkipPreviousRounded'
 import QueueMusicIcon from '@material-ui/icons/QueueMusic'
 import LyricsIcon from '@material-ui/icons/Subtitles'
 import { makeStyles } from '@material-ui/core/styles'
@@ -36,6 +38,7 @@ const PlayerControls = ({
   compact = false,
   isolateGestures = false,
   primaryControl = null,
+  roundedSkipIcons = false,
 }) => {
   const classes = useStyles()
   const playbackPress = useImmediateControlPress(
@@ -59,7 +62,7 @@ const PlayerControls = ({
           aria-label="Previous track"
           className="nd-player-btn-prev"
         >
-          <SkipPreviousIcon />
+          {roundedSkipIcons ? <SkipPreviousRoundedIcon /> : <SkipPreviousIcon />}
         </IconButton>
         {primaryControl || (
           <IconButton
@@ -82,7 +85,7 @@ const PlayerControls = ({
           aria-label="Next track"
           className="nd-player-btn-next"
         >
-          <SkipNextIcon />
+          {roundedSkipIcons ? <SkipNextRoundedIcon /> : <SkipNextIcon />}
         </IconButton>
       </div>
 

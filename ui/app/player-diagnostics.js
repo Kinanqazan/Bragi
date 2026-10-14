@@ -26,7 +26,9 @@ const enableCssMotion = () => {
       for (const rule of sheet.cssRules)
         if (rule.media?.mediaText === '(prefers-reduced-motion: reduce)')
           rule.media.mediaText = '(max-width: 0px)'
-    } catch {}
+    } catch {
+      // Cross-origin stylesheets do not expose their rules.
+    }
   }
 }
 if (diagnosticOptions.has('normal-motion')) {
@@ -50,7 +52,7 @@ const log = (kind, data) => {
   }
   records.push(record)
   if (records.length > 500) records.shift()
-  console.log(prefix, JSON.stringify(record))
+  console.debug(prefix, JSON.stringify(record)) // eslint-disable-line no-console
 }
 if (new URL(location.href).searchParams.has('capture'))
   document.addEventListener(
@@ -312,7 +314,9 @@ try {
       if (e.duration > 50)
         log('longtask', { start: e.startTime, duration: e.duration })
   }).observe({ type: 'longtask', buffered: true })
-} catch {}
+} catch {
+  // Long-task observations are unavailable in some browsers.
+}
 let lastFrame = performance.now()
 const tick = (now) => {
   if (now - lastFrame > 100) log('frame-gap', { duration: now - lastFrame })

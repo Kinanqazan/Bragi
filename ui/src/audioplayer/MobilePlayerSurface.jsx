@@ -222,11 +222,13 @@ const useStyles = makeStyles((theme) => ({
       gap: 40,
     },
     '& .nd-player-btn-prev, & .nd-player-btn-next': {
-      width: '56px !important',
-      height: '56px !important',
+      width: '64px !important',
+      height: '64px !important',
+      borderRadius: '14px !important',
+      backgroundColor: theme.palette.action.hover,
     },
     '& .nd-player-btn-prev svg, & .nd-player-btn-next svg': {
-      fontSize: 36,
+      fontSize: 40,
     },
   },
   volume: {
@@ -530,6 +532,9 @@ const MobilePlayerSurface = ({
     const progress = clamp(value)
     const bounds = sharedRects.current
     if (!bounds) return
+
+    const playIcon = sharedPlayRef.current?.querySelector('svg')
+    if (playIcon) playIcon.style.fontSize = `${36 + 12 * progress}px`
 
     const update = (element, start, end) => {
       if (!element || !start || !end) return

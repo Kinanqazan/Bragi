@@ -283,7 +283,7 @@ export const createPlaybackEngine = ({
     adapter.addEventListener(name, eventHandlers[name]),
   )
 
-  const getSnapshot = () => ({ ...state })
+  const getSnapshot = () => ({ ...state, playbackIntent })
 
   const loadTrack = async (
     index,

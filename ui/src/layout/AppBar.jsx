@@ -179,6 +179,7 @@ const useStyles = makeStyles(
         boxShadow: '0 3px 12px rgba(0, 0, 0, 0.22)',
         boxSizing: 'border-box',
         flexShrink: 0,
+        '& button': { color: '#f5f5f5' },
       },
       floatingActionButton: {
         width: 64,

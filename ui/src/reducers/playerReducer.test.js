@@ -20,6 +20,46 @@ const song = (id, title = id) => ({
 })
 
 describe('playerReducer', () => {
+  it('reorders repeated entries by queue identity while preserving the active song', async () => {
+    const { reorderQueuedTrack } = await import('../actions')
+    let state = playerReducer(
+      undefined,
+      playTracks({ a: song('a'), b: song('b') }, ['a', 'a', 'b'], 'b'),
+    )
+    state = playerReducer(state, currentPlaying(state.queue[2]))
+    const next = playerReducer(
+      state,
+      reorderQueuedTrack(state.queue[2].uuid, state.queue[0].uuid, 2),
+    )
+    expect(next.queue.map((track) => track.uuid)).toEqual([
+      state.queue[2].uuid,
+      state.queue[0].uuid,
+      state.queue[1].uuid,
+    ])
+    expect(next.current).toBe(state.current)
+    expect(next.savedPlayIndex).toBe(0)
+    expect(next.playIndex).toBeUndefined()
+    expect(next.autoPlay).toBe(false)
+    expect(playerReducer(next, reorderQueuedTrack('stale', null, 0))).toBe(next)
+    expect(
+      playerReducer(next, reorderQueuedTrack(next.queue[0].uuid, 'stale', 0)),
+    ).toBe(next)
+  })
+
+  it('reindexes a pending play request when moving an earlier entry', async () => {
+    const { reorderQueuedTrack } = await import('../actions')
+    const state = playerReducer(
+      undefined,
+      playTracks({ a: song('a'), b: song('b') }, undefined, 'b'),
+    )
+    const next = playerReducer(
+      state,
+      reorderQueuedTrack(state.queue[0].uuid, null, 0),
+    )
+    expect(next.queue.map((track) => track.trackId)).toEqual(['b', 'a'])
+    expect(next.playIndex).toBe(0)
+    expect(next.autoPlay).toBe(true)
+  })
   it('removes only the swiped occurrence of a repeated song and reindexes the current entry', () => {
     let state = playerReducer(
       undefined,

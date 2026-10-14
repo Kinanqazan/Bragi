@@ -14,17 +14,10 @@ import { makeStyles } from '@material-ui/core/styles'
 import MoreVertIcon from '@material-ui/icons/MoreVert'
 import { MdQuestionMark } from 'react-icons/md'
 import clsx from 'clsx'
-import {
-  openAddToPlaylist,
-  openExtendedInfoDialog,
-  openDownloadMenu,
-  DOWNLOAD_MENU_SONG,
-} from '../actions'
+import { openAddToPlaylist, playNext, openExtendedInfoDialog } from '../actions'
 import { LoveButton } from './LoveButton'
 import config from '../config'
 import { playSimilar } from './playbackActions.js'
-import { formatBytes } from '../utils'
-import { useRedirect } from 'react-admin'
 import { useHistory, useLocation } from 'react-router-dom'
 import { openSong } from '../song/songNavigation'
 
@@ -89,13 +82,9 @@ export const SongContextMenu = ({
   const notify = useNotify()
   const dataProvider = useDataProvider()
   const [anchorEl, setAnchorEl] = useState(null)
-  const [playlistAnchorEl, setPlaylistAnchorEl] = useState(null)
-  const [playlists, setPlaylists] = useState([])
-  const [playlistsLoaded, setPlaylistsLoaded] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const { permissions } = usePermissions()
-  const redirect = useRedirect()
   const history = useHistory()
   const location = useLocation()
   const refresh = useRefresh()
@@ -107,6 +96,14 @@ export const SongContextMenu = ({
         _: 'Open song page',
       }),
       action: (record) => openSong(history, location, record),
+    },
+    playNext: {
+      enabled: !record.missing,
+      label: translate('resources.song.actions.playNext', { _: 'Play next' }),
+      action: (record) => {
+        const id = record.mediaFileId || record.id
+        dispatch(playNext({ [id]: record }, [id]))
+      },
     },
     instantMix: {
       enabled: config.enableExternalServices,
@@ -136,24 +133,6 @@ export const SongContextMenu = ({
             onSuccess: (id) => onAddToPlaylist(id),
           }),
         ),
-    },
-    showInPlaylist: {
-      enabled: true,
-      label:
-        translate('resources.song.actions.showInPlaylist') +
-        (playlists.length > 0 ? ' ►' : ''),
-      action: (record, e) => {
-        setPlaylistAnchorEl(e.currentTarget)
-      },
-    },
-    download: {
-      enabled: config.enableDownloads,
-      label:
-        record.size == null
-          ? translate('ra.action.download')
-          : `${translate('ra.action.download')} (${formatBytes(record.size)})`,
-      action: (record) =>
-        dispatch(openDownloadMenu(record, DOWNLOAD_MENU_SONG)),
     },
     deleteFile: {
       enabled:
@@ -192,62 +171,22 @@ export const SongContextMenu = ({
 
   const handleClick = (e) => {
     setAnchorEl(e.currentTarget)
-    if (!playlistsLoaded) {
-      const id = record.mediaFileId || record.id
-      dataProvider
-        .getPlaylists(id)
-        .then((res) => {
-          setPlaylists(res.data)
-          setPlaylistsLoaded(true)
-        })
-        .catch((error) => {
-          // eslint-disable-next-line no-console
-          console.error('Failed to fetch playlists:', error)
-          setPlaylists([])
-          setPlaylistsLoaded(true)
-        })
-    }
-    e.stopPropagation()
-  }
-
-  const handleClose = (e) => {
-    setAnchorEl(null)
     e.stopPropagation()
   }
 
   const handleItemClick = (e) => {
     e.preventDefault()
-    const key = e.target.getAttribute('value')
+    const key = e.currentTarget.getAttribute('value')
     const action = options[key].action
 
-    if (key === 'showInPlaylist') {
-      // For showInPlaylist, we keep the main menu open and show submenu
-      action(record, e)
-    } else {
-      // For other actions, close the main menu
-      setAnchorEl(null)
-      action(record)
-    }
+    setAnchorEl(null)
+    action(record)
     e.stopPropagation()
-  }
-
-  const handlePlaylistClose = (e) => {
-    setPlaylistAnchorEl(null)
-    if (e) {
-      e.stopPropagation()
-    }
   }
 
   const handleMainMenuClose = (e) => {
     setAnchorEl(null)
-    setPlaylistAnchorEl(null) // Close both menus
     e.stopPropagation()
-  }
-
-  const handlePlaylistClick = (id, e) => {
-    e.stopPropagation()
-    redirect(`/playlist/${id}/show`)
-    handlePlaylistClose()
   }
 
   const open = Boolean(anchorEl)
@@ -302,32 +241,23 @@ export const SongContextMenu = ({
         getContentAnchorEl={null}
         style={{ zIndex: 1500 }}
       >
-        {Object.keys(options).filter((key) => key !== 'info').map((key) => {
-          const showInPlaylistDisabled =
-            key === 'showInPlaylist' && !playlists.length
-          return (
-            options[key].enabled && (
-              <MenuItem
-                value={key}
-                key={key}
-                className={
-                  key === 'deleteFile' ? classes.deleteItem : undefined
-                }
-                onClick={
-                  showInPlaylistDisabled
-                    ? (e) => e.stopPropagation()
-                    : handleItemClick
-                }
-                disabled={showInPlaylistDisabled}
-                style={
-                  showInPlaylistDisabled ? { pointerEvents: 'auto' } : undefined
-                }
-              >
-                {options[key].label}
-              </MenuItem>
-            )
-          )
-        })}
+        {Object.keys(options)
+          .filter((key) => key !== 'info')
+          .map(
+            (key) =>
+              options[key].enabled && (
+                <MenuItem
+                  value={key}
+                  key={key}
+                  className={
+                    key === 'deleteFile' ? classes.deleteItem : undefined
+                  }
+                  onClick={handleItemClick}
+                >
+                  {options[key].label}
+                </MenuItem>
+              ),
+          )}
       </Menu>
       <Confirm
         isOpen={deleteDialogOpen}
@@ -338,27 +268,6 @@ export const SongContextMenu = ({
         onConfirm={handleDeleteFile}
         onClose={() => setDeleteDialogOpen(false)}
       />
-      <Menu
-        anchorEl={playlistAnchorEl}
-        open={Boolean(playlistAnchorEl)}
-        onClose={handlePlaylistClose}
-        getContentAnchorEl={null}
-        style={{ zIndex: 1500 }}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-      >
-        {playlists.map((p) => (
-          <MenuItem key={p.id} onClick={(e) => handlePlaylistClick(p.id, e)}>
-            {p.name}
-          </MenuItem>
-        ))}
-      </Menu>
     </span>
   )
 }

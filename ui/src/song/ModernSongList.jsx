@@ -372,6 +372,9 @@ const useStyles = makeStyles((theme) => {
       [theme.breakpoints.down('sm')]: {
         gap: 12,
         minHeight: 64,
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
         padding: theme.spacing(0.75, 0.5, 0.75, 0.5),
         width: '100% !important',
         maxWidth: '100% !important',
@@ -380,6 +383,24 @@ const useStyles = makeStyles((theme) => {
     },
     playing: {
       background: alpha(theme.palette.primary.main, 0.12),
+    },
+    artworkCell: {
+      position: 'relative',
+      width: 56,
+      height: 56,
+      borderRadius: 4,
+    },
+    artworkSelection: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 1,
+      borderRadius: 'inherit',
+      background: alpha(theme.palette.background.paper, 0.72),
+      '& .MuiCheckbox-root': {
+        width: '100%',
+        height: '100%',
+        padding: 0,
+      },
     },
     artwork: {
       width: 56,
@@ -728,6 +749,7 @@ export const ModernTrackRows = ({
 }) => {
   const classes = useStyles()
   const press = useRef()
+  const isMobile = useMediaQuery('(max-width:959.95px)')
   const suppressClick = useRef()
   const suppressClickTimer = useRef()
 
@@ -771,6 +793,7 @@ export const ModernTrackRows = ({
       if (press.current?.pointerId !== pointerId) return
       press.current.timer = undefined
       press.current.longPressed = true
+      if (isMobile) window.getSelection()?.removeAllRanges()
       suppressNextClick(songId)
       onStartSelection(songId)
     }, LONG_PRESS_DELAY)
@@ -849,9 +872,8 @@ export const ModernTrackRows = ({
     }
   }, [])
 
-  const defaultGrid = selectionMode
-    ? '36px 56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
-    : '56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
+  const defaultGrid =
+    '56px minmax(140px, 1.4fr) minmax(110px, 1fr) minmax(80px, 0.7fr) minmax(60px, 0.5fr) 44px'
 
   const computedGrid = gridTemplateColumns || defaultGrid
 
@@ -879,6 +901,9 @@ export const ModernTrackRows = ({
         onPointerUp={(event) => handlePointerUp(event, song)}
         onPointerCancel={cancelLongPress}
         onPointerLeave={cancelLongPress}
+        onContextMenu={(event) => {
+          if (isMobile) event.preventDefault()
+        }}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return
           if (event.key === 'Enter' || event.key === ' ') {
@@ -887,26 +912,29 @@ export const ModernTrackRows = ({
           }
         }}
       >
-        {selectionMode && (
-          <Box
-            onClick={(event) => event.stopPropagation()}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <Checkbox
-              checked={selectedIds.includes(song.id)}
-              color="primary"
-              inputProps={{ 'aria-label': `Select ${song.title}` }}
-              onChange={() => onToggleSelection(song.id)}
-            />
-          </Box>
-        )}
-        <Artwork
-          className={classes.artwork}
-          record={song}
-          size={84}
-          fit="cover"
-          title={song.title}
-        />
+        <div className={classes.artworkCell}>
+          <Artwork
+            className={classes.artwork}
+            record={song}
+            size={84}
+            fit="cover"
+            title={song.title}
+          />
+          {selectionMode && (
+            <Box
+              className={classes.artworkSelection}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <Checkbox
+                checked={selectedIds.includes(song.id)}
+                color="primary"
+                inputProps={{ 'aria-label': `Select ${song.title}` }}
+                onChange={() => onToggleSelection(song.id)}
+              />
+            </Box>
+          )}
+        </div>
         <div className={classes.titleCell}>
           <Typography className={classes.title} variant="body2">
             {playing && <EqualizerIcon className={classes.playingIcon} />}
@@ -1030,19 +1058,16 @@ export const ModernSongList = ({
 
   const gridTemplateColumns = useMemo(() => {
     if (isMobile) {
-      return selectionMode
-        ? '34px 56px minmax(0, 1fr) 44px'
-        : '56px minmax(0, 1fr) 44px'
+      return '56px minmax(0, 1fr) 44px'
     }
     const cols = [
-      selectionMode ? '36px' : '',
       '56px',
       'minmax(140px, 1.4fr)',
       ...activeColumns.map((col) => col.width),
       '44px',
     ].filter(Boolean)
     return cols.join(' ')
-  }, [isMobile, selectionMode, activeColumns])
+  }, [isMobile, activeColumns])
 
   const handleSort =
     (field, defaultDesc = false) =>
@@ -1081,9 +1106,7 @@ export const ModernSongList = ({
     >
       {selectionMode && isMobile && (
         <div className={classes.mobileSelectionToolbar}>
-          <Box
-            className={classes.summaryMeta}
-          >
+          <Box className={classes.summaryMeta}>
             <Typography className={classes.summaryLabel}>
               {`${selectedIds.length} selected`}
             </Typography>
@@ -1117,7 +1140,14 @@ export const ModernSongList = ({
           } ${selectionMode ? classes.tableWrapperSelection : ''}`}
         >
           {isMobile && showQuickActions && !selectionMode && (
-            <div style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflow: 'visible' }}>
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
+                overflow: 'visible',
+              }}
+            >
               <MobileQuickActions resource="song" />
             </div>
           )}

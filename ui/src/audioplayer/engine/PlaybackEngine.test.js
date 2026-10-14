@@ -29,6 +29,48 @@ const makeEngine = (options = {}) => {
 
 describe('PlaybackEngine', () => {
   it.each([true, false])(
+    'preserves the current stream, position and playing=%s when its queue entry is reordered',
+    async (playing) => {
+      const { audio, engine, resolveStreamUrl } = makeEngine()
+      await engine.setQueue(tracks, 1, { autoplay: playing })
+      engine.seek(45)
+      await engine.setQueue([tracks[1], tracks[0], tracks[2]], 0, {
+        autoplay: false,
+      })
+      expect(resolveStreamUrl).toHaveBeenCalledTimes(1)
+      expect(audio.currentTime).toBe(45)
+      expect(engine.getSnapshot()).toMatchObject({
+        currentIndex: 0,
+        currentTrack: tracks[1],
+        playing,
+        playbackIntent: playing,
+      })
+      engine.destroy()
+    },
+  )
+
+  it('reports playback intent during a pending load and clears it on pause', async () => {
+    let resolveStream
+    const { engine } = makeEngine({
+      resolveStreamUrl: () =>
+        new Promise((resolve) => {
+          resolveStream = resolve
+        }),
+    })
+    const pending = engine.setQueue(tracks, 0, { autoplay: true })
+    await Promise.resolve()
+    expect(engine.getSnapshot()).toMatchObject({
+      playing: false,
+      loading: true,
+      playbackIntent: true,
+    })
+    engine.pause()
+    expect(engine.getSnapshot().playbackIntent).toBe(false)
+    resolveStream('stream:song-a')
+    await pending
+    engine.destroy()
+  })
+  it.each([true, false])(
     'keeps the current stream and position when an earlier song is removed (playing=%s)',
     async (playing) => {
       const { audio, engine, resolveStreamUrl } = makeEngine()

@@ -149,6 +149,7 @@ const DesktopPlayer = ({ bridge, queue, onClear, lyrics }) => {
       )}
       {queueOpen && (
         <QueueDrawer
+          mobile={false}
           queue={queue}
           snapshot={snapshot}
           currentIndex={snapshot.currentIndex}

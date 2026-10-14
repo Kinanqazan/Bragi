@@ -9,6 +9,17 @@ import { MOBILE_BACKGROUND_COLOR } from '../consts'
 import { openSaveQueueDialog, currentPlaying, playTracks } from '../actions'
 import { playerReducer } from '../reducers/playerReducer'
 
+vi.mock('../common/Artwork', () => ({
+  Artwork: ({ record, size, className }) => (
+    <div
+      className={className}
+      data-testid="queue-artwork"
+      data-song-id={record.id}
+      data-size={size}
+    />
+  ),
+}))
+
 const makeStore = () => createStore((state = {}) => state)
 const fireTouch = (target, type, clientY, clientX = 80) => {
   const event = new Event(type, { bubbles: true, cancelable: true })
@@ -41,7 +52,7 @@ const renderQueue = (onClose = vi.fn(), commands = { select: vi.fn() }) => {
     commands,
   }
 }
-const renderRemovableQueue = () => {
+const renderRemovableQueue = (snapshot = { playing: true }) => {
   let player = playerReducer(
     undefined,
     playTracks(
@@ -67,7 +78,7 @@ const renderRemovableQueue = () => {
       <QueueDrawer
         queue={state.queue}
         currentIndex={state.playIndex ?? state.savedPlayIndex}
-        snapshot={{ playing: true }}
+        snapshot={snapshot}
         commands={commands}
         onClose={onClose}
       />
@@ -92,12 +103,164 @@ afterEach(() => {
 })
 
 describe('QueueDrawer', () => {
+  it.each([true, false])(
+    'preserves playback intent=%s when removing a song during loading',
+    (playbackIntent) => {
+      const { store } = renderRemovableQueue({
+        playing: false,
+        loading: true,
+        playbackIntent,
+      })
+      fireEvent.keyDown(
+        screen.getByRole('button', { name: 'B', exact: true }),
+        { key: 'Delete' },
+      )
+      expect(store.getState().player.autoPlay).toBe(playbackIntent)
+    },
+  )
+
+  it('scrolls a long list near its edge while keeping the held row under the finger', () => {
+    let nextFrame
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      nextFrame = callback
+      return 1
+    })
+    const { drawer } = renderRemovableQueue()
+    const list = drawer.querySelector('ol')
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 280,
+    })
+    const rows = Array.from(list.children)
+    rows.forEach((row, index) =>
+      vi.spyOn(row, 'getBoundingClientRect').mockImplementation(() => ({
+        top: 100 + index * 60 - list.scrollTop,
+        height: 60,
+      })),
+    )
+    const grip = screen.getByRole('button', { name: 'Reorder A' })
+    fireTouch(grip, 'touchstart', 130)
+    fireTouch(grip, 'touchmove', 265)
+    nextFrame()
+    expect(list.scrollTop).toBe(8.25)
+    expect(rows[0].style.transform).toBe('translate3d(0, 143.25px, 0)')
+    fireTouch(grip, 'touchcancel', 265)
+    expect(rows[0].style.transform).toBe('')
+  })
+
+  it('uses song-page artwork thumbnails and keyboard reorder without selecting a song', () => {
+    const { store, commands } = renderRemovableQueue()
+    expect(
+      screen.getAllByTestId('queue-artwork').map((art) => art.dataset.songId),
+    ).toEqual(['a', 'b', 'c'])
+    expect(screen.getAllByTestId('queue-artwork')[0]).toHaveAttribute(
+      'data-size',
+      '84',
+    )
+    const grip = screen.getByRole('button', { name: 'Reorder B' })
+    fireEvent.keyDown(grip, { key: 'ArrowDown' })
+    expect(store.getState().player.queue.map((track) => track.trackId)).toEqual(
+      ['a', 'c', 'b'],
+    )
+    expect(store.getState().player.savedPlayIndex).toBe(2)
+    fireEvent.keyDown(grip, { key: 'ArrowUp' })
+    expect(store.getState().player.queue.map((track) => track.trackId)).toEqual(
+      ['a', 'b', 'c'],
+    )
+    expect(commands.select).not.toHaveBeenCalled()
+  })
+
+  it.each(['touchend', 'touchcancel'])(
+    'follows a touch reorder handle and commits only on release (%s)',
+    (end) => {
+      const { store, drawer, commands, onClose } = renderRemovableQueue()
+      const list = drawer.querySelector('ol')
+      vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 500,
+      })
+      const rows = Array.from(list.children)
+      rows.forEach((row, index) =>
+        vi
+          .spyOn(row, 'getBoundingClientRect')
+          .mockReturnValue({ top: 100 + index * 60, height: 60 }),
+      )
+      const grip = screen.getByRole('button', { name: 'Reorder A' })
+      fireTouch(grip, 'touchstart', 130)
+      const move = fireTouch(grip, 'touchmove', 280)
+      expect(move.defaultPrevented).toBe(true)
+      expect(rows[0].style.transform).toBe('translate3d(0, 150px, 0)')
+      expect(drawer.style.transform).toBe('')
+      expect(
+        store.getState().player.queue.map((track) => track.trackId),
+      ).toEqual(['a', 'b', 'c'])
+      fireTouch(grip, end, 280)
+      expect(
+        store.getState().player.queue.map((track) => track.trackId),
+      ).toEqual(end === 'touchend' ? ['b', 'c', 'a'] : ['a', 'b', 'c'])
+      expect(rows[0].style.transform).toBe('')
+      fireEvent.click(screen.getByRole('button', { name: 'B' }), { detail: 1 })
+      expect(commands.select).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+    },
+  )
+
+  it('collapses an expanded drawer before dismissing it', () => {
+    const { drawer, row, onClose } = renderQueue()
+    fireTouch(row, 'touchstart', 200)
+    fireTouch(row, 'touchmove', 100)
+    fireTouch(row, 'touchend', 100)
+    vi.spyOn(drawer, 'getBoundingClientRect').mockReturnValue({
+      height: window.innerHeight - 8,
+    })
+    fireTouch(row, 'touchstart', 200)
+    fireTouch(row, 'touchmove', 300)
+    fireTouch(row, 'touchend', 300)
+    expect(drawer).not.toHaveClass('is-expanded')
+    expect(drawer.style.transform).toBe('')
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('cancels removal when a second finger touches the drawer', () => {
+    const { store } = renderRemovableQueue()
+    const row = screen.getByRole('button', { name: 'A' })
+    fireTouch(row, 'touchstart', 200, 40)
+    fireTouch(row, 'touchmove', 200, 180)
+    const event = new Event('touchstart', { bubbles: true, cancelable: true })
+    Object.defineProperties(event, {
+      touches: { value: [{ identifier: 1 }, { identifier: 2 }] },
+      changedTouches: { value: [{ identifier: 2, clientX: 80, clientY: 200 }] },
+    })
+    fireEvent(row, event)
+    fireTouch(row, 'touchend', 200, 180)
+    expect(store.getState().player.queue).toHaveLength(3)
+    expect(row.closest('[data-queue-track]').style.transform).toBe('')
+  })
+
+  it('keeps desktop colors and provides a visible close control', () => {
+    const onClose = vi.fn()
+    render(
+      <Provider store={makeStore()}>
+        <QueueDrawer mobile={false} onClose={onClose} />
+      </Provider>,
+    )
+    const drawer = screen.getByLabelText('Playback queue')
+    expect(drawer).toHaveClass('is-desktop')
+    expect(drawer.style.getPropertyValue('--nd-player-surface')).toBe(
+      createTheme().palette.background.paper,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Close queue' }))
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
   it('tracks a right swipe and removes that row without playing it or moving the drawer', () => {
     const { store, commands, onClose, drawer } = renderRemovableQueue()
     const row = screen.getByRole('button', { name: 'A' })
     fireTouch(row, 'touchstart', 200, 40)
     fireTouch(row, 'touchmove', 205, 180)
-    expect(row.style.transform).toBe('translate3d(140px, 0, 0)')
+    expect(row.closest('[data-queue-track]').style.transform).toBe(
+      'translate3d(140px, 0, 0)',
+    )
     expect(drawer.style.transform).toBe('')
     expect(store.getState().player.queue).toHaveLength(3)
     fireTouch(row, 'touchend', 205, 180)
@@ -128,7 +291,7 @@ describe('QueueDrawer', () => {
       fireTouch(row, 'touchmove', 200, 160 + deltaX)
       fireTouch(row, type, 200, 160 + deltaX)
       expect(store.getState().player.queue).toHaveLength(3)
-      expect(row.style.transform).toBe('')
+      expect(row.closest('[data-queue-track]').style.transform).toBe('')
     }
   })
 
@@ -168,7 +331,7 @@ describe('QueueDrawer', () => {
       </Provider>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /next song/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^next song$/i }))
 
     expect(commands.select).toHaveBeenCalledWith(0)
     expect(commands.play).not.toHaveBeenCalled()

@@ -2,6 +2,7 @@ import {
   PLAYER_ADD_TRACKS,
   PLAYER_CLEAR_QUEUE,
   PLAYER_REMOVE_TRACK,
+  PLAYER_REORDER_TRACK,
   PLAYER_CURRENT,
   PLAYER_PLAY_NEXT,
   PLAYER_PLAY_TRACKS,
@@ -25,6 +26,31 @@ const tracksFromData = (data = {}) =>
   Object.keys(data).map((id) => toQueueTrack(data[id]))
 
 const reduceClearQueue = () => ({ ...initialState, clear: true })
+
+const reduceReorderTrack = (state, { data }) => {
+  const from = state.queue.findIndex((track) => track.uuid === data?.uuid)
+  if (from < 0 || data.uuid === data.beforeUuid) return state
+  const queue = state.queue.filter((_, index) => index !== from)
+  const to =
+    data.beforeUuid == null
+      ? queue.length
+      : queue.findIndex((track) => track.uuid === data.beforeUuid)
+  if (to < 0 || from === to) return state
+  queue.splice(to, 0, state.queue[from])
+  const activeIndex =
+    state.playIndex ??
+    (Number.isInteger(data.currentIndex) && data.currentIndex >= 0
+      ? data.currentIndex
+      : state.savedPlayIndex)
+  const activeUuid = state.queue[activeIndex]?.uuid
+  const nextIndex = queue.findIndex((track) => track.uuid === activeUuid)
+  return {
+    ...state,
+    queue,
+    savedPlayIndex: Math.max(0, nextIndex),
+    playIndex: state.playIndex == null ? undefined : Math.max(0, nextIndex),
+  }
+}
 
 const reduceRemoveTrack = (state, { data }) => {
   if (!data?.uuid) return state
@@ -99,7 +125,10 @@ const reduceUpdateTrackMetadata = (state, { data = {} }) => {
   }
   const queue = state.queue.map(update)
   const current = update(state.current)
-  if (queue.every((track, index) => track === state.queue[index]) && current === state.current) {
+  if (
+    queue.every((track, index) => track === state.queue[index]) &&
+    current === state.current
+  ) {
     return state
   }
   return { ...state, queue, current }
@@ -168,6 +197,8 @@ export const playerReducer = (previousState = initialState, payload) => {
       return reduceClearQueue()
     case PLAYER_REMOVE_TRACK:
       return reduceRemoveTrack(previousState, payload)
+    case PLAYER_REORDER_TRACK:
+      return reduceReorderTrack(previousState, payload)
     case PLAYER_PLAY_TRACKS:
       return reducePlayTracks(previousState, payload)
     case PLAYER_SET_TRACK:

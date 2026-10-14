@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import VolumeDownIcon from '@material-ui/icons/VolumeDown'
-import VolumeOffIcon from '@material-ui/icons/VolumeOff'
-import VolumeUpIcon from '@material-ui/icons/VolumeUp'
+import VolumeUpRoundedIcon from '@material-ui/icons/VolumeUpRounded'
 
 const VolumeControl = ({ value = 1, onChange }) => {
   const previousValue = useRef(value || 1)
@@ -22,12 +20,6 @@ const VolumeControl = ({ value = 1, onChange }) => {
     event?.currentTarget?.blur?.()
     setValue(activeValue > 0 ? 0 : previousValue.current || 1)
   }
-  const Icon =
-    activeValue === 0
-      ? VolumeOffIcon
-      : activeValue < 0.5
-      ? VolumeDownIcon
-      : VolumeUpIcon
   const percent = Math.min(100, Math.max(0, (activeValue || 0) * 100))
 
   const handlePointerDown = (event) => {
@@ -69,21 +61,38 @@ const VolumeControl = ({ value = 1, onChange }) => {
         type="button"
         onClick={toggleMute}
         aria-label={activeValue ? 'Mute' : 'Unmute'}
+        className={activeValue === 0 ? 'nd-player-volume-muted' : undefined}
       >
-        <Icon />
+        <VolumeUpRoundedIcon />
       </button>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={activeValue}
-        onPointerDown={handlePointerDown}
-        onTouchStart={(e) => e.stopPropagation?.()}
-        onChange={handleChange}
-        aria-label="Volume"
-        style={{ '--progress-percent': `${percent}%` }}
-      />
+      <div className="nd-player-volume-meter">
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={activeValue}
+          onPointerDown={handlePointerDown}
+          onTouchStart={(e) => e.stopPropagation?.()}
+          onChange={handleChange}
+          aria-label="Volume"
+          aria-valuetext={`${Math.round(percent)}%`}
+        />
+        <div className="nd-player-volume-segments" aria-hidden="true">
+          {Array.from({ length: 10 }, (_, index) => {
+            const segmentFill = Math.min(
+              100,
+              Math.max(0, percent - index * 10) * 10,
+            )
+            return (
+              <span
+                key={index}
+                style={{ '--segment-fill': `${segmentFill}%` }}
+              />
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }

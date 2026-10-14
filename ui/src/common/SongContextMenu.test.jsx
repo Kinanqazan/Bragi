@@ -75,22 +75,19 @@ describe('SongContextMenu', () => {
     })
   })
 
-  it('navigates to playlist when selected', async () => {
+  it('omits playlist browsing and download from the song menu', async () => {
     render(
       <TestContext>
         <SongContextMenu record={{ id: 'song1', size: 1 }} resource="song" />
       </TestContext>,
     )
     fireEvent.click(screen.getAllByRole('button')[1])
-    await waitFor(() =>
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
-    )
-    fireEvent.click(
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
-    )
-    await waitFor(() => screen.getByText('Pl 1'))
-    fireEvent.click(screen.getByText('Pl 1'))
-    expect(window.location.hash).toBe('#/playlist/pl1/show')
+    await screen.findByText(/openSongPage|Open song page/i)
+    expect(
+      screen.queryByText(/resources\.song\.actions\.showInPlaylist/),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/download/i)).not.toBeInTheDocument()
+    expect(getPlaylistsMock).not.toHaveBeenCalled()
   })
 
   it('opens the song page from the three-dot menu', async () => {
@@ -115,7 +112,7 @@ describe('SongContextMenu', () => {
     )
   })
 
-  it('renders the download action before the full song record has loaded', async () => {
+  it('omits download when the song record is partially loaded', async () => {
     render(
       <TestContext>
         <SongContextMenu record={{ id: 'song1' }} resource="song" />
@@ -124,13 +121,12 @@ describe('SongContextMenu', () => {
 
     fireEvent.click(screen.getAllByRole('button')[1])
 
-    expect(
-      await screen.findByText(/resources\.song\.actions\.download|download/i),
-    ).toBeInTheDocument()
+    await screen.findByText(/openSongPage|Open song page/i)
+    expect(screen.queryByText(/download/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
   })
 
-  it('stops event propagation when playlist submenu is closed', async () => {
+  it('stops event propagation when the song menu is closed', async () => {
     const mockOnClick = vi.fn()
     render(
       <TestContext>
@@ -140,25 +136,17 @@ describe('SongContextMenu', () => {
       </TestContext>,
     )
 
-    // Open main menu
     fireEvent.click(screen.getAllByRole('button')[1])
+    await screen.findByText(/openSongPage|Open song page/i)
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' })
     await waitFor(() =>
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument(),
     )
-
-    // Open playlist submenu
-    fireEvent.click(
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
-    )
-    await waitFor(() => screen.getByText('Pl 1'))
-
-    // Click outside the playlist submenu (should close it without triggering parent click)
-    fireEvent.click(document.body)
 
     expect(mockOnClick).not.toHaveBeenCalled()
   })
 
-  it('does nothing when "Show in Playlist" is disabled', async () => {
+  it('opens the remaining actions without fetching playlists', async () => {
     getPlaylistsMock.mockResolvedValue({ data: [] })
     const mockOnClick = vi.fn()
     render(
@@ -170,13 +158,9 @@ describe('SongContextMenu', () => {
     )
 
     fireEvent.click(screen.getAllByRole('button')[1])
-    await waitFor(() =>
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
-    )
-
-    fireEvent.click(
-      screen.getByText(/resources\.song\.actions\.showInPlaylist/),
-    )
+    await screen.findByText(/openSongPage|Open song page/i)
+    expect(screen.getByText(/playNext|Play next/i)).toBeInTheDocument()
+    expect(getPlaylistsMock).not.toHaveBeenCalled()
     expect(mockOnClick).not.toHaveBeenCalled()
   })
 
