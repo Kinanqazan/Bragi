@@ -71,6 +71,9 @@ const useStyles = makeStyles((theme) => ({
     '& .nd-player-btn-prev svg, & .nd-player-btn-next svg': {
       fontSize: 56,
     },
+    '& .nd-player-primary-control svg': {
+      fontSize: '52px !important',
+    },
     '& .nd-player-primary-control': {
       color: `${theme.palette.text.primary} !important`,
     },

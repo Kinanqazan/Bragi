@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useDispatch } from 'react-redux'
 import SaveOutlinedIcon from '@material-ui/icons/SaveOutlined'
 import DeleteOutlineIcon from '@material-ui/icons/DeleteOutline'
@@ -37,7 +37,6 @@ const QueueDrawer = ({
   const closeTimerRef = useRef(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
-  const [expanded, setExpanded] = useState(false)
   const isDark = theme.palette.type === 'dark'
   const playerTextColor =
     !mobile || isDark ? theme.palette.text.primary : '#f5f5f5'
@@ -79,16 +78,12 @@ const QueueDrawer = ({
       if (!nativeTouch) drawer.setPointerCapture?.(event.pointerId)
       return
     }
-    const rect = drawer.getBoundingClientRect()
     const row = event.target?.closest?.('[data-queue-row]')
     swipeRef.current = {
       pointerId: event.pointerId,
       nativeTouch,
       startX: event.clientX,
       startY: event.clientY,
-      startHeight: rect.height,
-      startExpanded: expanded,
-      baseHeight: Math.min(window.innerHeight * 0.82, 760),
       inList: Boolean(listRef.current?.contains(event.target)),
       startScrollTop: listRef.current?.scrollTop || 0,
       mode: null,
@@ -117,12 +112,9 @@ const QueueDrawer = ({
           deltaX > 0 && swipe.row?.dataset.queueId ? 'remove' : 'ignore'
       } else {
         // Keep native list scrolling, including momentum, when there is content
-        // above the finger or the fully expanded list is swiped upward.
+        // above the finger or the list is swiped upward.
         swipe.mode =
-          swipe.inList &&
-          (!mobile ||
-            swipe.startScrollTop > 0 ||
-            (deltaY < 0 && swipe.startExpanded))
+          swipe.inList && (!mobile || swipe.startScrollTop > 0 || deltaY < 0)
             ? 'scroll'
             : mobile
               ? 'drag'
@@ -158,19 +150,7 @@ const QueueDrawer = ({
       return
     }
 
-    if (deltaY < 0) {
-      const maxHeight = Math.max(0, window.innerHeight - 8)
-      drawer.style.height = `${Math.min(maxHeight, swipe.startHeight - deltaY)}px`
-      drawer.style.transform = 'translate3d(0, 0, 0)'
-      return
-    }
-
-    const heightReduction = swipe.startExpanded
-      ? Math.min(deltaY, Math.max(0, swipe.startHeight - swipe.baseHeight))
-      : 0
-    drawer.style.height = `${swipe.startHeight - heightReduction}px`
-    const dragOffset = Math.max(0, deltaY - heightReduction)
-    drawer.style.transform = `translate3d(0, ${dragOffset}px, 0)`
+    drawer.style.transform = `translate3d(0, ${Math.max(0, deltaY)}px, 0)`
   }
   const completeClose = () => {
     if (!closingRef.current) return
@@ -213,15 +193,7 @@ const QueueDrawer = ({
     if (swipe.mode !== 'drag') return
     if (event.cancelable) event.preventDefault()
     const deltaY = (event?.clientY ?? swipe.startY) - swipe.startY
-    const heightReduction = swipe.startExpanded
-      ? Math.min(
-          Math.max(0, deltaY),
-          Math.max(0, swipe.startHeight - swipe.baseHeight),
-        )
-      : 0
-    const shouldClose = !cancelled && deltaY - heightReduction > 80
-    const shouldExpand = !cancelled && deltaY < -64
-    const shouldCollapse = !cancelled && swipe.startExpanded && deltaY > 48
+    const shouldClose = !cancelled && deltaY > 80
     drawer?.style.removeProperty('transition')
     if (shouldClose) {
       closingRef.current = true
@@ -230,13 +202,7 @@ const QueueDrawer = ({
       return
     }
 
-    drawer?.style.removeProperty('height')
     drawer?.style.removeProperty('transform')
-    setExpanded(
-      cancelled
-        ? swipe.startExpanded
-        : shouldExpand || (swipe.startExpanded && !shouldCollapse),
-    )
   }
   gestureHandlersRef.current = {
     start: handleSwipeStart,
@@ -294,11 +260,12 @@ const QueueDrawer = ({
   }, [])
   const playing = Boolean(snapshot?.playing)
   const togglePlayback = playing ? commands?.pause : commands?.play
+  const currentTrack = snapshot?.currentTrack || queue[currentIndex]
 
   return (
     <aside
       ref={drawerRef}
-      className={`nd-player-queue-drawer${expanded ? ' is-expanded' : ''}${mobile ? '' : ' is-desktop'}`}
+      className={`nd-player-queue-drawer${mobile ? '' : ' is-desktop'}`}
       aria-label="Playback queue"
       data-sidebar-swipe-lock="true"
       tabIndex={-1}
@@ -365,17 +332,51 @@ const QueueDrawer = ({
         <span />
       </div>
       <div className="nd-player-queue-toolbar" aria-label="Queue controls">
-        {!mobile && (
-          <button
-            type="button"
-            className="nd-player-queue-action"
-            data-queue-action="true"
-            aria-label="Close queue"
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
-        )}
+        <div
+          className="nd-player-queue-current"
+          role="group"
+          aria-label="Current song"
+        >
+          {currentTrack && (
+            <>
+              <span
+                className="nd-player-queue-cover"
+                aria-hidden="true"
+                onDragStart={(event) => event.preventDefault()}
+              >
+                <MusicNoteIcon />
+                {!currentTrack.isRadio && (
+                  <Artwork
+                    className="nd-player-queue-artwork"
+                    record={
+                      currentTrack.song || {
+                        ...currentTrack,
+                        id: currentTrack.trackId,
+                      }
+                    }
+                    size={84}
+                    fit="cover"
+                    title=""
+                  />
+                )}
+              </span>
+              <span className="nd-player-queue-details">
+                <strong>
+                  {currentTrack.title ||
+                    currentTrack.name ||
+                    currentTrack.song?.title ||
+                    'Untitled'}
+                </strong>
+                <small>
+                  {currentTrack.artist ||
+                    currentTrack.singer ||
+                    currentTrack.song?.artist ||
+                    ''}
+                </small>
+              </span>
+            </>
+          )}
+        </div>
         <div className="nd-player-queue-actions" data-queue-action="true">
           {queue.length > 0 && (
             <button
@@ -406,6 +407,16 @@ const QueueDrawer = ({
           >
             {playing ? <PauseIcon /> : <PlayArrowIcon />}
           </button>
+          {!mobile && (
+            <button
+              type="button"
+              className="nd-player-queue-action"
+              aria-label="Close queue"
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </button>
+          )}
         </div>
       </div>
       <ol ref={listRef}>

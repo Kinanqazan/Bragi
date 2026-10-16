@@ -179,7 +179,7 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     left: 0,
     padding: 0,
-    color: `${theme.palette.primary.contrastText || '#ffffff'} !important`,
+    color: `${theme.palette.text.primary} !important`,
     backgroundColor: `${theme.palette.primary.main} !important`,
     borderRadius: '50%',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.28)',
@@ -223,18 +223,24 @@ const useStyles = makeStyles((theme) => ({
     '& .nd-player-controls': {
       gap: 40,
     },
+    '& .nd-player-controls-primary': {
+      gap: 8,
+    },
     '& .nd-player-btn-prev, & .nd-player-btn-next': {
-      width: '64px !important',
-      height: '64px !important',
-      borderRadius: '14px !important',
-      backgroundColor: theme.palette.action.hover,
+      width: '80px !important',
+      height: '80px !important',
+      padding: '0 !important',
+      backgroundColor: 'transparent !important',
+      '&:hover': {
+        backgroundColor: 'transparent !important',
+      },
     },
     '& .nd-player-btn-prev svg, & .nd-player-btn-next svg': {
-      fontSize: 40,
+      fontSize: 56,
     },
   },
   volume: {
-    width: 'min(100%, 380px)',
+    width: 'min(100%, 300px)',
     margin: '20px auto 0',
   },
   error: {
@@ -1129,6 +1135,7 @@ const MobilePlayerSurface = ({
                 }
                 compact
                 isolateGestures
+                roundedSkipIcons
               />
             </div>
             <div className={classes.volume}>

@@ -472,12 +472,13 @@ code {
   display: flex;
   flex-direction: column;
   width: min(100%, 680px);
-  height: min(82dvh, 760px);
-  max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), 8px));
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
   outline: none;
-  padding: 8px max(env(safe-area-inset-right, 0px), 18px)
+  padding: max(env(safe-area-inset-top, 0px), 8px)
+    max(env(safe-area-inset-right, 0px), 18px)
     max(env(safe-area-inset-bottom, 0px), 16px)
     max(env(safe-area-inset-left, 0px), 18px);
   color: inherit;
@@ -488,15 +489,9 @@ code {
   box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.24);
   pointer-events: auto;
   animation: nd-player-queue-rise 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  transition:
-    height 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: height, transform;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
   touch-action: pan-y;
-}
-
-.nd-player-queue-drawer.is-expanded {
-  height: calc(100dvh - max(env(safe-area-inset-top, 0px), 8px));
 }
 
 .nd-player-queue-drawer.is-desktop {
@@ -541,10 +536,38 @@ code {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   min-width: 0;
   padding: 4px 2px 10px;
+  gap: 10px;
   border-bottom: 1px solid var(--nd-player-divider, currentColor);
+}
+
+.nd-player-queue-current {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  gap: 10px;
+  min-width: 0;
+  height: 42px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.nd-player-queue-current .nd-player-queue-cover {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.nd-player-queue-current strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.nd-player-queue-current small {
+  font-size: 0.78rem;
 }
 
 .nd-player-queue-toolbar button {
@@ -560,14 +583,11 @@ code {
   border: 0;
   border-radius: 50%;
   cursor: pointer;
-  transition:
-    background-color 0.16s ease,
-    transform 0.16s ease;
+  transition: background-color 0.16s ease;
 }
 
 .nd-player-queue-toolbar button:hover {
   background: var(--nd-player-tint-hover, var(--nd-player-tint, transparent));
-  transform: scale(1.04);
 }
 
 .nd-player-queue-toolbar button svg {

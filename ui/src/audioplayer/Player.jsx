@@ -35,7 +35,12 @@ export const Player = () => {
     (state) => state.settings?.notifications || false,
   )
   const gainInfo = useSelector((state) => state.replayGain)
-  const isDesktop = useMediaQuery(`(min-width:${desktopPlayerBreakpoint}px)`)
+  const matchesDesktopWidth = useMediaQuery(
+    `(min-width:${desktopPlayerBreakpoint}px)`,
+  )
+  const isNativeApp =
+    typeof window !== 'undefined' && Boolean(window.BragiNative)
+  const isDesktop = matchesDesktopWidth && !isNativeApp
   const [mobileExpanded, setMobileExpanded] = useState(false)
   const [resolvedLyrics, setResolvedLyrics] = useState(null)
   const [lyricsRevision, setLyricsRevision] = useState(0)

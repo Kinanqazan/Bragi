@@ -150,10 +150,18 @@ describe('QueueDrawer', () => {
 
   it('uses song-page artwork thumbnails and keyboard reorder without selecting a song', () => {
     const { store, commands } = renderRemovableQueue()
+    const currentSong = screen.getByLabelText('Current song')
+    expect(currentSong).toHaveTextContent('B')
     expect(
-      screen.getAllByTestId('queue-artwork').map((art) => art.dataset.songId),
+      currentSong.querySelector('[data-testid="queue-artwork"]'),
+    ).toHaveAttribute('data-song-id', 'b')
+    const list = screen.getByLabelText('Playback queue').querySelector('ol')
+    expect(
+      Array.from(list.querySelectorAll('[data-testid="queue-artwork"]')).map(
+        (art) => art.dataset.songId,
+      ),
     ).toEqual(['a', 'b', 'c'])
-    expect(screen.getAllByTestId('queue-artwork')[0]).toHaveAttribute(
+    expect(list.querySelector('[data-testid="queue-artwork"]')).toHaveAttribute(
       'data-size',
       '84',
     )
@@ -205,20 +213,17 @@ describe('QueueDrawer', () => {
     },
   )
 
-  it('collapses an expanded drawer before dismissing it', () => {
+  it('dismisses a full-height drawer in one downward gesture', () => {
+    vi.useFakeTimers()
     const { drawer, row, onClose } = renderQueue()
     fireTouch(row, 'touchstart', 200)
-    fireTouch(row, 'touchmove', 100)
-    fireTouch(row, 'touchend', 100)
-    vi.spyOn(drawer, 'getBoundingClientRect').mockReturnValue({
-      height: window.innerHeight - 8,
-    })
-    fireTouch(row, 'touchstart', 200)
     fireTouch(row, 'touchmove', 300)
+    expect(drawer.style.transform).toBe('translate3d(0, 100px, 0)')
+    expect(drawer.style.height).toBe('')
     fireTouch(row, 'touchend', 300)
-    expect(drawer).not.toHaveClass('is-expanded')
-    expect(drawer.style.transform).toBe('')
     expect(onClose).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(260)
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('cancels removal when a second finger touches the drawer', () => {
@@ -380,14 +385,15 @@ describe('QueueDrawer', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('tracks an upward touch from the list and expands the sheet', () => {
+  it('keeps the full-height sheet fixed while an upward touch scrolls the list', () => {
     const { drawer, row } = renderQueue()
     fireTouch(row, 'touchstart', 200)
-    fireTouch(row, 'touchmove', 100)
-    expect(drawer.style.height).toBe('600px')
-    expect(drawer.style.transform).toBe('translate3d(0, 0, 0)')
+    const move = fireTouch(row, 'touchmove', 100)
+    expect(move.defaultPrevented).toBe(false)
+    expect(drawer.style.height).toBe('')
+    expect(drawer.style.transform).toBe('')
     fireTouch(row, 'touchend', 100)
-    expect(drawer).toHaveClass('is-expanded')
+    expect(drawer.style.height).toBe('')
   })
 
   it('preserves native list scrolling while there are earlier songs above the finger', () => {
