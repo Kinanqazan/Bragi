@@ -1539,6 +1539,143 @@ describe('createCastPlaybackTarget', () => {
 })
 
 describe('createNativeCastPlaybackTarget', () => {
+  it('clears the spinner when Android acknowledges a paused load', async () => {
+    window.BragiNative = { loadMedia: vi.fn() }
+    const target = createNativeCastPlaybackTarget({
+      resolveMedia: () => Promise.resolve({ url: 'https://test/one.mp3' }),
+    })
+    try {
+      await target.setQueue([track], 0, { autoplay: false })
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'PAUSED',
+        contentId: 'https://test/one.mp3',
+        loadPending: false,
+      })
+      expect(target.getSnapshot()).toMatchObject({
+        playing: false,
+        loading: false,
+      })
+    } finally {
+      target.destroy()
+      delete window.BragiNative
+    }
+  })
+
+  it('sends the queue to Android and adopts receiver next/previous without reloading', async () => {
+    window.BragiNative = { loadQueue: vi.fn(), loadMedia: vi.fn() }
+    const tracks = [track, { ...track, uuid: 'track-2', trackId: 'track-2' }]
+    const target = createNativeCastPlaybackTarget({
+      resolveMedia: (item) =>
+        Promise.resolve({ url: `https://test/${item.trackId}.mp3` }),
+    })
+    try {
+      await target.setQueue(tracks, 0, { autoplay: true })
+      expect(window.BragiNative.loadQueue).toHaveBeenCalledOnce()
+      const payload = JSON.parse(window.BragiNative.loadQueue.mock.calls[0][0])
+      expect(payload.items).toHaveLength(2)
+      expect(payload.startIndex).toBe(0)
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'PLAYING',
+        contentId: 'https://test/track-1.mp3',
+        queueIndex: 0,
+        queueRevision: payload.revision,
+        loadPending: false,
+      })
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'IDLE',
+        idleReason: 'FINISHED',
+        contentId: 'https://test/track-1.mp3',
+        queueIndex: 0,
+        queueRevision: payload.revision,
+        loadPending: false,
+      })
+      expect(window.BragiNative.loadQueue).toHaveBeenCalledOnce()
+      expect(target.getSnapshot()).toMatchObject({
+        playing: false,
+        loading: false,
+      })
+      for (const index of [1, 0]) {
+        window.__bragiNativeCastMediaStatus({
+          playerState: 'PLAYING',
+          contentId: `https://test/track-${index + 1}.mp3`,
+          queueIndex: index,
+          queueRevision: payload.revision,
+          loadPending: false,
+          currentTime: 1,
+        })
+        expect(target.getSnapshot()).toMatchObject({
+          currentIndex: index,
+          currentTrack: tracks[index],
+          playing: true,
+          loading: false,
+        })
+      }
+      expect(window.BragiNative.loadQueue).toHaveBeenCalledOnce()
+      expect(window.BragiNative.loadMedia).not.toHaveBeenCalled()
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'PLAYING',
+        queueIndex: 1,
+        queueRevision: payload.revision - 1,
+      })
+      expect(target.getSnapshot().currentIndex).toBe(0)
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'IDLE',
+        idleReason: 'ERROR',
+        loadPending: false,
+        contentId: 'https://test/track-1.mp3',
+        queueIndex: 0,
+        queueRevision: payload.revision,
+      })
+      expect(target.getSnapshot().error).toBe('Cast playback error')
+      await target.play()
+      expect(window.BragiNative.loadQueue).toHaveBeenCalledTimes(2)
+      expect(target.getSnapshot().error).toBeNull()
+    } finally {
+      target.destroy()
+      delete window.BragiNative
+    }
+  })
+
+  it('accepts a receiver pause after playback starts and resumes on the next toggle', async () => {
+    window.BragiNative = {
+      loadMedia: vi.fn(),
+      play: vi.fn(),
+      pause: vi.fn(),
+    }
+    const onPlaybackEvent = vi.fn()
+    const target = createNativeCastPlaybackTarget({
+      onPlaybackEvent,
+      resolveMedia: () => Promise.resolve({ url: 'https://test/track-1.mp3' }),
+    })
+    try {
+      await target.setQueue([track], 0, { autoplay: true })
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'PLAYING',
+        contentId: 'https://test/track-1.mp3',
+        currentTime: 10,
+      })
+      window.__bragiNativeCastMediaStatus({
+        playerState: 'PAUSED',
+        contentId: 'https://test/track-1.mp3',
+        currentTime: 12,
+      })
+      expect(target.getSnapshot()).toMatchObject({
+        playing: false,
+        loading: false,
+        wasPlaying: false,
+      })
+      expect(onPlaybackEvent).toHaveBeenLastCalledWith(
+        expect.objectContaining({ type: 'paused', positionMs: 12000 }),
+      )
+      await target.toggle()
+      expect(window.BragiNative.play).toHaveBeenCalledOnce()
+      expect(window.BragiNative.pause).not.toHaveBeenCalled()
+    } finally {
+      target.destroy()
+      delete window.BragiNative
+    }
+  })
+
   it('preserves autoplay and playback intent across rapid track skips', async () => {
     const tracks = Array.from({ length: 8 }, (_, i) => ({
       uuid: `track-${i + 1}`,
@@ -1557,7 +1694,8 @@ describe('createNativeCastPlaybackTarget', () => {
     }
 
     const target = createNativeCastPlaybackTarget({
-      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
+      resolveMedia: (t) =>
+        Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
     })
 
     // Start playback on song 1
@@ -1597,7 +1735,8 @@ describe('createNativeCastPlaybackTarget', () => {
     }
 
     const target = createNativeCastPlaybackTarget({
-      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
+      resolveMedia: (t) =>
+        Promise.resolve({ url: `https://test/${t.uuid}.mp3` }),
     })
 
     await target.setQueue(tracks, 0, { autoplay: true })
@@ -1649,7 +1788,11 @@ describe('createNativeCastPlaybackTarget', () => {
     const target = createCastPlaybackTarget({
       runtime: fake.runtime,
       getSession: () => session,
-      resolveMedia: () => Promise.resolve({ url: 'https://test/song.mp3', contentType: 'audio/mpeg' }),
+      resolveMedia: () =>
+        Promise.resolve({
+          url: 'https://test/song.mp3',
+          contentType: 'audio/mpeg',
+        }),
     })
 
     await target.setQueue([track], 0, { autoplay: true })
@@ -1691,7 +1834,11 @@ describe('createNativeCastPlaybackTarget', () => {
     const target = createCastPlaybackTarget({
       runtime: fake.runtime,
       getSession: () => session,
-      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.trackId}.mp3`, contentType: 'audio/mpeg' }),
+      resolveMedia: (t) =>
+        Promise.resolve({
+          url: `https://test/${t.trackId}.mp3`,
+          contentType: 'audio/mpeg',
+        }),
       mediaLoadTimeoutMs: 50,
     })
 
@@ -1723,7 +1870,11 @@ describe('createNativeCastPlaybackTarget', () => {
     const target = createCastPlaybackTarget({
       runtime: fake.runtime,
       getSession: () => session,
-      resolveMedia: (t) => Promise.resolve({ url: `https://test/${t.trackId}.mp3`, contentType: 'audio/mpeg' }),
+      resolveMedia: (t) =>
+        Promise.resolve({
+          url: `https://test/${t.trackId}.mp3`,
+          contentType: 'audio/mpeg',
+        }),
     })
 
     await target.setQueue([first, second], 0, { autoplay: true })

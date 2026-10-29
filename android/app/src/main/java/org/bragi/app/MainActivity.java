@@ -385,13 +385,22 @@ public class MainActivity extends AppCompatActivity {
     private void notifyNativeCastMediaStatus(String playerState, String idleReason, double currentTime, double duration, double volume, String contentId) {
         runOnUiThread(() -> {
             if (webView == null) return;
-            String safeContentId = contentId != null ? contentId.replace("'", "\\'") : "";
-            String script = String.format(
-                    Locale.US,
-                    "if (window.__bragiNativeCastMediaStatus) { window.__bragiNativeCastMediaStatus({ playerState: '%s', idleReason: '%s', currentTime: %.2f, duration: %.2f, volume: %.4f, contentId: '%s' }); }",
-                    playerState, idleReason, currentTime, duration, volume, safeContentId
-            );
-            webView.evaluateJavascript(script, null);
+            try {
+                JSONObject payload = new JSONObject().put("playerState", playerState)
+                        .put("idleReason", idleReason).put("currentTime", currentTime)
+                        .put("duration", duration).put("volume", volume)
+                        .put("contentId", contentId).put("loadPending", isMediaLoading);
+                RemoteMediaClient client = currentCastSession != null ? currentCastSession.getRemoteMediaClient() : null;
+                MediaInfo info = client != null ? client.getMediaInfo() : null;
+                JSONObject identity = info != null ? info.getCustomData() : null;
+                if (identity != null && identity.has("bragiIndex") && identity.has("bragiRevision")) {
+                    payload.put("queueIndex", identity.getInt("bragiIndex"));
+                    payload.put("queueRevision", identity.getInt("bragiRevision"));
+                }
+                webView.evaluateJavascript("if (window.__bragiNativeCastMediaStatus) window.__bragiNativeCastMediaStatus(" + payload + ");", null);
+            } catch (Exception e) {
+                Log.w("BragiCast", "Could not publish receiver status", e);
+            }
         });
     }
 
@@ -1565,6 +1574,50 @@ public class MainActivity extends AppCompatActivity {
 
         private int currentLoadOperationId = 0;
         private final Handler loadMediaHandler = new Handler(Looper.getMainLooper());
+
+        @JavascriptInterface
+        public void loadQueue(String json) {
+            runOnUiThread(() -> {
+                int operation = ++currentLoadOperationId;
+                if (pendingLoadRetry != null) loadMediaHandler.removeCallbacks(pendingLoadRetry);
+                CastSession session = getActiveCastSession();
+                RemoteMediaClient client = session != null ? session.getRemoteMediaClient() : null;
+                if (client == null) {
+                    isMediaLoading = false;
+                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1);
+                    return;
+                }
+                isMediaLoading = true;
+                try {
+                    CastQueueLoader.load(client, new JSONObject(json),
+                            () -> operation == currentLoadOperationId && getActiveCastSession() == session,
+                            () -> {
+                                isMediaLoading = false;
+                                Log.i("BragiCast", "Receiver queue accepted");
+                                notifyCastStatus();
+                            },
+                            error -> {
+                                isMediaLoading = false;
+                                Log.e("BragiCast", "Receiver queue failed: " + error);
+                                notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1);
+                            });
+                } catch (Exception e) {
+                    isMediaLoading = false;
+                    Log.e("BragiCast", "Could not load receiver queue", e);
+                    notifyNativeCastMediaStatus("IDLE", "ERROR", 0, 0, 1);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void setQueueMode(String mode) {
+            runOnUiThread(() -> {
+                CastSession session = getActiveCastSession();
+                if (session != null && session.getRemoteMediaClient() != null) {
+                    session.getRemoteMediaClient().queueSetRepeatMode(CastQueueLoader.repeatMode(mode), null);
+                }
+            });
+        }
         private Runnable pendingLoadRetry = null;
 
         @JavascriptInterface
@@ -1773,6 +1826,10 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     if (opId == currentLoadOperationId) {
                         Log.i("BragiCast", "Media load accepted by Cast receiver for opId=" + opId);
+                        if (!autoplay) {
+                            isMediaLoading = false;
+                            notifyCastStatus();
+                        }
                     }
                 }
             });

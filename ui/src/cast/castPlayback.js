@@ -1058,9 +1058,13 @@ export const createNativeCastPlaybackTarget = ({
   let wasActuallyPlaying = false
   let playbackIntent = false
   const queuePolicy = createQueuePolicy()
-  let loadOperation = 0
+  // Receiver metadata can survive a WebView reload; keep revisions distinct.
+  let loadOperation = Math.floor(Math.random() * 1000000000)
   let mediaLoaded = false
   let finishedTrackId = null
+  let receiverQueueActive = false
+  let loadedQueueKey = ''
+  const queueKey = () => queue.map(trackKey).join('|')
 
   const throttledNativeSeek = throttle(
     (time) => {
@@ -1154,7 +1158,28 @@ export const createNativeCastPlaybackTarget = ({
       const trackDuration =
         Number(meta.duration || meta.song?.duration) || 0
 
-      if (typeof window !== 'undefined' && window.BragiNative?.loadMedia) {
+      if (typeof window !== 'undefined' && window.BragiNative?.loadQueue) {
+        const items = await Promise.all(queue.map(async (item, itemIndex) => {
+          const resolved = itemIndex === currentIndex ? media : await resolveMedia(item)
+          return {
+            url: resolved.url,
+            contentType: resolved.contentType || 'audio/mpeg',
+            title: item.title || item.name || '',
+            artist: item.artist || item.artistName || '',
+            album: item.album || item.albumName || '',
+            artwork: item.cover ? toCastReceiverUrl(item.cover) : '',
+            duration: Number(item.duration || item.song?.duration) || 0,
+          }
+        }))
+        if (destroyed || operation !== loadOperation) return false
+        receiverQueueActive = true
+        loadedQueueKey = queueKey()
+        window.BragiNative.loadQueue(JSON.stringify({
+          items, startIndex: currentIndex, revision: operation,
+          position: Number(position) || 0, autoplay: shouldAutoplay, mode: state.mode,
+        }))
+      } else if (typeof window !== 'undefined' && window.BragiNative?.loadMedia) {
+        receiverQueueActive = false
         try {
           window.BragiNative.loadMedia(
             meta.title || meta.name || '',
@@ -1220,8 +1245,28 @@ export const createNativeCastPlaybackTarget = ({
     duration,
     volume,
     contentId,
+    queueIndex,
+    queueRevision,
+    loadPending,
   }) => {
     if (destroyed) return
+
+    if (receiverQueueActive && Number.isInteger(queueRevision)) {
+      if (queueRevision !== loadOperation) return
+      if (Number.isInteger(queueIndex) && queue[queueIndex] && queueIndex !== currentIndex) {
+        report('stopped', state.currentTime)
+        currentIndex = queueIndex
+        currentTrack = queue[queueIndex]
+        lastActiveTrack = currentTrack
+        currentMediaUrl = contentId
+        queuePolicy.setQueue(queue.length, currentIndex)
+        wasActuallyPlaying = false
+        finishedTrackId = null
+        lastActivePosition = 0
+        state = { ...state, currentTrack, currentIndex, currentTime: 0, error: null }
+        report('starting', 0)
+      }
+    }
 
     // Verify whether this event belongs to the currently requested track
     const contentMatches =
@@ -1256,10 +1301,9 @@ export const createNativeCastPlaybackTarget = ({
         nextPlaying = true
       }
     } else if (isPaused) {
-      // If a track load is in progress or playbackIntent is true,
-      // a transient PAUSED event from the receiver terminating the previous
-      // track MUST NOT kill playback intent or stop playback!
-      if (!state.loading && !playbackIntent) {
+      // Preserve intent only during a handoff. Once playback has started,
+      // the receiver is authoritative (including voice/Google Home pauses).
+      if (loadPending === false || !state.loading) {
         nextPlaying = false
         nextLoading = false
         wasPlayingBeforeStop = false
@@ -1273,8 +1317,12 @@ export const createNativeCastPlaybackTarget = ({
         }
       } else {
         nextLoading = false
-        if (!playbackIntent) {
+        if (!playbackIntent || receiverQueueActive) {
           nextPlaying = false
+          if (receiverQueueActive) {
+            playbackIntent = false
+            wasPlayingBeforeStop = false
+          }
         }
       }
     }
@@ -1319,7 +1367,7 @@ export const createNativeCastPlaybackTarget = ({
       wasActuallyPlaying,
     )
 
-    if (finished) {
+    if (finished && !receiverQueueActive) {
       finishedTrackId = currentTrackId
       wasActuallyPlaying = false
       navigate('next', { autoplay: true, manual: false })
@@ -1329,7 +1377,7 @@ export const createNativeCastPlaybackTarget = ({
         return
       }
       const hasMoreTracks = queue.length > 1 && currentIndex + 1 < queue.length
-      if ((playbackIntent || wasPlayingBeforeStop) && hasMoreTracks) {
+      if (!receiverQueueActive && (playbackIntent || wasPlayingBeforeStop) && hasMoreTracks) {
         navigate('next', { autoplay: true, manual: false })
         return
       }
@@ -1354,7 +1402,7 @@ export const createNativeCastPlaybackTarget = ({
     if (!currentTrack && queue.length) {
       return loadTrack(queue[0], { autoplay: true, index: 0 })
     }
-    if (currentTrack && !mediaLoaded) {
+    if (currentTrack && (!mediaLoaded || state.error)) {
       return loadTrack(currentTrack, {
         autoplay: true,
         position: state.currentTime,
@@ -1402,6 +1450,8 @@ export const createNativeCastPlaybackTarget = ({
         currentMediaUrl = null
         currentIndex = -1
         mediaLoaded = false
+        receiverQueueActive = false
+        loadedQueueKey = ''
         state = {
           ...state,
           currentTrack: null,
@@ -1427,7 +1477,7 @@ export const createNativeCastPlaybackTarget = ({
           ? (options.autoplay || playbackIntent || state.playing)
           : Boolean(playbackIntent || state.playing)
 
-      if (sameTrack) {
+      if (sameTrack && (!window.BragiNative?.loadQueue || loadedQueueKey === queueKey())) {
         currentTrack = nextTrack
         state = { ...state, currentTrack, currentIndex, error: null }
         notify()
@@ -1502,6 +1552,7 @@ export const createNativeCastPlaybackTarget = ({
       const nextMode = normalizePlayMode(mode)
       queuePolicy.setMode(nextMode)
       state = { ...state, mode: nextMode }
+      if (receiverQueueActive) window.BragiNative?.setQueueMode?.(nextMode)
       notify()
       return state.mode
     },
