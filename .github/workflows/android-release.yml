@@ -26,6 +26,6 @@ jobs:
         run: |
           gh release create "$RELEASE_TAG" android/bragi.apk \
             --title "$RELEASE_TITLE" \
-            --notes "APK from commit $COMMIT_SHA." \
+            --notes "Bragi for Android. Install this APK on an Android device, connect it to your Bragi server, and stream your music library with native media controls and Google Cast support." \
             --target "$COMMIT_SHA" \
             --latest
