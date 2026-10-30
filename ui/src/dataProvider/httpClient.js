@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { baseUrl } from '../utils'
 import config from '../config'
 import { jwtDecode } from 'jwt-decode'
+import { handleNetworkFailure } from '../offline'
 
 const customAuthorizationHeader = 'X-ND-Authorization'
 export const clientUniqueIdHeader = 'X-ND-Client-Unique-Id'
@@ -60,6 +61,7 @@ const httpClient = (url, options = {}) => {
       return response
     })
     .catch((error) => {
+      handleNetworkFailure(error)
       if (error?.status === 401) {
         localStorage.removeItem('token')
         localStorage.removeItem('is-authenticated')

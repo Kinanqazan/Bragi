@@ -1,0 +1,31 @@
+name: Publish Android APK
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish existing APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Publish APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: android-${{ github.run_number }}
+          RELEASE_TITLE: Bragi Android build ${{ github.run_number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          gh release create "$RELEASE_TAG" android/bragi.apk \
+            --title "$RELEASE_TITLE" \
+            --notes "APK from commit $COMMIT_SHA." \
+            --target "$COMMIT_SHA" \
+            --latest

@@ -1399,6 +1399,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public String getThemeAccentColor() {
+            return String.format(Locale.US, "#%06X", 0xFFFFFF & exitDialogAccentColor);
+        }
+
+        @JavascriptInterface
         public String getServerUrl() {
             return currentServerUrl != null ? currentServerUrl.replaceAll("/+$", "") : "";
         }

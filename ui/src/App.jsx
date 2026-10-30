@@ -36,6 +36,8 @@ import { i18nProvider, retrieveTranslation } from './i18n'
 import config from './config'
 import useChangeThemeColor from './useChangeThemeColor'
 import { useEffect } from 'react'
+import { baseUrl } from './utils'
+import { handleNetworkFailure } from './offline'
 
 const history = createHashHistory()
 
@@ -133,6 +135,14 @@ const Admin = (props) => {
 const AppRoot = () => {
   let language = localStorage.getItem('locale') || 'en'
   document.documentElement.lang = language
+
+  useEffect(() => {
+    if (!window.BragiNative) return
+    fetch(baseUrl('/ping'), { cache: 'no-store' })
+      .then((response) => handleNetworkFailure({ status: response.status }))
+      .catch(handleNetworkFailure)
+  }, [])
+
   return <App />
 }
 

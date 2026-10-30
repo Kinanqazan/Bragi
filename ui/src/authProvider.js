@@ -1,6 +1,7 @@
 import { jwtDecode } from 'jwt-decode'
 import { baseUrl } from './utils'
 import config from './config'
+import { handleNetworkFailure } from './offline'
 
 // config sent from server may contain authentication info, for example when the user is authenticated
 // by a reverse proxy request header
@@ -39,7 +40,9 @@ const authProvider = {
     return fetch(request)
       .then((response) => {
         if (response.status < 200 || response.status >= 300) {
-          throw new Error(response.statusText)
+          const error = new Error(response.statusText)
+          error.status = response.status
+          throw error
         }
         return response.json()
       })
@@ -51,10 +54,7 @@ const authProvider = {
         return response
       })
       .catch((error) => {
-        if (
-          error.message === 'Failed to fetch' ||
-          error.stack === 'TypeError: Failed to fetch'
-        ) {
+        if (handleNetworkFailure(error)) {
           throw new Error('errors.network_error')
         }
 
