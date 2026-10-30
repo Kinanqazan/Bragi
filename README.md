@@ -6,28 +6,28 @@
 
 ## Features
 
-<img src=".github/icons/library.svg" width="20" height="20" alt=""> **Music library**<br>
+<img src=".github/icons/library.svg" width="20" height="20" align="absmiddle" alt=""> **Music library**<br>
 Browse and search songs, albums, artists, genres, and moods. Create playlists, save favorites, and manage your playback queue.
 
-<img src=".github/icons/lyrics.svg" width="20" height="20" alt=""> **Lyrics**<br>
+<img src=".github/icons/lyrics.svg" width="20" height="20" align="absmiddle" alt=""> **Lyrics**<br>
 Follow synchronized lyrics, tap a timed line to jump to it, and search online for missing lyrics using the song's title and artist.
 
-<img src=".github/icons/lyrics-timing.svg" width="20" height="20" alt=""> **Lyrics editing**<br>
+<img src=".github/icons/lyrics-timing.svg" width="20" height="20" align="absmiddle" alt=""> **Lyrics editing**<br>
 Import TXT or LRC files, edit lyrics, and shift timestamps earlier or later in one-second steps. Save lyrics inside the song file or as a separate file.
 
-<img src=".github/icons/song-editing.svg" width="20" height="20" alt=""> **Song editing**<br>
+<img src=".github/icons/song-editing.svg" width="20" height="20" align="absmiddle" alt=""> **Song editing**<br>
 Update titles, artist names, album artist names, genre and mood tags, and cover artwork.
 
-<img src=".github/icons/cast.svg" width="20" height="20" alt=""> **Google Cast**<br>
+<img src=".github/icons/cast.svg" width="20" height="20" align="absmiddle" alt=""> **Google Cast**<br>
 Play music on Chromecast, Google Home/Nest speakers, and Android TVs from the Android app or a supported browser.
 
-<img src=".github/icons/statistics.svg" width="20" height="20" alt=""> **Listening statistics**<br>
+<img src=".github/icons/statistics.svg" width="20" height="20" align="absmiddle" alt=""> **Listening statistics**<br>
 See your top tracks and artists over the last 30 days and discover unplayed songs.
 
-<img src=".github/icons/mobile.svg" width="20" height="20" alt=""> **Mobile listening**<br>
+<img src=".github/icons/mobile.svg" width="20" height="20" align="absmiddle" alt=""> **Mobile listening**<br>
 The Android app supports background playback, lock-screen controls, and headset controls.
 
-<img src=".github/icons/personalization.svg" width="20" height="20" alt=""> **Personalization**<br>
+<img src=".github/icons/personalization.svg" width="20" height="20" align="absmiddle" alt=""> **Personalization**<br>
 Choose a theme and language, adjust library views, and enable Last.fm or ListenBrainz scrobbling when configured on your server.
 
 Online lyrics search and editing require an administrator account and the deployment option shown below. The server needs internet access for lyrics search.
@@ -45,8 +45,8 @@ services:
     container_name: bragi
     environment:
       BR_ENABLEMEDIAFILEMETADATAEDITING: "true" # (Optional: enable administrator song, artwork, and lyrics editing and lyrics search)
-      # BR_ENABLEMEDIAFILEDELETION: "true" # (Optional: allow administrators to permanently delete music files)
-      # BR_CASTMEDIABASEURL: "http://YOUR_SERVER_IP:4533" # (Optional: use a server address reachable by Cast speakers or TVs; replace YOUR_SERVER_IP)
+      BR_ENABLEMEDIAFILEDELETION: "true" # (Optional: allow administrators to permanently delete music files)
+      BR_CASTMEDIABASEURL: "http://YOUR_SERVER_IP:4533" # (Optional: use a server address reachable by Cast speakers or TVs; replace YOUR_SERVER_IP)
     volumes:
       - /path/to/data:/data
       - /path/to/music:/music:rw
@@ -63,11 +63,11 @@ docker compose up -d
 
 3. Open `http://YOUR_SERVER_IP:4533/app/` in your browser and create your administrator account. Your music will appear as the library is scanned.
 
-The example enables administrator lyrics search, song editing, and lyrics editing. Uncomment the other optional settings only if needed. Saving song tags, artwork, and lyrics requires write access to the music folder. For a read-only library, set `BR_ENABLEMEDIAFILEMETADATAEDITING` to `"false"` and change `:rw` to `:ro`.
+The example enables administrator editing, lyrics search, and permanent file deletion. Replace `YOUR_SERVER_IP` with an address your Cast speakers or TVs can reach, or remove `BR_CASTMEDIABASEURL` if no override is needed. Saving changes and deleting files require write access to the music folder. For a read-only library, set both `BR_ENABLEMEDIAFILEMETADATAEDITING` and `BR_ENABLEMEDIAFILEDELETION` to `"false"` and change `:rw` to `:ro`.
 
 ## Android app
 
-1. Download the [Bragi APK](android/bragi.apk) to your phone and install it. Allow installation from that source if Android asks.
+1. Download the APK from the [latest Android release](https://github.com/Kinanqazan/Bragi/releases/latest) to your phone and install it. Allow installation from that source if Android asks.
 2. Open Bragi and enter your server's base address, such as `https://music.example.com` or `http://192.168.1.100:4533` on your home network.
 3. Connect and sign in with your Bragi account.
 
