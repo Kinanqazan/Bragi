@@ -1,66 +1,42 @@
 # Bragi
 
-[![Build custom Docker image](https://github.com/Kinanqaz/Bragi/actions/workflows/custom-image.yml/badge.svg)](https://github.com/Kinanqaz/Bragi/actions/workflows/custom-image.yml)
+![Bragi on desktop and mobile](.github/screenshots/bragi-mockup.png)
 
-![Bragi Modern UI & Mobile PWA Preview](.github/screenshots/bragi-mockup.png)
+**Bragi** is a self-hosted music streaming server with a web player and an Android app. Keep your music on your own server and listen from your computer, phone, or Cast speakers.
 
-**Bragi** is a modern, mobile-first music streaming server and Progressive Web App (PWA). Designed with sleek glassmorphism, responsive touch navigation, synchronized lyrics, and direct Google Cast support, Bragi turns your personal music collection into a premium streaming experience.
+## Features
 
----
+<img src=".github/icons/library.svg" width="20" height="20" alt=""> **Music library**<br>
+Browse and search songs, albums, artists, genres, and moods. Create playlists, save favorites, and manage your playback queue.
 
-## 🌟 Top 10 Features in Bragi
+<img src=".github/icons/lyrics.svg" width="20" height="20" alt=""> **Lyrics**<br>
+Follow synchronized lyrics, tap a timed line to jump to it, and search online for missing lyrics using the song's title and artist.
 
-### 1. 📡 Google Cast (Chromecast) Integration
-- Cast music directly to Chromecast, Google Home/Nest speakers, and Android TVs from the web UI and PWA.
-- Full remote playback synchronization, volume adjustment, seeking, and live Cast connection diagnostics.
+<img src=".github/icons/lyrics-timing.svg" width="20" height="20" alt=""> **Lyrics editing**<br>
+Import TXT or LRC files, edit lyrics, and shift timestamps earlier or later in one-second steps. Save lyrics inside the song file or as a separate file.
 
-### 2. 🎵 Modern Responsive Player Surface
-- Redesigned player surface for both desktop and mobile (`ModernPlayerSurface` / `MobilePlayerSurface`).
-- Dynamic ambient artwork backdrop coloring (`artworkColor`) that adapts to the currently playing song's album art.
-- Expanded queue drawer with easy reordering, swipe interactions, and queue management.
+<img src=".github/icons/song-editing.svg" width="20" height="20" alt=""> **Song editing**<br>
+Update titles, artist names, album artist names, genre and mood tags, and cover artwork.
 
-### 3. 📱 Full PWA & Dynamic Notch/Theme Synchronization
-- Standalone Progressive Web App with optimized service worker caching and manifest shortcuts.
-- Dynamic `<meta name="theme-color">` runtime synchronization (`useChangeThemeColor`) that adapts the mobile notch and status bar to current theme and player states.
-- Safe-area inset support designed specifically for modern notched mobile displays.
+<img src=".github/icons/cast.svg" width="20" height="20" alt=""> **Google Cast**<br>
+Play music on Chromecast, Google Home/Nest speakers, and Android TVs from the Android app or a supported browser.
 
-### 4. 📲 Mobile Bottom Navigation & Touch Gestures
-- Dedicated mobile navigation bar (`MobileBottomNav`) for one-tap switching between Songs, Albums, Artists, Playlists, and Search.
-- Mobile touch gestures, including pull-down to minimize player and quick-action sheets.
+<img src=".github/icons/statistics.svg" width="20" height="20" alt=""> **Listening statistics**<br>
+See your top tracks and artists over the last 30 days and discover unplayed songs.
 
-### 5. ✨ Modern Song & Album Discovery Experience
-- Brand new `ModernSongList` with faceted filtering, fast multi-field searching, customizable items-per-page, and album art thumbnails.
-- Flexible responsive layout switching between dense list, card view, and facet grids.
+<img src=".github/icons/mobile.svg" width="20" height="20" alt=""> **Mobile listening**<br>
+The Android app supports background playback, lock-screen controls, and headset controls.
 
-### 6. 🎤 Synchronized Lyrics Canvas
-- Dedicated lyrics canvas interface with synchronized line-by-line scrolling and distraction-free full-screen display.
+<img src=".github/icons/personalization.svg" width="20" height="20" alt=""> **Personalization**<br>
+Choose a theme and language, adjust library views, and enable Last.fm or ListenBrainz scrobbling when configured on your server.
 
-### 7. 🎧 Native OS Media Session API Integration
-- Complete integration with the browser's Media Session API for rich lock screen controls, notification center metadata, album artwork, and Bluetooth/headset media key controls.
+Online lyrics search and editing require an administrator account and the deployment option shown below. The server needs internet access for lyrics search.
 
-### 8. ⚡ Robust Modular Playback Engine
-- Decoupled `PlaybackEngine` architecture separating playback state from HTML5 audio and Cast streams.
-- Smooth debounced volume controls, gapless queue progression, and reliable track transition policies.
+## Deploy with Docker Compose
 
-### 9. 🎨 Curated Glassmorphism & Modern Themes
-- Beautiful glassmorphic themes (such as `SquiddiesGlass`, `amusic`, and updated `gruvboxDark`) featuring modern typography, refined dark palettes, and subtle micro-animations.
+You need Docker with Docker Compose on your server. The container image is built for **linux/amd64** (Intel/AMD 64-bit servers).
 
-### 10. 🗑️ Permanent Media File Deletion (Admin Safeguard)
-- Administrators can permanently delete individual songs directly from the web context menu (`BR_ENABLEMEDIAFILEDELETION="true"`).
-- Protected by strict server-side safeguards: administrator-only checks, path traversal/symlink escape prevention, and automated cleanup of related database records.
-
-### 11. 🏷️ Song Metadata Editing (Admin Safeguard)
-- Administrators can edit a song's title, artist, and album artist on its song page (`BR_ENABLEMEDIAFILEMETADATAEDITING="true"`).
-- Changes are written to the selected song's embedded tags; filenames and folders stay unchanged. This setting is off by default.
-- Administrators can set a display-name override on an artist page. It is stored in Bragi and does not rewrite song tags.
-
----
-
-## 🚀 Quick Start with Docker Compose
-
-Pushes to `master` automatically build and publish the container image to GitHub Container Registry:
-
-Use the `BR_` prefix for Bragi environment variables. For example, `BR_ENABLEMEDIAFILEDELETION` enables administrator file deletion.
+1. Save the following as `compose.yaml`, replacing `/path/to/data` and `/path/to/music` with your own folders. The data folder stores Bragi's database and settings; the music folder contains your collection.
 
 ```yaml
 services:
@@ -68,8 +44,9 @@ services:
     image: ghcr.io/kinanqaz/bragi:latest
     container_name: bragi
     environment:
-      BR_ENABLEMEDIAFILEDELETION: "true" # Optional: enable admin file deletion
-      BR_ENABLEMEDIAFILEMETADATAEDITING: "true" # Optional: enable admin song metadata editing
+      BR_ENABLEMEDIAFILEMETADATAEDITING: "true" # (Optional: enable administrator song, artwork, and lyrics editing and lyrics search)
+      # BR_ENABLEMEDIAFILEDELETION: "true" # (Optional: allow administrators to permanently delete music files)
+      # BR_CASTMEDIABASEURL: "http://YOUR_SERVER_IP:4533" # (Optional: use a server address reachable by Cast speakers or TVs; replace YOUR_SERVER_IP)
     volumes:
       - /path/to/data:/data
       - /path/to/music:/music:rw
@@ -78,25 +55,24 @@ services:
     restart: unless-stopped
 ```
 
----
+2. From the folder containing `compose.yaml`, start Bragi:
 
-## 🛠️ Development & Local Testing
-
-Bragi is built with Go, React, SQLite, and Vite.
-
-To run the live single-origin development environment locally:
-
-```powershell
-.\scripts\dev.ps1
+```sh
+docker compose up -d
 ```
 
-- Starts Vite on `http://localhost:4533` with hot-module reloading (HMR).
-- Runs the backend API on `http://localhost:4633`.
-- Serves test music fixtures from `tests/fixtures/test_songs files`.
+3. Open `http://YOUR_SERVER_IP:4533/app/` in your browser and create your administrator account. Your music will appear as the library is scanned.
 
----
+The example enables administrator lyrics search, song editing, and lyrics editing. Uncomment the other optional settings only if needed. Saving song tags, artwork, and lyrics requires write access to the music folder. For a read-only library, set `BR_ENABLEMEDIAFILEMETADATAEDITING` to `"false"` and change `:rw` to `:ro`.
 
-## 📜 Acknowledgements & License
+## Android app
 
-- **Acknowledgements**: Bragi was originally created based on the wonderful [Navidrome](https://github.com/navidrome/navidrome) project by Deluan and contributors.
-- **License**: Licensed under the [GNU General Public License v3](LICENSE).
+1. Download the [Bragi APK](android/bragi.apk) to your phone and install it. Allow installation from that source if Android asks.
+2. Open Bragi and enter your server's base address, such as `https://music.example.com` or `http://192.168.1.100:4533` on your home network.
+3. Connect and sign in with your Bragi account.
+
+The Android app connects to your server to browse and stream your music.
+
+## Acknowledgements & License
+
+Bragi is based on [Navidrome](https://github.com/navidrome/navidrome) by Deluan and contributors. Licensed under the [GNU General Public License v3](LICENSE).
