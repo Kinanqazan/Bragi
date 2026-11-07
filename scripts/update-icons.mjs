@@ -15,7 +15,7 @@ const ffmpeg = path.join(
   'ffmpeg.exe',
 );
 const brandBackground = '#5B805F';
-const androidLauncherBackground = '#6B946F';
+const androidLauncherBackground = '#246B45';
 const faviconColor = '#66B76D';
 const androidLauncherOnly = process.argv.includes('--android-launcher-only');
 
