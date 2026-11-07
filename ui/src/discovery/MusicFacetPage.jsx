@@ -35,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
       height: '0 !important',
     },
     paddingTop: 'calc(var(--nd-mobile-top-offset, calc(env(safe-area-inset-top, 0px) + 82px)) + 12px)',
-    paddingBottom: 'calc(var(--nd-mobile-bottom-offset, calc(env(safe-area-inset-bottom, 0px) + 80px)) + 24px)',
+    paddingBottom: 24,
     paddingLeft: 0,
     paddingRight: 0,
     [theme.breakpoints.up('sm')]: {

@@ -45,7 +45,7 @@ const Menu = ({ sidebarOpen }) => (
   </div>
 )
 
-const renderSidebar = (open = false, content = null) => {
+const renderSidebar = (open = false, content = null, menu = <Menu />) => {
   const store = createStore(
     (state = { admin: { ui: { sidebarOpen: open } } }, action) =>
       action.type === setSidebarVisibility(true).type
@@ -66,9 +66,7 @@ const renderSidebar = (open = false, content = null) => {
         <div role="slider" aria-label="Seek" />
         <div className="nd-artwork-carousel">Artwork</div>
         {content}
-        <Sidebar>
-          <Menu />
-        </Sidebar>
+        <Sidebar>{menu}</Sidebar>
       </ThemeProvider>
     </Provider>,
   )
@@ -114,6 +112,9 @@ const isOpen = (store) => store.getState().admin.ui.sidebarOpen
 
 describe('Sidebar swipes', () => {
   beforeEach(() => {
+    const app = document.createElement('div')
+    app.id = 'root'
+    document.body.appendChild(app)
     useMediaQuery.mockReturnValue(true)
     onMenuItemClick.mockClear()
     vi.useFakeTimers()
@@ -125,6 +126,7 @@ describe('Sidebar swipes', () => {
 
   afterEach(() => {
     cleanup()
+    document.getElementById('root')?.remove()
     vi.restoreAllMocks()
     vi.useRealTimers()
   })
@@ -172,12 +174,18 @@ describe('Sidebar swipes', () => {
     pointer(control, 'pointermove', 240)
     tick()
     expect(paper.style.transform).toBe('translate3d(-75%, 0, 0)')
+    expect(document.getElementById('root').style.transform).toBe(
+      'translate3d(20.5vw, 0, 0)',
+    )
     expect(paper.style.transition).toBe('none')
     expect(isOpen(store)).toBe(false)
     expect(screen.getByText('Expanded menu')).toBeVisible()
     pointer(document, 'pointermove', 300)
     tick()
     expect(paper.style.transform).toBe('translate3d(-50%, 0, 0)')
+    expect(document.getElementById('root').style.transform).toBe(
+      'translate3d(41vw, 0, 0)',
+    )
     pointer(document, 'pointermove', 210)
     tick()
     expect(paper.style.transform).toBe('translate3d(-87.5%, 0, 0)')
@@ -245,14 +253,40 @@ describe('Sidebar swipes', () => {
     const row = screen.getByRole('button', { name: 'Play Swipe target' })
 
     pointer(row, 'pointerdown', 20, 300)
-    tick(LONG_PRESS_DELAY - 1)
+    tick(20)
     pointer(row, 'pointermove', 160, 300)
+    tick(LONG_PRESS_DELAY)
     pointer(row, 'pointerup', 160, 300)
-    tick(1)
 
     expect(isOpen(store)).toBe(true)
     expect(onStartSelection).not.toHaveBeenCalled()
     expect(onPlay).not.toHaveBeenCalled()
+  })
+
+  it('accepts the first sidebar tap after a song touch', () => {
+    const song = {
+      id: 'song-1',
+      title: 'Test song',
+      artist: 'Artist',
+      album: 'Album',
+      duration: 180,
+    }
+    const { store } = renderSidebar(
+      false,
+      <ModernTrackRows songs={[song]} onPlay={vi.fn()} />,
+    )
+    const row = screen.getByRole('button', { name: 'Play Test song' })
+    pointer(row, 'pointerdown', 100)
+    pointer(row, 'pointerup', 100)
+
+    act(() => {
+      store.dispatch(setSidebarVisibility(true))
+    })
+    const artists = screen.getByRole('button', { name: 'Artists' })
+    pointer(artists, 'pointerdown', 100)
+    pointer(artists, 'pointerup', 100)
+    fireEvent.click(artists, { detail: 1 })
+    expect(onMenuItemClick).toHaveBeenCalledOnce()
   })
 
   it('reverses immediately after dragging past the fully open edge', () => {
@@ -343,6 +377,73 @@ describe('Sidebar swipes', () => {
     fireEvent.click(artists, { detail: 1 })
 
     expect(onMenuItemClick).toHaveBeenCalledOnce()
+  })
+
+  it('activates a sidebar link on touch release even if the browser omits click', () => {
+    const navigate = vi.fn((event) => event.preventDefault())
+    const LinkMenu = () => (
+      <a role="menuitem" href="/album/all" onClick={navigate}>
+        Albums
+      </a>
+    )
+    renderSidebar(true, null, <LinkMenu />)
+    const albums = screen.getByRole('menuitem', { name: 'Albums' })
+    pointer(albums, 'pointerdown', 100)
+    pointer(albums, 'pointerup', 100)
+    expect(navigate).toHaveBeenCalledTimes(1)
+    fireEvent.click(albums, { detail: 1 })
+    expect(navigate).toHaveBeenCalledTimes(1)
+    pointer(albums, 'pointerdown', 100)
+    pointer(albums, 'pointerup', 100)
+    expect(navigate).toHaveBeenCalledTimes(2)
+  })
+
+  it('activates sidebar settings and the configured link on their first touch', () => {
+    const openSettings = vi.fn()
+    const openLink = vi.fn()
+    const refresh = vi.fn((event) => event.stopPropagation())
+    const Controls = () => (
+      <div>
+        <div role="menuitem" data-sidebar-touch onClick={openLink}>External link</div>
+        <div role="button" data-sidebar-touch onClick={openSettings}>
+          Settings
+          <button data-sidebar-touch onClick={refresh}>Refresh</button>
+        </div>
+      </div>
+    )
+    renderSidebar(true, null, <Controls />)
+    for (const [role, name, callback] of [
+      ['menuitem', 'External link', openLink],
+      ['button', 'Settings Refresh', openSettings],
+      ['button', 'Refresh', refresh],
+    ]) {
+      const target = screen.getByRole(role, { name })
+      pointer(target, 'pointerdown', 100)
+      pointer(target, 'pointerup', 100)
+      expect(callback).toHaveBeenCalledOnce()
+      fireEvent.click(target, { detail: 1 })
+      expect(callback).toHaveBeenCalledOnce()
+    }
+    expect(openSettings).toHaveBeenCalledOnce()
+  })
+
+  it('does not activate a menu link when the touch scrolls, swipes, or is cancelled', () => {
+    const navigate = vi.fn((event) => event.preventDefault())
+    const LinkMenu = () => (
+      <a role="menuitem" href="/album/all" onClick={navigate}>Albums</a>
+    )
+    renderSidebar(true, null, <LinkMenu />)
+    const albums = screen.getByRole('menuitem', { name: 'Albums' })
+    pointer(albums, 'pointerdown', 100)
+    pointer(albums, 'pointermove', 100, 330)
+    pointer(albums, 'pointerup', 100, 330)
+    pointer(albums, 'pointerdown', 100)
+    pointer(albums, 'pointermove', 70)
+    pointer(albums, 'pointerup', 70)
+    pointer(albums, 'pointerdown', 100)
+    pointer(albums, 'pointercancel', 100)
+    pointer(albums, 'pointerup', 100)
+    expect(navigate).not.toHaveBeenCalled()
   })
 
   it.each(['Search', 'Seek', 'Artwork'])(

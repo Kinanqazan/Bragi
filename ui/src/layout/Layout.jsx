@@ -32,7 +32,7 @@ const useStyles = makeStyles((theme) => ({
     '@media (max-width: 959.95px)': {
       backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
     },
-    paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+    paddingBottom: 'var(--nd-mobile-bottom-offset, calc(56px + env(safe-area-inset-bottom, 0px)))',
     '& .MuiDrawer-root.MuiDrawer-modal, & .MuiDrawer-modal, & .RaSidebar-root .MuiDrawer-modal':
       {
         background: 'transparent !important',
@@ -285,8 +285,7 @@ const useStyles = makeStyles((theme) => ({
         overflowY: 'auto !important',
         WebkitOverflowScrolling: 'touch',
         overscrollBehaviorY: 'contain',
-        paddingBottom:
-          'calc(var(--nd-mobile-bottom-offset, 56px) + 16px) !important',
+        paddingBottom: '16px !important',
       },
       '&& #main-content > div': {
         flex: '0 0 auto !important',
@@ -426,7 +425,7 @@ const Layout = (props) => {
 
   useEffect(() => {
     const offset = hasQueue
-      ? 'calc(156px + env(safe-area-inset-bottom, 0px))'
+      ? 'calc(159px + env(safe-area-inset-bottom, 0px))'
       : 'calc(56px + env(safe-area-inset-bottom, 0px))'
     document.documentElement.style.setProperty(
       '--nd-mobile-bottom-offset',

@@ -215,7 +215,9 @@ describe('MobilePlayerSurface gestures', () => {
     const shell = screen.getByTestId('mobile-player-shell')
     expect(drawer.parentElement).toBe(shell)
     expect(
-      screen.getByRole('region', { name: 'Full-screen player' }).contains(drawer),
+      screen
+        .getByRole('region', { name: 'Full-screen player' })
+        .contains(drawer),
     ).toBe(false)
     expect(commands.play).not.toHaveBeenCalled()
   })
@@ -892,6 +894,38 @@ describe('MobilePlayerSurface gestures', () => {
 
     expect(onExpandedChange).not.toHaveBeenCalled()
     expect(frame.style.transform).toBe(initialFrameTransform)
+  })
+
+  it('snaps back after a short downward swipe on artwork', () => {
+    const { onExpandedChange } = renderSurface()
+    const frame = screen.getByTestId('shared-player-frame')
+    const initialTransform = frame.style.transform
+    const surface = screen.getByRole('region', { name: 'Full-screen player' })
+    const artwork = document.createElement('div')
+    artwork.dataset.playerArtwork = 'true'
+    surface.appendChild(artwork)
+
+    dispatchPointer(artwork, 'pointerdown', {
+      pointerId: 42,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 100,
+    })
+    dispatchPointer(artwork, 'pointermove', {
+      pointerId: 42,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 130,
+    })
+    dispatchPointer(artwork, 'pointerup', {
+      pointerId: 42,
+      pointerType: 'touch',
+      clientX: 100,
+      clientY: 130,
+    })
+
+    expect(frame.style.transform).toBe(initialTransform)
+    expect(onExpandedChange).not.toHaveBeenCalledWith(false)
   })
 
   it('does not classify short or upward motion as a downward swipe', () => {

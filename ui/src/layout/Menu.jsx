@@ -826,6 +826,7 @@ const Menu = ({ dense = false, sidebarOpen }) => {
                 className={classes.menuItem}
                 onClick={handleOpenSidebarLink}
                 aria-label={savedSidebarLink.label}
+                data-sidebar-touch
               >
                 <ListItemIcon className="RaMenuItemLink-icon">
                   <LaunchIcon fontSize="small" />
@@ -840,6 +841,7 @@ const Menu = ({ dense = false, sidebarOpen }) => {
             role="button"
             tabIndex={0}
             aria-label="User profile & system settings"
+            data-sidebar-touch
           >
             <div className={classes.userInfo}>
               {loaded && identity?.avatar ? (
@@ -868,6 +870,7 @@ const Menu = ({ dense = false, sidebarOpen }) => {
                   handleReloadApp()
                 }}
                 aria-label={translate('menu.refresh', { _: 'Refresh App' })}
+                data-sidebar-touch
               >
                 <RefreshIcon style={{ fontSize: 18 }} />
               </IconButton>

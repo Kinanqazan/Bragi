@@ -146,14 +146,13 @@ describe('SongShow metadata editing', () => {
     expect(mocks.refresh).toHaveBeenCalledOnce()
   })
 
-  it('shows Album artist on the page and while editing without an extra disclosure click', () => {
+  it('hides album artist on the page and while editing', () => {
     renderSongShow()
 
-    expect(screen.getByText('Old album artist')).toBeInTheDocument()
+    expect(screen.queryByText('Old album artist')).not.toBeInTheDocument()
+    expect(screen.queryByText('Album artist')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
-    expect(screen.getByRole('combobox', { name: 'Album artist' })).toHaveValue(
-      'Old album artist',
-    )
+    expect(screen.queryByRole('combobox', { name: 'Album artist' })).not.toBeInTheDocument()
   })
 
   it('explains when the displayed cover falls back to shared disc or album artwork', () => {
@@ -196,16 +195,14 @@ describe('SongShow metadata editing', () => {
     })
   })
 
-  it('keeps the title, artist, and album artist in their display positions while editing', () => {
+  it('keeps the title and artist in their display positions while editing', () => {
     renderSongShow()
     const titleHeading = screen.getByRole('heading', { name: 'Old title' })
     const artistLine = screen.getByText('Old artist').parentElement
-    const albumArtistLine = screen.getByText(/Album artist/).parentElement
     fireEvent.click(screen.getByRole('button', { name: 'Edit metadata' }))
 
     expect(screen.getByRole('textbox', { name: 'Song title' }).parentElement).toBe(titleHeading)
     expect(screen.getByRole('combobox', { name: 'Artist' }).parentElement).toBe(artistLine)
-    expect(screen.getByRole('combobox', { name: 'Album artist' }).parentElement).toBe(albumArtistLine)
     expect(screen.queryByText('Duration')).not.toBeInTheDocument()
     expect(
       within(screen.getByRole('group', { name: 'Song actions' })).getByRole('button', {

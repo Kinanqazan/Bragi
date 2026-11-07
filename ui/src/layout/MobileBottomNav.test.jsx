@@ -9,6 +9,18 @@ vi.mock('react-admin', () => ({
   useTranslate: () => (key, options) => options?._ || key,
 }))
 
+const touch = (target, type, x = 100, y = 100) => {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(event, {
+    pointerId: { value: 1 },
+    pointerType: { value: 'touch' },
+    isPrimary: { value: true },
+    clientX: { value: x },
+    clientY: { value: y },
+  })
+  fireEvent(target, event)
+}
+
 describe('<MobileBottomNav />', () => {
   it('renders navigation links for songs, artists, genres, and moods', () => {
     render(
@@ -153,5 +165,47 @@ describe('<MobileBottomNav />', () => {
     fireEvent.click(artists)
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(history.location.pathname).toBe('/artist')
+  })
+
+  it('navigates each bottom tab on a touch release even when the WebView omits click', () => {
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    const onChange = vi.fn()
+    history.listen(onChange)
+    render(
+      <Router history={history}>
+        <MobileBottomNav />
+      </Router>,
+    )
+    for (const [label, path] of [
+      ['Artists', '/artist'],
+      ['Genres', '/genres'],
+      ['Moods', '/moods'],
+    ]) {
+      const link = screen.getByRole('link', { name: label })
+      touch(link, 'pointerdown')
+      touch(link, 'pointerup')
+      expect(history.location.pathname).toBe(path)
+      const count = onChange.mock.calls.length
+      fireEvent.click(link, { detail: 1 })
+      expect(onChange).toHaveBeenCalledTimes(count)
+    }
+    expect(onChange).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not navigate when a touch moves or is cancelled', () => {
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    render(
+      <Router history={history}>
+        <MobileBottomNav />
+      </Router>,
+    )
+    const genres = screen.getByRole('link', { name: 'Genres' })
+    touch(genres, 'pointerdown')
+    touch(genres, 'pointermove', 100, 135)
+    touch(genres, 'pointerup', 100, 135)
+    touch(genres, 'pointerdown')
+    touch(genres, 'pointercancel')
+    touch(genres, 'pointerup')
+    expect(history.location.pathname).toBe('/song')
   })
 })

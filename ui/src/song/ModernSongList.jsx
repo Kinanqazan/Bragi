@@ -856,6 +856,9 @@ export const ModernTrackRows = ({
   }
 
   useEffect(() => {
+    // A later press belongs to a new interaction, even when the browser did
+    // not generate a click for the previous song touch.
+    const startNewPress = () => clearSuppressedClick()
     const suppressGeneratedClick = (event) => {
       if (suppressClick.current === undefined) return
       if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)
@@ -864,8 +867,12 @@ export const ModernTrackRows = ({
       event.preventDefault()
       event.stopPropagation()
     }
+    document.addEventListener('pointerdown', startNewPress, true)
+    document.addEventListener('keydown', startNewPress, true)
     document.addEventListener('click', suppressGeneratedClick, true)
     return () => {
+      document.removeEventListener('pointerdown', startNewPress, true)
+      document.removeEventListener('keydown', startNewPress, true)
       document.removeEventListener('click', suppressGeneratedClick, true)
       if (press.current?.timer) clearTimeout(press.current.timer)
       if (suppressClickTimer.current) clearTimeout(suppressClickTimer.current)

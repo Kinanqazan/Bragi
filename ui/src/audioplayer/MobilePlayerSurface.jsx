@@ -117,7 +117,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: '100%',
     margin: '0 auto',
     overflow: 'hidden',
-    fontSize: '1.3rem',
+    fontSize: '1.2rem',
     fontWeight: 700,
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -225,6 +225,10 @@ const useStyles = makeStyles((theme) => ({
     },
     '& .nd-player-controls-primary': {
       gap: 8,
+    },
+    '& .nd-player-primary-placeholder': {
+      width: '80px !important',
+      height: '80px !important',
     },
     '& .nd-player-btn-prev, & .nd-player-btn-next': {
       width: '80px !important',
@@ -459,7 +463,7 @@ const MobilePlayerSurface = ({
       miniTitle: miniRects.title,
       fullArtist: fullRects.artist,
       miniArtist: miniRects.artist,
-      fullTitleSize: fontSize(fullTitleRef.current, 18.4),
+      fullTitleSize: fontSize(fullTitleRef.current, 19.2),
       miniTitleSize: fontSize(miniTitleRef.current, 16),
       fullArtistSize: fullArtistRef.current
         ? fontSize(fullArtistRef.current, 16)
@@ -900,6 +904,7 @@ const MobilePlayerSurface = ({
       const passedThreshold = gesture.moved || deltaY >= swipeThreshold
       if (!passedThreshold && isInteractiveTarget(event?.target)) {
         setThemeColorActive(expanded)
+        settleMiniReset()
         return
       }
       if (passedThreshold) {
@@ -920,13 +925,17 @@ const MobilePlayerSurface = ({
       Math.abs(deltaX) > Math.abs(deltaY)
     ) {
       event?.preventDefault?.()
+      const target = gesture.opening ? 0 : 1
+      setThemeColorActive(target === 1)
+      settleTo(target)
       return
     }
 
-    if (!gesture.moved && isInteractiveTarget(event?.target)) {
+    if (!gesture.moved && !gesture.mode && isInteractiveTarget(event?.target)) {
       // Small finger drift is still a tap. Let the browser synthesize its click
-      // instead of settling the layer and cancelling the control activation.
+      // while restoring any movement applied before the gesture was classified.
       setThemeColorActive(expanded)
+      settleTo(gesture.opening ? 0 : 1)
       return
     }
 
@@ -1222,7 +1231,11 @@ const MobilePlayerSurface = ({
             lyric={lyric}
             cover={track.cover}
             glowColor={ambientColor}
-            songId={!track.isRadio ? (track.trackId || track.song?.id || track.id) : null}
+            songId={
+              !track.isRadio
+                ? track.trackId || track.song?.id || track.id
+                : null
+            }
             searchTitle={displayTitle || track.song?.title || ''}
             searchArtist={artist || ''}
             onClose={() => setLyricsOpen(false)}

@@ -1,6 +1,7 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { Link, MemoryRouter, Router, useLocation } from 'react-router-dom'
+import { createMemoryHistory } from 'history'
 import { describe, expect, it, vi } from 'vitest'
 import TrackIdentity from './TrackIdentity'
 
@@ -16,14 +17,93 @@ const pointerEvent = (type, options = {}) => {
 }
 
 vi.mock('../common', () => ({
-  ArtistLinkField: ({ record, source }) => (
-    <span data-testid="artist-link-field">
+  ArtistLinkField: ({ record, source, onArtistClick }) => (
+    <Link
+      data-testid="artist-link-field"
+      to="/artist/artist-1"
+      onClick={onArtistClick}
+    >
       {record?.[source] || 'Artist'}
-    </span>
+    </Link>
   ),
 }))
 
 describe('TrackIdentity', () => {
+  it.each([
+    ['Song Title', '/song/song-1/show'],
+    ['Artist Name', '/artist/artist-1'],
+  ])(
+    'opens the full-screen %s on touch release without a browser click',
+    (name, path) => {
+      const history = createMemoryHistory({ initialEntries: ['/song'] })
+      const onNavigate = vi.fn()
+      history.listen(onNavigate)
+      const onTitleClick = vi.fn()
+      const onArtistClick = vi.fn()
+      render(
+        <Router history={history}>
+          <TrackIdentity
+            track={{
+              song: {
+                id: 'song-1',
+                title: 'Song Title',
+                artist: 'Artist Name',
+                artistId: 'artist-1',
+              },
+            }}
+            mobile
+            shared
+            onTitleClick={onTitleClick}
+            onArtistClick={onArtistClick}
+          />
+        </Router>,
+      )
+      const link = screen.getByText(name).closest('a')
+      const props = {
+        pointerId: 1,
+        pointerType: 'touch',
+        isPrimary: true,
+        clientX: 10,
+        clientY: 10,
+      }
+      fireEvent(link, pointerEvent('pointerdown', props))
+      fireEvent(link, pointerEvent('pointerup', props))
+      expect(history.location.pathname).toBe(path)
+      expect(
+        name === 'Song Title' ? onTitleClick : onArtistClick,
+      ).toHaveBeenCalledOnce()
+      fireEvent.click(link, { detail: 1 })
+      expect(onNavigate).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('does not activate the full-screen title when a swipe is claimed', () => {
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    const onTitleClick = vi.fn()
+    render(
+      <Router history={history}>
+        <TrackIdentity
+          track={{ song: { id: 'song-1', title: 'Song Title' } }}
+          mobile
+          shared
+          onTitleClick={onTitleClick}
+          gestureHandlers={{ onPointerUp: (event) => event.preventDefault() }}
+        />
+      </Router>,
+    )
+    const link = screen.getByText('Song Title').closest('a')
+    const props = {
+      pointerId: 1,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: 10,
+      clientY: 10,
+    }
+    fireEvent(link, pointerEvent('pointerdown', props))
+    fireEvent(link, pointerEvent('pointerup', props))
+    expect(onTitleClick).not.toHaveBeenCalled()
+    expect(history.location.pathname).toBe('/song')
+  })
   it('links the player title to its song page and delegates artist to ArtistLinkField', () => {
     const track = {
       song: {
@@ -91,7 +171,9 @@ describe('TrackIdentity', () => {
       '/song/song-3/show',
     )
     expect(screen.getByText('Mobile Song')).toBeInTheDocument()
-    expect(screen.getByTestId('artist-link-field')).toHaveTextContent('Mobile Artist')
+    expect(screen.getByTestId('artist-link-field')).toHaveTextContent(
+      'Mobile Artist',
+    )
   })
 
   it('runs the mobile title action on click, after touch release', () => {
@@ -107,12 +189,15 @@ describe('TrackIdentity', () => {
     )
 
     const link = screen.getByRole('link', { name: 'Touch Song' })
-    fireEvent(link, pointerEvent('pointerdown', {
-      pointerId: 5,
-      pointerType: 'touch',
-      clientX: 10,
-      clientY: 10,
-    }))
+    fireEvent(
+      link,
+      pointerEvent('pointerdown', {
+        pointerId: 5,
+        pointerType: 'touch',
+        clientX: 10,
+        clientY: 10,
+      }),
+    )
     const release = pointerEvent('pointerup', {
       pointerId: 5,
       pointerType: 'touch',
@@ -156,18 +241,24 @@ describe('TrackIdentity', () => {
     )
 
     const link = screen.getByRole('link', { name: 'Moving Song' })
-    fireEvent(link, pointerEvent('pointerdown', {
-      pointerId: 6,
-      pointerType: 'touch',
-      clientX: 10,
-      clientY: 10,
-    }))
-    fireEvent(link, pointerEvent('pointerup', {
-      pointerId: 6,
-      pointerType: 'touch',
-      clientX: 10,
-      clientY: 10,
-    }))
+    fireEvent(
+      link,
+      pointerEvent('pointerdown', {
+        pointerId: 6,
+        pointerType: 'touch',
+        clientX: 10,
+        clientY: 10,
+      }),
+    )
+    fireEvent(
+      link,
+      pointerEvent('pointerup', {
+        pointerId: 6,
+        pointerType: 'touch',
+        clientX: 10,
+        clientY: 10,
+      }),
+    )
 
     expect(screen.getByTestId('current-path')).toHaveTextContent('/player')
     expect(link).toBeInTheDocument()
@@ -191,24 +282,33 @@ describe('TrackIdentity', () => {
     )
 
     const link = screen.getByRole('link', { name: 'Slight Drift Song' })
-    fireEvent(link, pointerEvent('pointerdown', {
-      pointerId: 7,
-      pointerType: 'touch',
-      clientX: 10,
-      clientY: 10,
-    }))
-    fireEvent(link, pointerEvent('pointermove', {
-      pointerId: 7,
-      pointerType: 'touch',
-      clientX: 20,
-      clientY: 10,
-    }))
-    fireEvent(link, pointerEvent('pointerup', {
-      pointerId: 7,
-      pointerType: 'touch',
-      clientX: 20,
-      clientY: 10,
-    }))
+    fireEvent(
+      link,
+      pointerEvent('pointerdown', {
+        pointerId: 7,
+        pointerType: 'touch',
+        clientX: 10,
+        clientY: 10,
+      }),
+    )
+    fireEvent(
+      link,
+      pointerEvent('pointermove', {
+        pointerId: 7,
+        pointerType: 'touch',
+        clientX: 20,
+        clientY: 10,
+      }),
+    )
+    fireEvent(
+      link,
+      pointerEvent('pointerup', {
+        pointerId: 7,
+        pointerType: 'touch',
+        clientX: 20,
+        clientY: 10,
+      }),
+    )
     fireEvent.click(link)
 
     expect(onTitleClick).toHaveBeenCalledOnce()

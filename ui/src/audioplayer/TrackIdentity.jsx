@@ -4,6 +4,7 @@ import { makeStyles } from '@material-ui/core/styles'
 import { ArtistLinkField } from '../common'
 import { songShowPath } from '../song/songNavigation'
 import { useImmediateLinkPress } from './controlPress'
+import useTouchActivation from '../layout/useTouchActivation'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -96,6 +97,27 @@ const TrackIdentity = ({
   const classes = useStyles()
   const location = useLocation()
   const titlePress = useImmediateLinkPress(onTitleClick)
+  const touchLinks = useTouchActivation('a[href]')
+  const sharedGestures = shared &&
+    mobile && {
+      ...gestureHandlers,
+      onPointerDown: (event) => {
+        gestureHandlers?.onPointerDown?.(event)
+        touchLinks.onPointerDown(event)
+      },
+      onPointerMove: (event) => {
+        gestureHandlers?.onPointerMove?.(event)
+        touchLinks.onPointerMove(event)
+      },
+      onPointerUp: (event) => {
+        gestureHandlers?.onPointerUp?.(event)
+        touchLinks.onPointerUp(event)
+      },
+      onPointerCancel: (event) => {
+        gestureHandlers?.onPointerCancel?.(event)
+        touchLinks.onPointerCancel(event)
+      },
+    }
   const song = track?.song || track
   if (!song?.title && !track?.title && !track?.name) return null
 
@@ -154,7 +176,7 @@ const TrackIdentity = ({
       className={
         shared ? `${classes.root} ${classes.sharedRoot}` : classes.root
       }
-      {...(shared ? gestureHandlers : {})}
+      {...(shared ? sharedGestures || gestureHandlers : {})}
     >
       {shared ? (
         <div ref={titleRef} className={classes.sharedTitle}>

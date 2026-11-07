@@ -11,6 +11,8 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
+    <style name="BragiLaunchTheme" parent="AppTheme" />
+
     <style name="BragiMediaRouterTheme">
         <item name="android:windowBackground">@drawable/cast_picker_surface</item>
         <item name="android:colorBackground">@color/cast_picker_surface</item>

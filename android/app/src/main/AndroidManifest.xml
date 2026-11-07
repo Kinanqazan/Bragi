@@ -22,6 +22,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:theme="@style/BragiLaunchTheme"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"

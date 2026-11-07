@@ -48,7 +48,7 @@ const useStyles = makeStyles(
         height: '100%',
         maxHeight: '100% !important',
         paddingTop: 'var(--nd-mobile-top-offset, 82px)',
-        paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 80px) + 24px)',
+        paddingBottom: 24,
       },
       [theme.breakpoints.down('xs')]: {
         flex: '1 1 auto',
@@ -56,7 +56,7 @@ const useStyles = makeStyles(
         height: '100%',
         maxHeight: '100% !important',
         paddingTop: 'var(--nd-mobile-top-offset, 82px)',
-        paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 80px) + 24px)',
+        paddingBottom: 24,
       },
     },
     actions: {

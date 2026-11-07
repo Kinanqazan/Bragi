@@ -65,7 +65,7 @@ const useStyles = makeStyles((theme) => ({
       overscrollBehaviorY: 'contain',
       WebkitOverflowScrolling: 'touch',
       touchAction: 'pan-y',
-      paddingBottom: 'calc(var(--nd-mobile-bottom-offset, 56px) + 16px)',
+      paddingBottom: 16,
     },
     [theme.breakpoints.up('sm')]: {
       padding: theme.spacing(3),
@@ -124,6 +124,11 @@ const useStyles = makeStyles((theme) => ({
   },
   tagGroup: {
     minWidth: 0,
+  },
+  editingTagGroups: {
+    [theme.breakpoints.down('xs')]: {
+      gridTemplateColumns: 'minmax(0, 1fr)',
+    },
   },
   content: {
     display: 'grid',
@@ -228,7 +233,16 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     flex: '0 0 auto',
-    gap: theme.spacing(0.5),
+    gap: theme.spacing(0.25),
+    padding: theme.spacing(0.5),
+    borderRadius: 28,
+    background: theme.palette.background.paper,
+    boxShadow: theme.shadows[2],
+    '& button': {
+      width: 44,
+      height: 44,
+      padding: theme.spacing(1),
+    },
     [theme.breakpoints.down('xs')]: {
       position: 'absolute',
       top: 'calc(8px + env(safe-area-inset-top, 0px))',
@@ -236,17 +250,11 @@ const useStyles = makeStyles((theme) => ({
       right: 'auto',
       zIndex: 3,
       flexDirection: 'column',
-      gap: 0,
-      width: 48,
+      width: 56,
       boxSizing: 'border-box',
-      padding: theme.spacing(0.25),
-      borderRadius: 24,
-      background: theme.palette.background.paper,
-      boxShadow: theme.shadows[2],
       '& button': {
-        width: 40,
-        height: 40,
-        padding: theme.spacing(1),
+        width: 48,
+        height: 48,
       },
     },
   },
@@ -263,15 +271,8 @@ const useStyles = makeStyles((theme) => ({
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 0,
+      gap: theme.spacing(0.25),
     },
-  },
-  section: {
-    marginTop: theme.spacing(3),
-  },
-  label: {
-    color: theme.palette.text.secondary,
-    marginRight: theme.spacing(1),
   },
   chipList: {
     display: 'flex',
@@ -312,17 +313,41 @@ const useStyles = makeStyles((theme) => ({
   artistInput: {
     width: '100%',
   },
-  editableChip: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: theme.spacing(0.5),
-    maxWidth: '100%',
-    padding: theme.spacing(0.5, 1),
-    borderRadius: 16,
+  metadataInput: {
+    boxSizing: 'border-box',
+    minHeight: 44,
+    padding: theme.spacing(1),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 14,
     background: theme.palette.action.hover,
+    '&:focus': {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+  editableChip: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
+    paddingLeft: theme.spacing(1),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 14,
+    background: theme.palette.action.hover,
+    '&:focus-within': { borderColor: theme.palette.primary.main },
+  },
+  tagInput: {
+    flex: '1 1 auto',
+    width: '100%',
+    minHeight: 44,
   },
   removeChip: {
+    flex: '0 0 44px',
+    width: 44,
+    height: 44,
     border: 0,
+    borderLeft: `1px solid ${theme.palette.divider}`,
     padding: 0,
     background: 'transparent',
     color: theme.palette.text.secondary,
@@ -333,7 +358,8 @@ const useStyles = makeStyles((theme) => ({
   addChip: {
     border: `1px dashed ${theme.palette.divider}`,
     padding: theme.spacing(0.5, 1.25),
-    borderRadius: 16,
+    minHeight: 44,
+    borderRadius: 14,
     background: 'transparent',
     color: theme.palette.text.secondary,
     font: 'inherit',
@@ -430,7 +456,6 @@ const genreValuesFromRecord = (record) =>
 const metadataDraftFromRecord = (record) => ({
   title: record.title || '',
   artist: record.artist || '',
-  albumArtist: record.albumArtist || '',
   genres: genreValuesFromRecord(record),
   moods: [...(record.tags?.mood || [])],
 })
@@ -444,10 +469,9 @@ const EditableTagList = ({ kind, values, classes, onChange, onAdd, onRemove, sug
       <div className={classes.editableChip} key={`${kind}-${index}`}>
         <input
           aria-label={`${kind} ${index + 1}`}
-          className={classes.inlineInput}
+          className={`${classes.inlineInput} ${classes.tagInput}`}
           list={suggestionsId}
           maxLength={4096}
-          style={{ width: `${Math.max(4, value.length + 1)}ch` }}
           value={value}
           onChange={(event) => onChange(index, event.target.value)}
         />
@@ -489,7 +513,6 @@ const SongShowLayout = (props) => {
   const [draft, setDraft] = useState({
     title: '',
     artist: '',
-    albumArtist: '',
     genres: [],
     moods: [],
   })
@@ -572,7 +595,7 @@ const SongShowLayout = (props) => {
   const changedFields = useMemo(() => {
     if (!displayRecord) return {}
     const changes = Object.fromEntries(
-      ['title', 'artist', 'albumArtist']
+      ['title', 'artist']
         .filter((field) => draft[field] !== (displayRecord[field] || ''))
         .map((field) => [field, draft[field]]),
     )
@@ -1180,7 +1203,7 @@ const SongShowLayout = (props) => {
                 {editing ? (
                   <input
                     aria-label="Song title"
-                    className={`${classes.inlineInput} ${classes.titleInput}`}
+                    className={`${classes.inlineInput} ${classes.titleInput} ${classes.metadataInput}`}
                     maxLength={4096}
                     value={draft.title}
                     onChange={(event) =>
@@ -1253,7 +1276,7 @@ const SongShowLayout = (props) => {
               {editing ? (
                 <input
                   aria-label="Artist"
-                  className={`${classes.inlineInput} ${classes.artistInput}`}
+                  className={`${classes.inlineInput} ${classes.artistInput} ${classes.metadataInput}`}
                   list="artist-suggestions"
                   maxLength={4096}
                   placeholder="Unknown artist"
@@ -1268,27 +1291,6 @@ const SongShowLayout = (props) => {
                 'Unknown artist'
               )}
             </Typography>
-            <div className={classes.section}>
-              <Typography component="div">
-                <span className={classes.label}>Album artist</span>
-                {editing ? (
-                  <input
-                    aria-label="Album artist"
-                    className={classes.inlineInput}
-                    list="artist-suggestions"
-                    maxLength={4096}
-                    placeholder="Not set"
-                    style={{ width: `${Math.max(7, (draft.albumArtist || '').length + 1)}ch` }}
-                    value={draft.albumArtist}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, albumArtist: event.target.value }))
-                    }
-                  />
-                ) : (
-                  displayRecord.albumArtist || 'Not set'
-                )}
-              </Typography>
-            </div>
             {refreshError && (
               <Typography className={classes.refreshNotice} role="status" color="textSecondary">
                 The file was saved, but the library index still needs updating. {refreshError}{' '}
@@ -1298,7 +1300,7 @@ const SongShowLayout = (props) => {
               </Typography>
             )}
             {(editing || genres.length > 0 || moods.length > 0) && (
-              <div className={classes.tagGroups}>
+              <div className={`${classes.tagGroups} ${editing ? classes.editingTagGroups : ''}`}>
                 {(editing || genres.length > 0) && (
                   <div className={classes.tagGroup}>
                     <Typography variant="subtitle2">Genres</Typography>

@@ -12,6 +12,7 @@ import WbSunnyIcon from '@material-ui/icons/WbSunny'
 import clsx from 'clsx'
 import { useTranslate } from 'react-admin'
 import { MOBILE_SIDEBAR_BACKGROUND_COLOR } from '../consts'
+import useTouchActivation from './useTouchActivation'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -166,6 +167,7 @@ const MobileBottomNav = () => {
   const location = useLocation()
   const translate = useTranslate()
   const hasBottomTabLayer = React.useRef(false)
+  const linkTouch = useTouchActivation('a[href]')
 
   React.useEffect(
     () =>
@@ -209,7 +211,7 @@ const MobileBottomNav = () => {
   }
 
   return (
-    <nav className={classes.root} aria-label="Bottom Navigation">
+    <nav className={classes.root} aria-label="Bottom Navigation" {...linkTouch}>
       {navItems.map((item) => {
         const isActive = item.isActive(location.pathname)
         const IconComponent = isActive ? item.ActiveIcon : item.Icon

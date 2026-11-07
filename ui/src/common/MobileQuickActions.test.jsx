@@ -52,6 +52,18 @@ const initialState = {
   },
 }
 
+const touch = (target, type, x = 100, y = 100) => {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperties(event, {
+    pointerId: { value: 1 },
+    pointerType: { value: 'touch' },
+    isPrimary: { value: true },
+    clientX: { value: x },
+    clientY: { value: y },
+  })
+  fireEvent(target, event)
+}
+
 describe('<MobileQuickActions />', () => {
   beforeEach(() => {
     filterState.current = {}
@@ -63,6 +75,58 @@ describe('<MobileQuickActions />', () => {
           : {},
       loading: false,
     }))
+  })
+
+  it('activates Recently Added and Favorites on the first touch without a browser click', () => {
+    const store = createStore(() => initialState)
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    const onNavigate = vi.fn()
+    history.listen(onNavigate)
+    render(
+      <Provider store={store}>
+        <ThemeProvider theme={createTheme({ palette: { type: 'dark' } })}>
+          <Router history={history}>
+            <MobileQuickActions />
+          </Router>
+        </ThemeProvider>
+      </Provider>,
+    )
+    const recent = screen.getByRole('button', { name: 'Recently Added' })
+    touch(recent, 'pointerdown')
+    touch(recent, 'pointerup')
+    expect(history.location.pathname).toBe('/song/recentlyAdded')
+    fireEvent.click(recent, { detail: 1 })
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+
+    const favorites = screen.getByRole('button', { name: 'Favorites' })
+    touch(favorites, 'pointerdown')
+    touch(favorites, 'pointerup')
+    expect(setFiltersMock).toHaveBeenCalledTimes(1)
+    expect(setFiltersMock.mock.calls[0][0]).toEqual({ starred: true })
+    fireEvent.click(favorites, { detail: 1 })
+    expect(setFiltersMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not activate a tag when swiping or cancelling its touch', () => {
+    const store = createStore(() => initialState)
+    const history = createMemoryHistory({ initialEntries: ['/song'] })
+    render(
+      <Provider store={store}>
+        <ThemeProvider theme={createTheme({ palette: { type: 'dark' } })}>
+          <Router history={history}>
+            <MobileQuickActions />
+          </Router>
+        </ThemeProvider>
+      </Provider>,
+    )
+    const rock = screen.getByRole('button', { name: 'Rock' })
+    touch(rock, 'pointerdown')
+    touch(rock, 'pointermove', 135)
+    touch(rock, 'pointerup')
+    touch(rock, 'pointerdown')
+    touch(rock, 'pointercancel')
+    touch(rock, 'pointerup')
+    expect(setFiltersMock).not.toHaveBeenCalled()
   })
 
   it('clears special-list params before returning to the song route', () => {
@@ -94,9 +158,7 @@ describe('<MobileQuickActions />', () => {
   it('preserves special-list sorting when adding a filter', () => {
     const store = createStore(() => initialState)
     const history = createMemoryHistory({
-      initialEntries: [
-        '/song/mostPlayed?sort=play_count&order=DESC&filter={}',
-      ],
+      initialEntries: ['/song/mostPlayed?sort=play_count&order=DESC&filter={}'],
     })
 
     render(

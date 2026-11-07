@@ -1,5 +1,5 @@
 import React from 'react'
-import { List as RAList } from 'react-admin'
+import { Empty, List as RAList } from 'react-admin'
 import { makeStyles, useMediaQuery } from '@material-ui/core'
 import config from '../config'
 import { Pagination } from './Pagination'
@@ -88,6 +88,18 @@ const useStyles = makeStyles((theme) => ({
       display: 'none !important',
     },
   },
+  emptyMessage: {
+    [theme.breakpoints.down('sm')]: {
+      marginTop:
+        'var(--nd-mobile-top-offset, calc(env(safe-area-inset-top, 0px) + 92px)) !important',
+    },
+  },
+  emptyIcon: {
+    [theme.breakpoints.down('sm')]: {
+      maxWidth: '100%',
+      height: 'auto !important',
+    },
+  },
 }))
 
 export const List = (props) => {
@@ -113,6 +125,11 @@ export const List = (props) => {
       debounce={config.uiSearchDebounceMs}
       perPage={getStoredPerPage()}
       pagination={<Pagination />}
+      empty={
+        <Empty
+          classes={{ message: classes.emptyMessage, icon: classes.emptyIcon }}
+        />
+      }
       filters={isMobile ? undefined : filters}
       classes={{
         root: `${classes.root}${phoneScrollClass}`,

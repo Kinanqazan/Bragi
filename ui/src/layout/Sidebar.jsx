@@ -1,10 +1,16 @@
-import React, { cloneElement, useCallback, useLayoutEffect, useRef } from 'react'
+import React, {
+  cloneElement,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+} from 'react'
 import { Backdrop, Modal, Paper, useMediaQuery } from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import { Sidebar as RASidebar, setSidebarVisibility } from 'react-admin'
 import { useDispatch, useSelector } from 'react-redux'
 import { MOBILE_SIDEBAR_BACKGROUND_COLOR } from '../consts'
-import useSidebarSwipe from './useSidebarSwipe'
+import useSidebarSwipe, { mobileSidebarWidth } from './useSidebarSwipe'
+import useTouchActivation from './useTouchActivation'
 
 const useStyles = makeStyles((theme) => ({
   '@global': {
@@ -21,8 +27,7 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     bottom: 0,
     left: 0,
-    width: 280,
-    maxWidth: 'calc(100vw - 32px)',
+    width: `${mobileSidebarWidth}vw`,
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -46,6 +51,9 @@ const MobileSidebar = ({ children }) => {
     [dispatch],
   )
   const { paperRef, present } = useSidebarSwipe(open, changeOpen)
+  const touchControls = useTouchActivation(
+    'a[role="menuitem"][href], [data-sidebar-touch]',
+  )
 
   useLayoutEffect(() => {
     if (!present) return
@@ -74,6 +82,7 @@ const MobileSidebar = ({ children }) => {
         aria-label="Navigation"
         aria-modal="true"
         tabIndex={-1}
+        {...touchControls}
         style={{
           transform: initialOpen.current
             ? 'translate3d(0%, 0, 0)'

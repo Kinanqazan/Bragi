@@ -40,6 +40,7 @@ import { playTracks } from '../actions'
 import config from '../config'
 import songLists from '../song/songLists'
 import { createSongListResetAction } from '../song/songListNavigation'
+import useTouchActivation from '../layout/useTouchActivation'
 
 const EMPTY_FILTERS = {}
 
@@ -247,6 +248,7 @@ const useStyles = makeStyles((theme) => {
 
 export const MobileQuickActions = ({ resource = 'song' }) => {
   const classes = useStyles()
+  const touchActions = useTouchActivation('[role="button"]')
   const history = useHistory()
   const location = useLocation()
   const dispatch = useDispatch()
@@ -543,6 +545,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
           className={classes.tagsRow}
           role="region"
           aria-label="Moods and genres tags"
+          {...touchActions}
         >
           {tags.map((tag, index) => {
             const active = isTagActive(tag)
@@ -580,6 +583,7 @@ export const MobileQuickActions = ({ resource = 'song' }) => {
         className={classes.quickActionsRow}
         role="region"
         aria-label="Quick song actions"
+        {...touchActions}
       >
         {/* Button 1: Recently Added */}
         <div

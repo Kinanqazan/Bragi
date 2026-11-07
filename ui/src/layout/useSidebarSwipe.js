@@ -8,6 +8,7 @@ import {
 
 // Leave enough movement for ordinary finger drift on menu links to remain a tap.
 const intentThreshold = 12
+export const mobileSidebarWidth = 82
 const clamp = (value) => Math.max(0, Math.min(1, value))
 const snapEasing = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const sidebarSwipeLocked = () =>
@@ -36,8 +37,7 @@ const ownsHorizontalGesture = (target) => {
   return false
 }
 
-// Only the drawer transform changes during a drag. Redux and the song list
-// update once on release, rather than rendering on every pointer move.
+// Move the drawer and app together without rendering the song list on each move.
 export default function useSidebarSwipe(open, onChange) {
   const paperRef = useRef(null)
   const progressRef = useRef(open ? 1 : 0)
@@ -61,8 +61,13 @@ export default function useSidebarSwipe(open, onChange) {
 
   const applyProgress = useCallback((progress) => {
     progressRef.current = clamp(progress)
-    if (paperRef.current) {
-      paperRef.current.style.transform = `translate3d(${(progressRef.current - 1) * 100}%, 0, 0)`
+    const paper = paperRef.current
+    if (paper) {
+      paper.style.transform = `translate3d(${(progressRef.current - 1) * 100}%, 0, 0)`
+      const app = document.getElementById('root')
+      if (app) {
+        app.style.transform = `translate3d(${progressRef.current * mobileSidebarWidth}vw, 0, 0)`
+      }
     }
   }, [])
 
@@ -98,11 +103,17 @@ export default function useSidebarSwipe(open, onChange) {
       if (paperRef.current) {
         paperRef.current.style.transition = `transform ${duration}ms ${snapEasing}`
       }
+      const app = document.getElementById('root')
+      if (app) app.style.transition = `transform ${duration}ms ${snapEasing}`
       applyProgress(target)
       timerRef.current = setTimeout(() => {
         timerRef.current = null
         if (!target) setPresent(false)
         if (paperRef.current) paperRef.current.style.willChange = ''
+        if (app && !target) {
+          app.style.removeProperty('transform')
+          app.style.removeProperty('transition')
+        }
       }, duration)
     },
     [applyProgress, readProgress, stopAnimation],
@@ -115,6 +126,17 @@ export default function useSidebarSwipe(open, onChange) {
       settleTo(Number(open))
     }
   }, [open, settleTo])
+
+  useLayoutEffect(() => {
+    if (progressRef.current) applyProgress(progressRef.current)
+    return () => {
+      const app = document.getElementById('root')
+      if (app) {
+        app.style.removeProperty('transform')
+        app.style.removeProperty('transition')
+      }
+    }
+  }, [applyProgress])
 
   useEffect(() => {
     const cancelGesture = () => {
@@ -184,9 +206,12 @@ export default function useSidebarSwipe(open, onChange) {
         setDragging(true)
         paperRef.current.style.transition = 'none'
         paperRef.current.style.willChange = 'transform'
+        const app = document.getElementById('root')
+        if (app) {
+          app.style.transition = 'none'
+        }
       }
       event.preventDefault()
-      event.stopPropagation()
       const now = performance.now()
       const elapsed = now - gesture.lastTime
       if (elapsed > 0) {
