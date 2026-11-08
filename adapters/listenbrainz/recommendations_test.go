@@ -97,7 +97,7 @@ func TestSearchYouTubeRecordingRejectsWrongVersion(t *testing.T) {
 }
 
 func TestRecordingYouTubeLinkSearchFallback(t *testing.T) {
-	t.Setenv("BR_YOUTUBE_API_KEY", "test-key")
+	t.Setenv("BR_YOUTUBE_API_KEY", "server-key")
 	hc := recommendationTestDoer(func(req *http.Request) (*http.Response, error) {
 		body := `{"title":"25 or 6 to 4","disambiguation":"re-recorded, 1986: Chicago 18 version","artist-credit":[{"name":"Chicago"}],"relations":[]}`
 		if req.URL.Host == "www.googleapis.com" {
@@ -108,7 +108,7 @@ func TestRecordingYouTubeLinkSearchFallback(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body))}, nil
 	})
-	s := Router{client: newClient("http://localhost/", hc)}
+	s := Router{client: newClient("http://localhost/", hc), youtubeKeys: &fakeSessionKeys{KeyValue: "test-key"}}
 	r := chi.NewRouter()
 	r.Get("/recording/{id}/youtube", s.recordingYouTubeLink)
 	resp := httptest.NewRecorder()

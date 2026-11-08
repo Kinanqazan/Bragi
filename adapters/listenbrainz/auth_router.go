@@ -28,6 +28,7 @@ type Router struct {
 	http.Handler
 	ds          model.DataStore
 	sessionKeys sessionKeysRepo
+	youtubeKeys sessionKeysRepo
 	client      *client
 }
 
@@ -35,6 +36,7 @@ func NewRouter(ds model.DataStore) *Router {
 	r := &Router{
 		ds:          ds,
 		sessionKeys: &agents.SessionKeys{DataStore: ds, KeyName: sessionKeyProperty},
+		youtubeKeys: &agents.SessionKeys{DataStore: ds, KeyName: "YouTubeDataAPIKey"},
 	}
 	r.Handler = r.routes()
 	hc := &http.Client{
@@ -57,6 +59,9 @@ func (s *Router) routes() http.Handler {
 		r.Get("/recommendations", s.recommendations)
 		r.Get("/recommendations/{id}", s.recommendationPlaylist)
 		r.Get("/recording/{id}/youtube", s.recordingYouTubeLink)
+		r.Get("/youtube-key", s.getYouTubeKeyStatus)
+		r.Put("/youtube-key", s.putYouTubeKey)
+		r.Delete("/youtube-key", s.deleteYouTubeKey)
 	})
 
 	return r

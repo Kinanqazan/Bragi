@@ -106,7 +106,19 @@ func (s *Router) recordingYouTubeLink(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if link == "" && strings.TrimSpace(os.Getenv("BR_YOUTUBE_API_KEY")) != "" {
+	key := strings.TrimSpace(os.Getenv("BR_YOUTUBE_API_KEY"))
+	if link == "" && s.youtubeKeys != nil {
+		u, _ := request.UserFrom(r.Context())
+		personalKey, err := s.youtubeKeys.Get(r.Context(), u.ID)
+		if err != nil && !errors.Is(err, model.ErrNotFound) {
+			http.Error(w, "Could not access YouTube settings", http.StatusInternalServerError)
+			return
+		}
+		if strings.TrimSpace(personalKey) != "" {
+			key = strings.TrimSpace(personalKey)
+		}
+	}
+	if link == "" && key != "" {
 		artists := make([]string, 0, len(data.ArtistCredit))
 		for _, credit := range data.ArtistCredit {
 			name := credit.Name
@@ -119,7 +131,7 @@ func (s *Router) recordingYouTubeLink(w http.ResponseWriter, r *http.Request) {
 		}
 		if data.Title != "" && len(artists) > 0 {
 			var err error
-			link, err = searchYouTubeRecording(r.Context(), s.client.hc, os.Getenv("BR_YOUTUBE_API_KEY"), data.Title, strings.Join(artists, " "), data.Disambiguation)
+			link, err = searchYouTubeRecording(r.Context(), s.client.hc, key, data.Title, strings.Join(artists, " "), data.Disambiguation)
 			if err != nil {
 				http.Error(w, "Could not search YouTube", http.StatusBadGateway)
 				return

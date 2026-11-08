@@ -11,6 +11,7 @@ import { ListenBrainzScrobbleToggle } from './ListenBrainzScrobbleToggle'
 import config from '../config'
 import { ReplayGainToggle } from './ReplayGainToggle'
 import SidebarLinkSettings from './SidebarLinkSettings'
+import YouTubeKeySettings from './YouTubeKeySettings'
 
 const useStyles = makeStyles({
   root: {
@@ -39,6 +40,7 @@ const Personal = () => {
         {config.lastFMEnabled && <LastfmScrobbleToggle />}
         {config.listenBrainzEnabled && <ListenBrainzScrobbleToggle />}
       </SimpleForm>
+      {config.listenBrainzEnabled && <YouTubeKeySettings />}
       <SidebarLinkSettings />
     </Card>
   )
