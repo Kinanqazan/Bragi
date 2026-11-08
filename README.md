@@ -32,6 +32,8 @@ Choose a theme and language, adjust library views, and enable Last.fm or ListenB
 
 Online lyrics search and editing require an administrator account and the deployment option shown below. The server needs internet access for lyrics search.
 
+For You uses MusicBrainz links when available. To also search YouTube for recordings without a direct link, enable the YouTube Data API v3 in Google Cloud and set the server environment variable `BR_YOUTUBE_API_KEY` to your API key. Searches are best-effort and subject to YouTube's quota; a matching video may not be available for every recording. Keep the key private and restrict it to the YouTube Data API.
+
 ## Deploy with Docker Compose
 
 You need Docker with Docker Compose on your server. The container image is built for **linux/amd64** (Intel/AMD 64-bit servers).

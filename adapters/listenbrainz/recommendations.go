@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -54,7 +56,7 @@ func (s *Router) recordingYouTubeLink(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "https://musicbrainz.org/ws/2/recording/"+id.String()+"?inc=url-rels&fmt=json", nil)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "https://musicbrainz.org/ws/2/recording/"+id.String()+"?inc=url-rels+artist-credits&fmt=json", nil)
 	if err != nil {
 		http.Error(w, "Could not look up recording", http.StatusBadGateway)
 		return
@@ -72,6 +74,14 @@ func (s *Router) recordingYouTubeLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var data struct {
+		Title          string `json:"title"`
+		Disambiguation string `json:"disambiguation"`
+		ArtistCredit   []struct {
+			Name   string `json:"name"`
+			Artist struct {
+				Name string `json:"name"`
+			} `json:"artist"`
+		} `json:"artist-credit"`
 		Relations []struct {
 			URL struct {
 				Resource string `json:"resource"`
@@ -96,7 +106,69 @@ func (s *Router) recordingYouTubeLink(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	if link == "" && strings.TrimSpace(os.Getenv("BR_YOUTUBE_API_KEY")) != "" {
+		artists := make([]string, 0, len(data.ArtistCredit))
+		for _, credit := range data.ArtistCredit {
+			name := credit.Name
+			if name == "" {
+				name = credit.Artist.Name
+			}
+			if name != "" {
+				artists = append(artists, name)
+			}
+		}
+		if data.Title != "" && len(artists) > 0 {
+			var err error
+			link, err = searchYouTubeRecording(r.Context(), s.client.hc, os.Getenv("BR_YOUTUBE_API_KEY"), data.Title, strings.Join(artists, " "), data.Disambiguation)
+			if err != nil {
+				http.Error(w, "Could not search YouTube", http.StatusBadGateway)
+				return
+			}
+		}
+	}
 	_ = rest.RespondWithJSON(w, http.StatusOK, map[string]string{"url": link})
+}
+
+func searchYouTubeRecording(ctx context.Context, hc httpDoer, key, title, artist, version string) (string, error) {
+	values := url.Values{"part": {"snippet"}, "type": {"video"}, "maxResults": {"5"}, "q": {strings.TrimSpace(artist + " " + title + " " + version)}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.googleapis.com/youtube/v3/search?"+values.Encode(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("X-Goog-Api-Key", key)
+	resp, err := hc.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("YouTube search returned HTTP %d", resp.StatusCode)
+	}
+	var result struct {
+		Items []struct {
+			ID struct {
+				VideoID string `json:"videoId"`
+			} `json:"id"`
+			Snippet struct {
+				Title        string `json:"title"`
+				ChannelTitle string `json:"channelTitle"`
+			} `json:"snippet"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result); err != nil {
+		return "", err
+	}
+	versionYear := regexp.MustCompile(`\b(?:19|20)\d{2}\b`).FindString(version)
+	for _, item := range result.Items {
+		if !regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`).MatchString(item.ID.VideoID) {
+			continue
+		}
+		text := strings.ToLower(item.Snippet.Title + " " + item.Snippet.ChannelTitle)
+		if strings.Contains(text, strings.ToLower(title)) && strings.Contains(text, strings.ToLower(artist)) && (versionYear == "" || strings.Contains(text, versionYear)) {
+			return "https://music.youtube.com/watch?v=" + item.ID.VideoID, nil
+		}
+	}
+	return "", nil
 }
 
 type recommendationPlaylist struct {

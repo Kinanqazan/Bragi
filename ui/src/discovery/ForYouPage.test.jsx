@@ -27,6 +27,21 @@ describe('ForYouPage', () => {
     delete window.BragiNative
   })
 
+  it('keeps horizontal touch gestures available on its scroll container', async () => {
+    httpClient.mockResolvedValue({ json: { linked: false } })
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: 'Connect ListenBrainz' })
+    const className = [...container.firstChild.classList].find((name) =>
+      name.includes('root'),
+    )
+    const rules = [...document.styleSheets].flatMap((sheet) => [
+      ...sheet.cssRules,
+    ])
+    expect(
+      rules.find((rule) => rule.selectorText === `.${className}`)?.cssText,
+    ).toContain('touch-action: pan-y pinch-zoom')
+  })
+
   it('offers the existing connection flow for unlinked users', async () => {
     httpClient.mockResolvedValue({ json: { linked: false } })
     renderPage()
@@ -189,9 +204,10 @@ describe('ForYouPage', () => {
     expect(screen.queryByText('Weekly')).not.toBeInTheDocument()
     expect(screen.queryByText('Hidden album')).not.toBeInTheDocument()
     expect(screen.queryByText('For listener')).not.toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: 'Open Stats' }),
-    ).toHaveAttribute('href', 'https://listenbrainz.org/user/listener/stats/')
+    expect(screen.getByRole('link', { name: 'Open Stats' })).toHaveAttribute(
+      'href',
+      'https://listenbrainz.org/user/listener/stats/',
+    )
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'PLAY', ids: ['local'] }),
     )
@@ -221,6 +237,14 @@ describe('ForYouPage', () => {
         'https://music.youtube.com/search?q=Artist%20Other',
       ),
     )
+    writeText.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link for Other' }))
+    expect(
+      await screen.findByText(
+        'No direct song link was found for this recording.',
+      ),
+    ).toBeInTheDocument()
+    expect(writeText).not.toHaveBeenCalled()
     expect(
       screen.queryByRole('button', { name: 'Play Other in Bragi' }),
     ).not.toBeInTheDocument()

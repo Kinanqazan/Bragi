@@ -25,6 +25,8 @@ const useStyles = makeStyles((theme) => ({
   root: {
     height: '100%',
     overflowY: 'auto',
+    overflowX: 'hidden',
+    touchAction: 'pan-y pinch-zoom',
     boxSizing: 'border-box',
     padding: theme.spacing(3),
     paddingBottom: theme.spacing(12),
@@ -194,10 +196,12 @@ export default function ForYouPage() {
       )
       return
     }
-    const url = direct || searchURL(track)
-    const message = direct
-      ? 'Song link copied'
-      : 'No direct link found; YouTube Music search link copied'
+    if (!direct) {
+      setNotice('No direct song link was found for this recording.')
+      return
+    }
+    const url = direct
+    const message = 'Song link copied'
     try {
       if (!navigator.clipboard?.writeText)
         throw new Error('Clipboard unavailable')
@@ -205,11 +209,7 @@ export default function ForYouPage() {
       setNotice(message)
     } catch {
       setManualCopy(url)
-      setNotice(
-        direct
-          ? 'Copy the song link below'
-          : 'No direct link found; copy the search link below',
-      )
+      setNotice('Copy the song link below')
     }
   }
 
