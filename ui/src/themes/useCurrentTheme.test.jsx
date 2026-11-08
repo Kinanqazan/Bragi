@@ -136,8 +136,7 @@ describe('useCurrentTheme', () => {
           </Provider>
         ),
       })
-      // Dark theme uses MUI default dark background
-      expect(document.body.style.backgroundColor).toBe('rgb(48, 48, 48)')
+      expect(document.body.style.backgroundColor).toBe('rgb(18, 18, 20)')
     })
     it('sets body background for light theme', () => {
       renderHook(() => useCurrentTheme(), {
@@ -160,8 +159,7 @@ describe('useCurrentTheme', () => {
           </Provider>
         ),
       })
-      // Spotify theme has explicit background.default: #121212
-      expect(document.body.style.backgroundColor).toBe('rgb(18, 18, 18)')
+      expect(document.body.style.backgroundColor).toBe('rgb(18, 18, 20)')
     })
     it('uses the fixed near-black background in phone mode', () => {
       window.matchMedia = createMatchMedia('light', 390)

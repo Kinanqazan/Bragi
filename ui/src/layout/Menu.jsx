@@ -32,6 +32,7 @@ import ViewListIcon from '@material-ui/icons/ViewList'
 import CategoryOutlinedIcon from '@material-ui/icons/CategoryOutlined'
 import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined'
 import EqualizerIcon from '@material-ui/icons/Equalizer'
+import ExploreOutlinedIcon from '@material-ui/icons/ExploreOutlined'
 import AccountCircle from '@material-ui/icons/AccountCircle'
 import TuneIcon from '@material-ui/icons/Tune'
 import InfoOutlinedIcon from '@material-ui/icons/InfoOutlined'
@@ -77,7 +78,7 @@ const useStyles = makeStyles((theme) => {
     ? 'rgba(255, 255, 255, 0.12)'
     : 'rgba(0, 0, 0, 0.12)'
   const sidebarBg = isDark
-    ? (theme.palette?.background?.default || '#0d0d0f')
+    ? MOBILE_SIDEBAR_BACKGROUND_COLOR
     : (theme.palette?.background?.default || '#fafafa')
 
   return {
@@ -777,6 +778,17 @@ const Menu = ({ dense = false, sidebarOpen }) => {
             />
           </>
         )}
+        {isMobile && config.listenBrainzEnabled && (
+          <MenuItemLink
+              to="/for-you"
+              activeClassName={classes.active}
+              className={classes.menuItem}
+              primaryText="For you"
+              leftIcon={<ExploreOutlinedIcon />}
+              sidebarIsOpen={open}
+              dense={dense}
+            />
+        )}
         {isMobile && renderResourceMenuItemLink(playlistResource)}
         {isMobile &&
           songLists.recentlyAdded &&
@@ -799,6 +811,17 @@ const Menu = ({ dense = false, sidebarOpen }) => {
               <Typography className={classes.sectionHeader}>
                 {translate('menu.discover', { _: 'Discover' })}
               </Typography>
+            )}
+            {config.listenBrainzEnabled && (
+              <MenuItemLink
+              to="/for-you"
+              activeClassName={classes.active}
+              className={classes.menuItem}
+              primaryText="For you"
+              leftIcon={<ExploreOutlinedIcon />}
+              sidebarIsOpen={open}
+              dense={dense}
+            />
             )}
             {Object.keys(songLists).map((type) =>
               renderSongListMenuItemLink(type, songLists[type]),

@@ -162,6 +162,7 @@ func (c *client) makeAuthenticatedRequest(ctx context.Context, method string, en
 	}
 	req, _ := http.NewRequestWithContext(ctx, method, uri, bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("User-Agent", "Bragi/1.0 (https://github.com/kinanqaz/bragi)")
 
 	if r.ApiKey != "" {
 		req.Header.Add("Authorization", fmt.Sprintf("Token %s", r.ApiKey))

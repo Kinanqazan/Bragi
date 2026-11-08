@@ -29,6 +29,9 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: '100vh',
     boxSizing: 'border-box',
     overflow: 'hidden',
+    ...(props.isDark && {
+      backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+    }),
     '@media (max-width: 959.95px)': {
       backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
     },
@@ -46,8 +49,8 @@ const useStyles = makeStyles((theme) => ({
         WebkitBackdropFilter: 'none !important',
       },
     '& .MuiDrawer-paper, & .RaSidebar-drawerPaper': {
-      backgroundColor: `${theme.palette.background?.default || '#0d0d0f'} !important`,
-      background: `${theme.palette.background?.default || '#0d0d0f'} !important`,
+      backgroundColor: `${props.isDark ? MOBILE_SIDEBAR_BACKGROUND_COLOR : theme.palette.background?.default || '#0d0d0f'} !important`,
+      background: `${props.isDark ? MOBILE_SIDEBAR_BACKGROUND_COLOR : theme.palette.background?.default || '#0d0d0f'} !important`,
       '@media (max-width: 959.95px)': {
         backgroundColor: `${MOBILE_SIDEBAR_BACKGROUND_COLOR} !important`,
         background: `${MOBILE_SIDEBAR_BACKGROUND_COLOR} !important`,
@@ -95,6 +98,9 @@ const useStyles = makeStyles((theme) => ({
       maxHeight: '100%',
       overflow: 'hidden',
       boxSizing: 'border-box',
+      ...(props.isDark && {
+        backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
+      }),
       '@media (max-width: 959.95px)': {
         backgroundColor: `${MOBILE_BACKGROUND_COLOR} !important`,
       },
@@ -145,6 +151,12 @@ const useStyles = makeStyles((theme) => ({
         maxWidth: '100% !important',
         minWidth: '0 !important',
       },
+      ...(props.isDark && {
+        '& .song-list-page .MuiCard-root': {
+          backgroundColor: 'transparent !important',
+          backgroundImage: 'none !important',
+        },
+      }),
       '& .RaList-main': {
         backgroundColor: 'transparent',
         padding: '0 !important',
@@ -411,7 +423,7 @@ const Layout = (props) => {
     location.pathname.startsWith(path),
   )
   const scrollablePhoneLibrary = location.pathname.startsWith('/library')
-  const classes = useStyles()
+  const classes = useStyles({ isDark: themeConfig.palette?.type === 'dark' })
   const layoutClassName = [
     classes.root,
     scrollablePhoneSurface && classes.phoneScrollSurface,

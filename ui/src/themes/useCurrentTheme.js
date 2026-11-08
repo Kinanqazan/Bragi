@@ -52,7 +52,7 @@ const useCurrentTheme = () => {
 
     // Set body background color to match theme (fixes white background on pull-to-refresh)
     const isDark = theme.palette?.type === 'dark'
-    const bgColor = isPhoneMode
+    const bgColor = isPhoneMode || isDark
       ? MOBILE_BACKGROUND_COLOR
       : theme.palette?.background?.default || (isDark ? '#303030' : '#fafafa')
     document.body.style.backgroundColor = bgColor

@@ -391,6 +391,7 @@ export const modernFilterStyles = (theme) => {
       boxSizing: 'border-box !important',
       display: 'inline-flex !important',
       alignItems: 'center !important',
+      justifyContent: 'center !important',
       verticalAlign: 'middle !important',
       '& .MuiFormControl-root': {
         margin: '0 !important',
@@ -404,12 +405,15 @@ export const modernFilterStyles = (theme) => {
         justifyContent: 'center !important',
         verticalAlign: 'middle !important',
       },
+      '& .MuiFormHelperText-root': {
+        display: 'none',
+      },
       '& .MuiInputBase-root, & .MuiOutlinedInput-root, & .MuiFilledInput-root':
         {
-          height: '36px !important',
-          minHeight: '36px !important',
-          maxHeight: '36px !important',
-          borderRadius: '18px !important',
+          height: '30px !important',
+          minHeight: '30px !important',
+          maxHeight: '30px !important',
+          borderRadius: '15px !important',
           backgroundColor: `${controlBackground} !important`,
           border: `1px solid ${controlBorder} !important`,
           paddingLeft: '10px !important',

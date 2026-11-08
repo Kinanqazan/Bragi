@@ -54,6 +54,9 @@ func (s *Router) routes() http.Handler {
 		r.Get("/link", s.getLinkStatus)
 		r.Put("/link", s.link)
 		r.Delete("/link", s.unlink)
+		r.Get("/recommendations", s.recommendations)
+		r.Get("/recommendations/{id}", s.recommendationPlaylist)
+		r.Get("/recording/{id}/youtube", s.recordingYouTubeLink)
 	})
 
 	return r

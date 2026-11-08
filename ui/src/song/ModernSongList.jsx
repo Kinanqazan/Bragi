@@ -34,6 +34,7 @@ import {
 import { playTracks } from '../actions'
 import config from '../config'
 import ListeningStats from '../statistics/ListeningStats'
+import { MOBILE_BACKGROUND_COLOR } from '../consts'
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === 'dark'
@@ -287,7 +288,9 @@ const useStyles = makeStyles((theme) => {
       position: 'sticky',
       top: 0,
       zIndex: 2,
-      backgroundColor: theme.palette.background.default,
+      backgroundColor: isDark
+        ? MOBILE_BACKGROUND_COLOR
+        : theme.palette.background.default,
       display: 'grid',
       alignItems: 'center',
       gap: 16,
@@ -388,7 +391,7 @@ const useStyles = makeStyles((theme) => {
       position: 'relative',
       width: 56,
       height: 56,
-      borderRadius: 4,
+      borderRadius: 6,
     },
     artworkSelection: {
       position: 'absolute',
@@ -405,12 +408,12 @@ const useStyles = makeStyles((theme) => {
     artwork: {
       width: 56,
       height: 56,
-      borderRadius: 4,
+      borderRadius: 6,
       background: theme.palette.action.hover,
       [theme.breakpoints.down('sm')]: {
         width: 56,
         height: 56,
-        borderRadius: 4,
+        borderRadius: 6,
       },
     },
     titleCell: {

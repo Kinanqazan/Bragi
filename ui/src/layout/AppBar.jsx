@@ -26,10 +26,13 @@ import { createSongListResetAction } from '../song/songListNavigation'
 const useStyles = makeStyles(
   (theme) => {
     const isDark = theme.palette.type === 'dark'
+    const backgroundColor = isDark
+      ? MOBILE_BACKGROUND_COLOR
+      : theme.palette.background.default
     return {
       appBar: {
         paddingTop: 'env(safe-area-inset-top)',
-        backgroundColor: `${theme.palette.background.default} !important`,
+        backgroundColor: `${backgroundColor} !important`,
         color: `${theme.palette.text.primary} !important`,
         boxShadow: 'none !important',
         borderBottom: `1px solid ${alpha(theme.palette.divider, 0.12)} !important`,
@@ -39,7 +42,7 @@ const useStyles = makeStyles(
         right: 0,
         zIndex: `${theme.zIndex.drawer + 1} !important`,
         '& .MuiToolbar-root': {
-          backgroundColor: `${theme.palette.background.default} !important`,
+          backgroundColor: `${backgroundColor} !important`,
           color: `${theme.palette.text.primary} !important`,
           paddingRight: `${theme.spacing(1)}px !important`,
           paddingLeft: `${theme.spacing(1)}px !important`,

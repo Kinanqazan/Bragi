@@ -149,7 +149,7 @@ const useStyles = makeStyles((theme) => ({
   artwork: {
     width: '100%',
     height: '100%',
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: 12,
     background: theme.palette.action.hover,
   },
   coverFrame: {
@@ -158,7 +158,7 @@ const useStyles = makeStyles((theme) => ({
     aspectRatio: '1 / 1',
     maxWidth: 220,
     overflow: 'hidden',
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: 12,
     [theme.breakpoints.down('xs')]: {
       maxWidth: 160,
       justifySelf: 'start',
