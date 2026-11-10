@@ -774,6 +774,10 @@ const MobilePlayerSurface = ({
 
   useEffect(() => {
     const handleBack = () => {
+      if (queueOpen) {
+        setQueueOpen(false)
+        return true
+      }
       if (!expanded && !settle.current?.notify) return false
       if (settle.current?.target !== 0) collapseToMiniPlayer()
       return true

@@ -210,6 +210,17 @@ describe('MobilePlayerSurface gestures', () => {
     vi.useRealTimers()
   })
 
+  it('closes the queue before collapsing the player on Android back', () => {
+    const { onExpandedChange } = renderSurface()
+    act(() => screen.getByRole('button', { name: 'Open queue' }).click())
+    expect(screen.getByTestId('queue-drawer')).toBeInTheDocument()
+    act(() => {
+      expect(window.__bragiHandlePlayerBack()).toBe(true)
+    })
+    expect(screen.queryByTestId('queue-drawer')).not.toBeInTheDocument()
+    expect(onExpandedChange).not.toHaveBeenCalled()
+  })
+
   it('keeps the full-screen player above app navigation', () => {
     renderSurface()
     const shell = screen.getByTestId('mobile-player-shell')
