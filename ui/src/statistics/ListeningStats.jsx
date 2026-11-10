@@ -33,23 +33,6 @@ const useStyles = makeStyles((theme) => ({
       marginBottom: theme.spacing(10),
     },
   },
-  songListDivider: {
-    position: 'relative',
-    marginTop: theme.spacing(3),
-    paddingTop: theme.spacing(2),
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: theme.spacing(2),
-      right: theme.spacing(2),
-      borderTop: `1px solid ${
-        theme.palette.type === 'dark'
-          ? 'rgba(255,255,255,0.07)'
-          : 'rgba(0,0,0,0.07)'
-      }`,
-    },
-  },
   header: {
     display: 'flex',
     alignItems: 'center',
@@ -307,14 +290,8 @@ const useStyles = makeStyles((theme) => ({
 
 const formatCount = (value) => (Number(value) || 0).toLocaleString()
 
-export const ListeningStats = ({
-  showTitle = true,
-  showSongListDivider = false,
-}) => {
+export const ListeningStats = ({ showTitle = true }) => {
   const classes = useStyles()
-  const rootClassName = `${classes.root} ${
-    showSongListDivider ? classes.songListDivider : ''
-  }`
   const dispatch = useDispatch()
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -407,7 +384,7 @@ export const ListeningStats = ({
 
   return (
     <section
-      className={rootClassName}
+      className={classes.root}
       aria-label="Listening statistics"
     >
       <div className={classes.header}>

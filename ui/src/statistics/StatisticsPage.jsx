@@ -11,9 +11,11 @@ const useStyles = makeStyles((theme) => ({
     margin: '0 auto',
     padding: theme.spacing(1, 0),
     overflowY: 'auto',
+    touchAction: 'pan-y pinch-zoom',
     boxSizing: 'border-box',
     [theme.breakpoints.down('sm')]: {
       padding: theme.spacing(1, 0, 3),
+      paddingTop: 'var(--nd-mobile-top-offset, 92px)',
     },
   },
   title: {

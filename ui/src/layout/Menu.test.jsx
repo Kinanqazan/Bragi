@@ -159,6 +159,7 @@ describe('<Menu />', () => {
       '/album/all',
       '/genres',
       '/moods',
+      ...(config.listenBrainzEnabled ? ['/for-you'] : []),
       '/song/recentlyAdded',
       '/song/recentlyPlayed',
       '/song/mostPlayed',
@@ -185,9 +186,11 @@ describe('<Menu />', () => {
       '/song',
       '/artist',
       '/album/all',
+      ...(config.listenBrainzEnabled ? ['/for-you'] : []),
       '/playlist',
       '/song/recentlyAdded',
       '/song/recentlyPlayed',
+      '/statistics',
     ])
   })
 

@@ -33,7 +33,6 @@ import {
 } from '../common'
 import { playTracks } from '../actions'
 import config from '../config'
-import ListeningStats from '../statistics/ListeningStats'
 import { MOBILE_BACKGROUND_COLOR } from '../consts'
 
 const useStyles = makeStyles((theme) => {
@@ -97,6 +96,7 @@ const useStyles = makeStyles((theme) => {
         height: '0 !important',
       },
       [theme.breakpoints.down('sm')]: {
+        touchAction: 'pan-y pinch-zoom',
         flex: '1 1 auto',
         minHeight: 0,
         height: '100%',
@@ -1015,7 +1015,6 @@ ModernTrackRows.propTypes = {
 export const ModernSongList = ({
   scrollable = true,
   showQuickActions = true,
-  showListeningStats = false,
 } = {}) => {
   const classes = useStyles()
   const dispatch = useDispatch()
@@ -1271,9 +1270,6 @@ export const ModernSongList = ({
             <div className={classes.empty}>
               <Typography color="textSecondary">No songs found</Typography>
             </div>
-          )}
-          {isMobile && showListeningStats && (
-            <ListeningStats showSongListDivider />
           )}
         </div>
       </div>

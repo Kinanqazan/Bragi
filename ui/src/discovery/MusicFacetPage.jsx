@@ -25,6 +25,7 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: '100%',
     overflowY: 'auto',
     overflowX: 'hidden',
+    touchAction: 'pan-y pinch-zoom',
     overscrollBehavior: 'contain',
     WebkitOverflowScrolling: 'touch',
     scrollbarWidth: 'none',

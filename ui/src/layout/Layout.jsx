@@ -295,6 +295,7 @@ const useStyles = makeStyles((theme) => ({
     '@media (max-width: 959.95px)': {
       '&& #main-content': {
         overflowY: 'auto !important',
+        touchAction: 'pan-y pinch-zoom',
         WebkitOverflowScrolling: 'touch',
         overscrollBehaviorY: 'contain',
         paddingBottom: '16px !important',

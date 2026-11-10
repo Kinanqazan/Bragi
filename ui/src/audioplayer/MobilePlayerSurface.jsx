@@ -772,6 +772,20 @@ const MobilePlayerSurface = ({
     settleTo(0, 0, true)
   }
 
+  useEffect(() => {
+    const handleBack = () => {
+      if (!expanded && !settle.current?.notify) return false
+      if (settle.current?.target !== 0) collapseToMiniPlayer()
+      return true
+    }
+    window.__bragiHandlePlayerBack = handleBack
+    return () => {
+      if (window.__bragiHandlePlayerBack === handleBack) {
+        delete window.__bragiHandlePlayerBack
+      }
+    }
+  })
+
   const cancelSettle = () => {
     clearSettleTimer()
     if (settle.current && !settle.current.dismiss) {

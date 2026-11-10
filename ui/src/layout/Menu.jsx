@@ -827,17 +827,18 @@ const Menu = ({ dense = false, sidebarOpen }) => {
               renderSongListMenuItemLink(type, songLists[type]),
             )}
             {renderResourceMenuItemLink(playlistResource)}
-            <MenuItemLink
-              to="/statistics"
-              activeClassName={classes.active}
-              className={classes.menuItem}
-              primaryText="Statistics"
-              leftIcon={<EqualizerIcon />}
-              sidebarIsOpen={open}
-              dense={dense}
-            />
+
           </>
         )}
+        <MenuItemLink
+          to="/statistics"
+          activeClassName={classes.active}
+          className={classes.menuItem}
+          primaryText="Statistics"
+          leftIcon={<EqualizerIcon />}
+          sidebarIsOpen={open}
+          dense={dense}
+        />
       </div>
 
       {/* Unified Bottom Profile, Activity & Settings Hub */}

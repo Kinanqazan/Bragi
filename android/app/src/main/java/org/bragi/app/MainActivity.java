@@ -1311,6 +1311,18 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (webView.getVisibility() == View.VISIBLE) {
+            webView.evaluateJavascript(
+                    "Boolean(window.__bragiHandlePlayerBack && window.__bragiHandlePlayerBack())",
+                    result -> {
+                        if (!"true".equals(result)) handleBackNormally();
+                    });
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    private void handleBackNormally() {
         if (webView.getVisibility() == View.VISIBLE && webView.canGoBack()) {
             webView.goBack();
         } else if (webView.getVisibility() == View.VISIBLE) {
@@ -1351,8 +1363,6 @@ public class MainActivity extends AppCompatActivity {
                         android.view.WindowManager.LayoutParams.WRAP_CONTENT);
             }
             dialog.show();
-        } else {
-            super.onBackPressed();
         }
     }
 

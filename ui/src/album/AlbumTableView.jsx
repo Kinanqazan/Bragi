@@ -61,6 +61,7 @@ const useStyles = makeStyles((theme) => {
         height: '0 !important',
       },
       [theme.breakpoints.down('sm')]: {
+        touchAction: 'pan-y pinch-zoom',
         flex: '1 1 auto',
         minHeight: 0,
         height: '100%',

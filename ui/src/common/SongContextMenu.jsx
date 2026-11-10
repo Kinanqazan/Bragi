@@ -7,9 +7,16 @@ import {
   useTranslate,
   useDataProvider,
   useRefresh,
-  Confirm,
 } from 'react-admin'
-import { IconButton, Menu, MenuItem } from '@material-ui/core'
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  IconButton,
+  Menu,
+  MenuItem,
+} from '@material-ui/core'
 import { makeStyles } from '@material-ui/core/styles'
 import MoreVertIcon from '@material-ui/icons/MoreVert'
 import { MdQuestionMark } from 'react-icons/md'
@@ -27,6 +34,18 @@ const useStyles = makeStyles((theme) => ({
   },
   deleteItem: {
     color: theme.palette.error.main,
+  },
+  deleteDialog: {
+    borderRadius: 16,
+    padding: theme.spacing(1),
+    width: '100%',
+    maxWidth: 400,
+  },
+  deleteActions: { padding: theme.spacing(1, 3, 2), gap: theme.spacing(1) },
+  deleteButton: {
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
+    '&:hover': { backgroundColor: theme.palette.error.dark },
   },
 }))
 
@@ -259,15 +278,35 @@ export const SongContextMenu = ({
               ),
           )}
       </Menu>
-      <Confirm
-        isOpen={deleteDialogOpen}
-        loading={deleting}
-        title="message.delete_media_file_title"
-        content="message.delete_media_file_content"
-        translateOptions={{ title: record.title, path: record.path }}
-        onConfirm={handleDeleteFile}
-        onClose={() => setDeleteDialogOpen(false)}
-      />
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={deleting ? undefined : () => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-song-title"
+        classes={{ paper: classes.deleteDialog }}
+      >
+        <DialogTitle id="delete-song-title">
+          {translate('message.delete_media_file_title', {
+            title: record.title,
+          })}
+        </DialogTitle>
+        <DialogActions className={classes.deleteActions}>
+          <Button
+            disabled={deleting}
+            onClick={() => setDeleteDialogOpen(false)}
+          >
+            {translate('ra.action.cancel')}
+          </Button>
+          <Button
+            className={classes.deleteButton}
+            disabled={deleting}
+            onClick={handleDeleteFile}
+            variant="contained"
+            disableElevation
+          >
+            {translate('ra.action.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </span>
   )
 }

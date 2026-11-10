@@ -193,6 +193,23 @@ describe('MobilePlayerSurface gestures', () => {
     vi.unstubAllGlobals()
   })
 
+  it('handles Android back by collapsing the full-screen player', () => {
+    vi.useFakeTimers()
+    const { onExpandedChange, rerenderSurface, unmount } = renderSurface()
+    act(() => {
+      expect(window.__bragiHandlePlayerBack()).toBe(true)
+    })
+    act(() => {
+      vi.runAllTimers()
+    })
+    expect(onExpandedChange).toHaveBeenCalledWith(false)
+    rerenderSurface(false)
+    expect(window.__bragiHandlePlayerBack()).toBe(false)
+    unmount()
+    expect(window.__bragiHandlePlayerBack).toBeUndefined()
+    vi.useRealTimers()
+  })
+
   it('keeps the full-screen player above app navigation', () => {
     renderSurface()
     const shell = screen.getByTestId('mobile-player-shell')

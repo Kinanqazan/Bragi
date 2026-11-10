@@ -185,9 +185,9 @@ describe('SongContextMenu', () => {
     )
 
     expect(deleteMediaFileMock).not.toHaveBeenCalled()
-    expect(screen.getByText(/message\.delete_media_file_content/)).toBeVisible()
+    expect(screen.getByText(/message\.delete_media_file_title/)).toBeVisible()
 
-    fireEvent.click(screen.getByText('ra.action.confirm'))
+    fireEvent.click(screen.getByText('ra.action.delete'))
     await waitFor(() =>
       expect(deleteMediaFileMock).toHaveBeenCalledWith('song1'),
     )
