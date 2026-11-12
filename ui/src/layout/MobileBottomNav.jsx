@@ -5,10 +5,9 @@ import MusicNoteOutlinedIcon from '@material-ui/icons/MusicNoteOutlined'
 import MusicNoteIcon from '@material-ui/icons/MusicNote'
 import PersonOutlineIcon from '@material-ui/icons/PersonOutline'
 import PersonIcon from '@material-ui/icons/Person'
-import CategoryOutlinedIcon from '@material-ui/icons/CategoryOutlined'
-import CategoryIcon from '@material-ui/icons/Category'
-import WbSunnyOutlinedIcon from '@material-ui/icons/WbSunnyOutlined'
-import WbSunnyIcon from '@material-ui/icons/WbSunny'
+import EqualizerIcon from '@material-ui/icons/Equalizer'
+import ExploreOutlinedIcon from '@material-ui/icons/ExploreOutlined'
+import ExploreIcon from '@material-ui/icons/Explore'
 import clsx from 'clsx'
 import { useTranslate } from 'react-admin'
 import { MOBILE_SIDEBAR_BACKGROUND_COLOR } from '../consts'
@@ -103,23 +102,20 @@ const navItems = [
     isActive: (pathname) => pathname.startsWith('/artist'),
   },
   {
-    path: '/genres',
-    labelKey: 'resources.genre.name',
-    defaultLabel: 'Genres',
-    smartCount: 2,
-    Icon: CategoryOutlinedIcon,
-    ActiveIcon: CategoryIcon,
-    isActive: (pathname) =>
-      pathname.startsWith('/genres') || pathname.startsWith('/categories'),
+    path: '/statistics',
+    labelKey: 'menu.statistics',
+    defaultLabel: 'Statistics',
+    Icon: EqualizerIcon,
+    ActiveIcon: EqualizerIcon,
+    isActive: (pathname) => pathname === '/statistics',
   },
   {
-    path: '/moods',
-    labelKey: 'menu.moods',
-    defaultLabel: 'Moods',
-    smartCount: 2,
-    Icon: WbSunnyOutlinedIcon,
-    ActiveIcon: WbSunnyIcon,
-    isActive: (pathname) => pathname.startsWith('/moods'),
+    path: '/for-you',
+    labelKey: 'menu.forYou',
+    defaultLabel: 'For You',
+    Icon: ExploreOutlinedIcon,
+    ActiveIcon: ExploreIcon,
+    isActive: (pathname) => pathname === '/for-you',
   },
 ]
 

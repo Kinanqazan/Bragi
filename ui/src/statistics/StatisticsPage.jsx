@@ -20,7 +20,11 @@ const useStyles = makeStyles((theme) => ({
   },
   title: {
     marginBottom: theme.spacing(1),
+    paddingLeft: theme.spacing(2),
     fontWeight: 700,
+    [theme.breakpoints.up('md')]: {
+      paddingLeft: theme.spacing(3),
+    },
   },
 }))
 

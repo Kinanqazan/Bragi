@@ -135,7 +135,8 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1.5),
     overflowX: 'auto',
     overflowY: 'hidden',
-    padding: theme.spacing(0.5, 0.25, 1),
+    touchAction: 'pan-right pan-y pinch-zoom',
+    padding: theme.spacing(0.5, 0, 1),
     scrollBehavior: 'smooth',
     scrollSnapType: 'x mandatory',
     overscrollBehaviorX: 'contain',
@@ -290,6 +291,11 @@ const useStyles = makeStyles((theme) => ({
 
 const formatCount = (value) => (Number(value) || 0).toLocaleString()
 
+const updateCarouselTouchAction = (event) => {
+  const carousel = event.currentTarget
+  carousel.style.touchAction = carousel.scrollLeft > 1 ? 'auto' : ''
+}
+
 export const ListeningStats = ({ showTitle = true }) => {
   const classes = useStyles()
   const dispatch = useDispatch()
@@ -343,6 +349,8 @@ export const ListeningStats = ({ showTitle = true }) => {
     return (
       <div
         className={classes.carousel}
+        data-sidebar-swipe-at-start
+        onScroll={updateCarouselTouchAction}
         aria-label={`${label} carousel`}
         tabIndex={0}
       >
@@ -459,6 +467,8 @@ export const ListeningStats = ({ showTitle = true }) => {
               {stats?.topArtists?.length ? (
                 <div
                   className={`${classes.carousel} ${classes.artistCarousel}`}
+                  data-sidebar-swipe-at-start
+                  onScroll={updateCarouselTouchAction}
                   aria-label="Top artists carousel"
                   tabIndex={0}
                 >

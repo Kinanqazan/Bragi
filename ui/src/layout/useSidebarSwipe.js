@@ -6,7 +6,8 @@ import {
   useState,
 } from 'react'
 
-// Leave enough movement for ordinary finger drift on menu links to remain a tap.
+// Opening can start sooner; menu links still need room for ordinary finger drift.
+const openingIntentThreshold = 6
 const intentThreshold = 12
 export const mobileSidebarWidth = 82
 const clamp = (value) => Math.max(0, Math.min(1, value))
@@ -14,7 +15,7 @@ const snapEasing = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const sidebarSwipeLocked = () =>
   Boolean(document.querySelector('[data-sidebar-swipe-lock="true"]'))
 
-const ownsHorizontalGesture = (target) => {
+const ownsHorizontalGesture = (target, allowedCarousel = null) => {
   if (
     target?.closest?.(
       'input, textarea, select, [contenteditable="true"], [role="slider"], .nd-artwork-carousel, [data-sidebar-swipe-ignore]',
@@ -28,6 +29,7 @@ const ownsHorizontalGesture = (target) => {
     node = node.parentElement
   ) {
     if (
+      node !== allowedCarousel &&
       node.scrollWidth > node.clientWidth + 1 &&
       /auto|scroll/.test(window.getComputedStyle(node).overflowX)
     ) {
@@ -95,9 +97,9 @@ export default function useSidebarSwipe(open, onChange) {
       const duration = reducedMotion
         ? 0
         : Math.round(
-            140 +
-              Math.abs(target - progress) * 100 -
-              Math.min(1, Math.abs(velocity)) * 40,
+            100 +
+              Math.abs(target - progress) * 80 -
+              Math.min(1, Math.abs(velocity)) * 30,
           )
       if (target || progress > 0) setPresent(true)
       if (paperRef.current) {
@@ -145,9 +147,13 @@ export default function useSidebarSwipe(open, onChange) {
       if (gesture?.claimed) settleTo(Number(openRef.current))
     }
 
-    const handleDown = (event) => {
+    const handleDown = (event, allowedCarousel = null) => {
       // A fresh press must always be able to click immediately after a swipe.
       suppressClickRef.current = false
+      if (
+        event.pointerType === 'touch' &&
+        event.target.closest?.('[data-sidebar-swipe-at-start]')
+      ) return
       if (gestureRef.current) {
         cancelGesture()
         return
@@ -161,7 +167,7 @@ export default function useSidebarSwipe(open, onChange) {
       const paper = paperRef.current
       const inDrawer = paper?.contains(event.target)
       if (
-        ownsHorizontalGesture(event.target) ||
+        ownsHorizontalGesture(event.target, allowedCarousel) ||
         (!inDrawer &&
           event.target.closest?.(
             '[role="dialog"], [role="menu"], .MuiPopover-root',
@@ -182,6 +188,7 @@ export default function useSidebarSwipe(open, onChange) {
     }
 
     const handleMove = (event) => {
+      if (event.pointerType === 'touch' && carouselTouch != null) return
       const gesture = gestureRef.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
       if (sidebarSwipeLocked()) {
@@ -191,7 +198,14 @@ export default function useSidebarSwipe(open, onChange) {
       const dx = event.clientX - gesture.startX
       const dy = event.clientY - gesture.startY
       if (!gesture.claimed) {
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < intentThreshold) return
+        const clearOpeningSwipe =
+          gesture.startProgress <= 0 &&
+          dx >= openingIntentThreshold &&
+          dx > Math.abs(dy) * 1.5
+        if (
+          !clearOpeningSwipe &&
+          Math.max(Math.abs(dx), Math.abs(dy)) < intentThreshold
+        ) return
         if (
           Math.abs(dy) >= Math.abs(dx) ||
           (gesture.startProgress <= 0 && dx < 0) ||
@@ -235,6 +249,7 @@ export default function useSidebarSwipe(open, onChange) {
     }
 
     const handleUp = (event) => {
+      if (event.pointerType === 'touch' && carouselTouch != null) return
       const gesture = gestureRef.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
       if (sidebarSwipeLocked()) {
@@ -262,6 +277,7 @@ export default function useSidebarSwipe(open, onChange) {
     }
 
     const handleCancel = (event) => {
+      if (event.pointerType === 'touch' && carouselTouch != null) return
       if (gestureRef.current?.pointerId === event.pointerId) {
         if (gestureRef.current.claimed) {
           suppressClickRef.current = true
@@ -277,7 +293,54 @@ export default function useSidebarSwipe(open, onChange) {
       event.stopPropagation()
     }
 
-    document.addEventListener('pointerdown', handleDown, true)
+    // Native touch scrolling normally cancels pointer events. At the start of
+    // opted-in carousels, use a non-passive touch listener so a right swipe can
+    // be claimed before the browser starts horizontal scrolling.
+    let carouselTouch = null
+    const handleCarouselTouch = (event) => {
+      if (event.type === 'touchstart') {
+        if (event.touches.length !== 1) {
+          if (carouselTouch != null) cancelGesture()
+          carouselTouch = null
+          return
+        }
+        const carousel = event.target.closest?.('[data-sidebar-swipe-at-start]')
+        if (!carousel || carousel.scrollLeft > 1 || openRef.current) return
+        const touch = event.changedTouches[0]
+        carouselTouch = touch.identifier
+        handleDown(touchPoint(event, touch), carousel)
+        if (!gestureRef.current) carouselTouch = null
+        return
+      }
+      if (carouselTouch == null) return
+      const touch = Array.from(event.changedTouches).find(
+        (item) => item.identifier === carouselTouch,
+      )
+      if (!touch) return
+      const point = touchPoint(event, touch)
+      if (event.type === 'touchmove') {
+        const gesture = gestureRef.current
+        if (gesture && !gesture.claimed) {
+          const dx = touch.clientX - gesture.startX
+          const dy = touch.clientY - gesture.startY
+          if (dx >= 6 && dx > Math.abs(dy) * 1.5) event.preventDefault()
+        }
+        handleMove(point)
+      } else {
+        carouselTouch = null
+        if (event.type === 'touchcancel') handleCancel(point)
+        else handleUp(point)
+      }
+    }
+    const touchPoint = (event, touch) => ({
+      pointerId: touch.identifier,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      target: event.target,
+      preventDefault: () => event.preventDefault(),
+    })
+    const handlePointerDown = (event) => handleDown(event)
+    document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('pointermove', handleMove, {
       capture: true,
       passive: false,
@@ -285,14 +348,24 @@ export default function useSidebarSwipe(open, onChange) {
     document.addEventListener('pointerup', handleUp, true)
     document.addEventListener('pointercancel', handleCancel, true)
     document.addEventListener('click', handleClick, true)
+    const touchTypes = ['touchstart', 'touchmove', 'touchend', 'touchcancel']
+    touchTypes.forEach((type) =>
+      document.addEventListener(type, handleCarouselTouch, {
+        capture: true,
+        passive: type === 'touchstart' || type === 'touchcancel',
+      }),
+    )
     window.addEventListener('blur', cancelGesture)
     window.addEventListener('resize', cancelGesture)
     return () => {
-      document.removeEventListener('pointerdown', handleDown, true)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('pointermove', handleMove, true)
       document.removeEventListener('pointerup', handleUp, true)
       document.removeEventListener('pointercancel', handleCancel, true)
       document.removeEventListener('click', handleClick, true)
+      touchTypes.forEach((type) =>
+        document.removeEventListener(type, handleCarouselTouch, true),
+      )
       window.removeEventListener('blur', cancelGesture)
       window.removeEventListener('resize', cancelGesture)
       stopAnimation()

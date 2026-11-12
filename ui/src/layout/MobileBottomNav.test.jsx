@@ -22,7 +22,7 @@ const touch = (target, type, x = 100, y = 100) => {
 }
 
 describe('<MobileBottomNav />', () => {
-  it('renders navigation links for songs, artists, genres, and moods', () => {
+  it('renders navigation links for songs, artists, statistics, and For You', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <MobileBottomNav />
@@ -37,13 +37,13 @@ describe('<MobileBottomNav />', () => {
       'href',
       '/artist',
     )
-    expect(screen.getByRole('link', { name: 'Genres' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Statistics' })).toHaveAttribute(
       'href',
-      '/genres',
+      '/statistics',
     )
-    expect(screen.getByRole('link', { name: 'Moods' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'For You' })).toHaveAttribute(
       'href',
-      '/moods',
+      '/for-you',
     )
   })
 
@@ -78,10 +78,10 @@ describe('<MobileBottomNav />', () => {
 
     for (const [label, path] of [
       ['Artists', '/artist'],
-      ['Genres', '/genres'],
-      ['Moods', '/moods'],
+      ['Statistics', '/statistics'],
+      ['For You', '/for-you'],
       ['Songs', '/song'],
-      ['Genres', '/genres'],
+      ['Statistics', '/statistics'],
     ]) {
       const link = screen.getByRole('link', { name: label })
       fireEvent.click(link)
@@ -116,8 +116,8 @@ describe('<MobileBottomNav />', () => {
 
     for (const [label, path] of [
       ['Artists', '/artist'],
-      ['Genres', '/genres'],
-      ['Moods', '/moods'],
+      ['Statistics', '/statistics'],
+      ['For You', '/for-you'],
       ['Songs', '/song'],
     ]) {
       const link = screen.getByRole('link', { name: label })
@@ -138,10 +138,10 @@ describe('<MobileBottomNav />', () => {
     )
 
     fireEvent.click(screen.getByRole('link', { name: 'Artists' }))
-    fireEvent.click(screen.getByRole('link', { name: 'Genres' }))
-    fireEvent.click(screen.getByRole('link', { name: 'Moods' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Statistics' }))
+    fireEvent.click(screen.getByRole('link', { name: 'For You' }))
 
-    expect(history.location.pathname).toBe('/moods')
+    expect(history.location.pathname).toBe('/for-you')
     history.goBack()
     expect(history.location.pathname).toBe('/song')
   })
@@ -178,8 +178,8 @@ describe('<MobileBottomNav />', () => {
     )
     for (const [label, path] of [
       ['Artists', '/artist'],
-      ['Genres', '/genres'],
-      ['Moods', '/moods'],
+      ['Statistics', '/statistics'],
+      ['For You', '/for-you'],
     ]) {
       const link = screen.getByRole('link', { name: label })
       touch(link, 'pointerdown')
@@ -199,13 +199,13 @@ describe('<MobileBottomNav />', () => {
         <MobileBottomNav />
       </Router>,
     )
-    const genres = screen.getByRole('link', { name: 'Genres' })
-    touch(genres, 'pointerdown')
-    touch(genres, 'pointermove', 100, 135)
-    touch(genres, 'pointerup', 100, 135)
-    touch(genres, 'pointerdown')
-    touch(genres, 'pointercancel')
-    touch(genres, 'pointerup')
+    const statistics = screen.getByRole('link', { name: 'Statistics' })
+    touch(statistics, 'pointerdown')
+    touch(statistics, 'pointermove', 100, 135)
+    touch(statistics, 'pointerup', 100, 135)
+    touch(statistics, 'pointerdown')
+    touch(statistics, 'pointercancel')
+    touch(statistics, 'pointerup')
     expect(history.location.pathname).toBe('/song')
   })
 })

@@ -191,6 +191,32 @@ describe('Sidebar swipes', () => {
     expect(paper.style.transform).toBe('translate3d(-87.5%, 0, 0)')
   })
 
+  it('starts following a deliberate opening swipe after a small movement', () => {
+    const { control, paper, store } = renderSidebar()
+    pointer(control, 'pointerdown', 100)
+    pointer(control, 'pointermove', 107)
+    tick()
+    expect(paper).toBeVisible()
+    expect(paper.style.transform).not.toBe('translate3d(-100%, 0, 0)')
+    expect(isOpen(store)).toBe(false)
+  })
+
+  it('does not claim a small diagonal movement as an opening swipe', () => {
+    const { control, paper, store } = renderSidebar()
+    pointer(control, 'pointerdown', 100, 300)
+    pointer(control, 'pointermove', 107, 306)
+    tick()
+    expect(paper).not.toBeVisible()
+    pointer(control, 'pointerup', 107, 306)
+    expect(isOpen(store)).toBe(false)
+  })
+
+  it('settles a button-opened sidebar promptly', () => {
+    const { paper, store } = renderSidebar()
+    act(() => { store.dispatch(setSidebarVisibility(true)) })
+    expect(Number.parseInt(paper.style.transition.match(/\d+ms/)[0], 10)).toBeLessThanOrEqual(180)
+  })
+
   it('snaps a small held swipe shut and leaves the app usable', () => {
     const { control, paper, store, onClick } = renderSidebar()
     pointer(control, 'pointerdown', 180)
@@ -521,6 +547,98 @@ describe('Sidebar swipes', () => {
     expect(pointer(control, 'pointermove', 280).defaultPrevented).toBe(false)
     pointer(control, 'pointerup', 280)
     expect(paper).not.toBeVisible()
+  })
+
+  it.each([
+    ['opens at the start', 0, 100, 280, true],
+    ['scrolls rightward away from the start', 80, 100, 280, false],
+    ['scrolls leftward at the start', 0, 280, 100, false],
+  ])('%s in a listening stats carousel', (_label, scrollLeft, start, end, opens) => {
+    const { getByText, store } = renderSidebar(false, (
+      <div data-sidebar-swipe-at-start style={{ overflowX: 'auto' }}>
+        <button>Stats track</button>
+      </div>
+    ))
+    const track = getByText('Stats track')
+    Object.defineProperties(track.parentElement, {
+      scrollWidth: { value: 800 },
+      clientWidth: { value: 390 },
+      scrollLeft: { value: scrollLeft },
+    })
+    const touch = (type, x) => {
+      const point = { identifier: 1, clientX: x, clientY: 300 }
+      const event = new TouchEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        touches: type === 'touchend' ? [] : [point],
+        changedTouches: [point],
+      })
+      fireEvent(track, event)
+      return event
+    }
+    touch('touchstart', start)
+    const move = touch('touchmove', end)
+    touch('touchend', end)
+    expect(move.defaultPrevented).toBe(opens)
+    expect(isOpen(store)).toBe(opens)
+  })
+
+  it('accepts the first tap on a scrolled carousel after a sidebar swipe', () => {
+    const onTrackClick = vi.fn()
+    const { control, getByText, store } = renderSidebar(false, (
+      <div data-sidebar-swipe-at-start style={{ overflowX: 'auto' }}>
+        <button onClick={onTrackClick}>Stats track</button>
+      </div>
+    ))
+    const track = getByText('Stats track')
+    Object.defineProperty(track.parentElement, 'scrollLeft', { value: 80 })
+    pointer(control, 'pointerdown', 100)
+    pointer(control, 'pointermove', 280)
+    pointer(control, 'pointerup', 280)
+    act(() => { store.dispatch(setSidebarVisibility(false)) })
+    pointer(track, 'pointerdown', 100)
+    pointer(track, 'pointerup', 100)
+    fireEvent.click(track, { detail: 1 })
+    expect(onTrackClick).toHaveBeenCalledOnce()
+  })
+
+  it('allows vertical scrolling after a small rightward drift on a carousel', () => {
+    const { getByText, store } = renderSidebar(false, (
+      <div data-sidebar-swipe-at-start><button>Stats track</button></div>
+    ))
+    const track = getByText('Stats track')
+    const touch = (type, x, y) => {
+      const point = { identifier: 1, clientX: x, clientY: y }
+      const event = new TouchEvent(type, {
+        bubbles: true, cancelable: true,
+        touches: type === 'touchend' ? [] : [point], changedTouches: [point],
+      })
+      fireEvent(track, event)
+      return event
+    }
+    touch('touchstart', 100, 300)
+    expect(touch('touchmove', 102, 301).defaultPrevented).toBe(false)
+    expect(touch('touchmove', 103, 350).defaultPrevented).toBe(false)
+    touch('touchend', 103, 350)
+    expect(isOpen(store)).toBe(false)
+  })
+
+  it('starts following a deliberate swipe at the carousel edge', () => {
+    const { getByText, paper } = renderSidebar(false, (
+      <div data-sidebar-swipe-at-start><button>Stats track</button></div>
+    ))
+    const track = getByText('Stats track')
+    const touch = (type, x) => {
+      const point = { identifier: 1, clientX: x, clientY: 300 }
+      fireEvent(track, new TouchEvent(type, {
+        bubbles: true, cancelable: true, touches: [point], changedTouches: [point],
+      }))
+    }
+    touch('touchstart', 100)
+    touch('touchmove', 107)
+    tick()
+    expect(paper).toBeVisible()
+    expect(paper.style.transform).not.toBe('translate3d(-100%, 0, 0)')
   })
 
   it('respects reduced motion and removes gesture listeners when unmounted', () => {
