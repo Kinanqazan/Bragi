@@ -1,5 +1,7 @@
 # Bragi
 
+![Bragi on desktop and mobile](.github/screenshots/bragi-mockup.png)
+
 **Bragi** is a self-hosted music streaming server with a web player and an Android app. Keep your music on your own server and listen from your computer, phone, or Cast speakers.
 
 ## Features
