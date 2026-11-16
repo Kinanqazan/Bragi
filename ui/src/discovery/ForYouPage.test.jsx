@@ -24,7 +24,6 @@ const renderPage = () =>
 describe('ForYouPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    delete window.BragiNative
   })
 
   it('keeps horizontal touch gestures available on its scroll container', async () => {
@@ -190,7 +189,12 @@ describe('ForYouPage', () => {
                 },
       }),
     )
-    window.BragiNative = { openExternalUrl: vi.fn() }
+    const popups = []
+    vi.spyOn(window, 'open').mockImplementation(() => {
+      const popup = { opener: null, location: { href: '' }, close: vi.fn() }
+      popups.push(popup)
+      return popup
+    })
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
@@ -219,9 +223,7 @@ describe('ForYouPage', () => {
     )
     await screen.findByRole('button', { name: 'Copy link for A & B' })
     await vi.waitFor(() =>
-      expect(window.BragiNative.openExternalUrl).toHaveBeenCalledWith(
-        'https://music.youtube.com/watch?v=abc',
-      ),
+      expect(popups[0].location.href).toBe('https://music.youtube.com/watch?v=abc'),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Copy link for A & B' }))
     await vi.waitFor(() =>
@@ -233,9 +235,7 @@ describe('ForYouPage', () => {
       screen.getByRole('button', { name: 'Open Other in YouTube Music' }),
     )
     await vi.waitFor(() =>
-      expect(window.BragiNative.openExternalUrl).toHaveBeenCalledWith(
-        'https://music.youtube.com/search?q=Artist%20Other',
-      ),
+      expect(popups[1].location.href).toBe('https://music.youtube.com/search?q=Artist%20Other'),
     )
     writeText.mockClear()
     fireEvent.click(screen.getByRole('button', { name: 'Copy link for Other' }))

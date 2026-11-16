@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-// Some Android WebViews occasionally omit the click after an otherwise normal
+// Some mobile browsers occasionally omit the click after an otherwise normal
 // touch release. Complete selected taps on release and discard the duplicate
 // browser click if one follows.
 export default function useTouchActivation(selector) {

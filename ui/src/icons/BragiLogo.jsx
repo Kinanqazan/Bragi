@@ -20,11 +20,6 @@ const BragiLogo = ({
   const maskSource = (() => {
     if (typeof window === 'undefined') return '/bragi-logo-mask.png'
 
-    // The Android WebView serves its bundled UI from /assets/index.html.
-    if (window.location.pathname.startsWith('/assets/')) {
-      return '/assets/bragi-logo-mask.png'
-    }
-
     // Vite serves public files from the origin root during development. The
     // production server serves them below its UI mount (/app), including any
     // configured BasePath.

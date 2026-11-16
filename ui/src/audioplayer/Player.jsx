@@ -38,9 +38,7 @@ export const Player = () => {
   const matchesDesktopWidth = useMediaQuery(
     `(min-width:${desktopPlayerBreakpoint}px)`,
   )
-  const isNativeApp =
-    typeof window !== 'undefined' && Boolean(window.BragiNative)
-  const isDesktop = matchesDesktopWidth && !isNativeApp
+  const isDesktop = matchesDesktopWidth
   const [mobileExpanded, setMobileExpanded] = useState(false)
   const [resolvedLyrics, setResolvedLyrics] = useState(null)
   const [lyricsRevision, setLyricsRevision] = useState(0)

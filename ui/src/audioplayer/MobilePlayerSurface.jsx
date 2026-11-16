@@ -56,7 +56,7 @@ const useStyles = makeStyles((theme) => ({
     boxSizing: 'border-box',
     border: 0,
     // Keep this clip static: rounded-frame animation rerasterizes the large
-    // background and shadow on Android WebView.
+    // background and shadow on mobile browsers.
     borderRadius: 0,
     boxShadow: theme.shadows[8],
     transformOrigin: 'top left',

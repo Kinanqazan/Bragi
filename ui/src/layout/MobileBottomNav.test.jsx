@@ -167,7 +167,7 @@ describe('<MobileBottomNav />', () => {
     expect(history.location.pathname).toBe('/artist')
   })
 
-  it('navigates each bottom tab on a touch release even when the WebView omits click', () => {
+  it('navigates each bottom tab on a touch release even when the browser omits click', () => {
     const history = createMemoryHistory({ initialEntries: ['/song'] })
     const onChange = vi.fn()
     history.listen(onChange)

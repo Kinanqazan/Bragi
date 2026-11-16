@@ -465,13 +465,13 @@ var _ = Describe("PlayTracker", func() {
 		})
 
 		Describe("auto-scrobble", func() {
-			It("scrobbles on stopped when positionMs >= 50% of track", func() {
+			It("counts a play at 30 seconds", func() {
 				err := tracker.ReportPlayback(ctx, ReportPlaybackParams{
 					MediaId: "123", PositionMs: 0, State: "starting", PlaybackRate: 1.0, ClientId: defaultClientId,
 				})
 				Expect(err).ToNot(HaveOccurred())
 				err = tracker.ReportPlayback(ctx, ReportPlaybackParams{
-					MediaId: "123", PositionMs: 90000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
+					MediaId: "123", PositionMs: 30000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(track.PlayCount).To(Equal(int64(1)))
@@ -479,7 +479,7 @@ var _ = Describe("PlayTracker", func() {
 				Expect(artist1.PlayCount).To(Equal(int64(1)))
 			})
 
-			It("scrobbles on stopped when positionMs >= 4 min for long tracks", func() {
+			It("counts a long track after 30 seconds", func() {
 				longTrack := model.MediaFile{
 					ID: "long", Title: "Long Song", Album: "Album", AlbumID: "al-1",
 					Duration: 600,
@@ -494,7 +494,7 @@ var _ = Describe("PlayTracker", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				err = tracker.ReportPlayback(ctx, ReportPlaybackParams{
-					MediaId: "long", PositionMs: 240000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
+					MediaId: "long", PositionMs: 30000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(longTrack.PlayCount).To(Equal(int64(1)))
@@ -506,10 +506,20 @@ var _ = Describe("PlayTracker", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 				err = tracker.ReportPlayback(ctx, ReportPlaybackParams{
-					MediaId: "123", PositionMs: 10000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
+					MediaId: "123", PositionMs: 29999, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(track.PlayCount).To(Equal(int64(0)))
+			})
+
+			It("counts a track shorter than 30 seconds when it ends", func() {
+				shortTrack := model.MediaFile{ID: "short", Title: "Short Song", AlbumID: "al-1", Duration: 20}
+				_ = ds.MediaFile(ctx).Put(&shortTrack)
+				err := tracker.ReportPlayback(ctx, ReportPlaybackParams{
+					MediaId: "short", PositionMs: 20000, State: "stopped", PlaybackRate: 1.0, ClientId: defaultClientId,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(shortTrack.PlayCount).To(Equal(int64(1)))
 			})
 
 			It("does NOT scrobble when ignoreScrobble=true even if threshold met", func() {

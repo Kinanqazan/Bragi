@@ -269,13 +269,18 @@ func (p *playTracker) ReportPlayback(ctx context.Context, params ReportPlaybackP
 			}
 			loadedMF = mf
 			trackDurationMs := int64(mf.Duration * 1000)
-			threshold := min(trackDurationMs*50/100, 240_000)
+			threshold := int64(30_000)
+			if trackDurationMs > 0 {
+				threshold = min(trackDurationMs, threshold)
+			}
 			if params.PositionMs >= threshold {
 				err = p.incPlay(ctx, mf, now)
 				if err != nil {
 					log.Warn(ctx, "Error updating play counts", "id", mf.ID, "track", mf.Title, "user", user.UserName, err)
 				}
-				p.dispatchScrobble(ctx, mf, now)
+				if trackDurationMs > 0 && params.PositionMs >= min(trackDurationMs*50/100, 240_000) {
+					p.dispatchScrobble(ctx, mf, now)
+				}
 			}
 		}
 		p.sessionsMu.Lock()

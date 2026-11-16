@@ -1,7 +1,5 @@
 # Bragi
 
-![Bragi on desktop and mobile](.github/screenshots/bragi-mockup.png)
-
 **Bragi** is a self-hosted music streaming server with a web player and an Android app. Keep your music on your own server and listen from your computer, phone, or Cast speakers.
 
 ## Features
@@ -22,7 +20,7 @@ Update titles, artist names, album artist names, genre and mood tags, and cover 
 Play music on Chromecast, Google Home/Nest speakers, and Android TVs from the Android app or a supported browser.
 
 <img src=".github/icons/statistics.svg" width="20" height="20" align="absmiddle" alt=""> **Listening statistics**<br>
-See your top tracks and artists over the last 30 days and discover unplayed songs.
+See your top tracks and artists, explore listening periods in the Android app, and discover unplayed songs.
 
 <img src=".github/icons/mobile.svg" width="20" height="20" align="absmiddle" alt=""> **Mobile listening**<br>
 The Android app supports background playback, lock-screen controls, and headset controls.
@@ -69,11 +67,11 @@ The example enables administrator editing, lyrics search, and permanent file del
 
 ## Android app
 
-1. Download the APK from the [latest Android release](https://github.com/Kinanqazan/Bragi/releases/latest) to your phone and install it. Allow installation from that source if Android asks.
-2. Open Bragi and enter your server's base address, such as `https://music.example.com` or `http://192.168.1.100:4533` on your home network.
-3. Connect and sign in with your Bragi account.
+1. Download the APK from the [latest Android release](https://github.com/Kinanqaz/Bragi/releases/latest) to your phone and install it. Allow installation from that source if Android asks.
+2. Open Bragi and choose music on your phone or connect to a Bragi server.
+3. To use a server, enter its base address, such as `https://music.example.com` or `http://192.168.1.100:4533`, and sign in with your Bragi account.
 
-The Android app connects to your server to browse and stream your music.
+The native Android app also works offline as a standalone player: choose music on your phone to browse and play locally stored audio without a server or internet connection. It supports Android 8.0 and later, background playback and Google Cast for server tracks. For build instructions, see [Android development](android-native/README.md).
 
 ## Acknowledgements & License
 

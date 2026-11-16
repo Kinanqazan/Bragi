@@ -583,7 +583,6 @@ const Menu = ({ dense = false, sidebarOpen }) => {
   }, [dispatch])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.BragiNative) return
     if (serverStart?.version && serverStart.version !== config.version) {
       notify('ra.notification.new_version', 'info', {}, false, 604800000 * 50)
     }
@@ -637,13 +636,7 @@ const Menu = ({ dense = false, sidebarOpen }) => {
 
   const handleOpenSidebarLink = () => {
     if (!savedSidebarLinkUrl) return
-    if (typeof window !== 'undefined' && window.BragiNative?.openExternalUrl) {
-      window.BragiNative.openExternalUrl(savedSidebarLinkUrl)
-    } else if (typeof window !== 'undefined' && window.BragiNative) {
-      window.location.assign(savedSidebarLinkUrl)
-    } else {
-      window.open(savedSidebarLinkUrl, '_blank', 'noopener,noreferrer')
-    }
+    window.open(savedSidebarLinkUrl, '_blank', 'noopener,noreferrer')
     if (isMobile) dispatch(toggleSidebar())
   }
 

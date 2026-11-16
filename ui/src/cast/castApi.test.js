@@ -225,37 +225,4 @@ describe('Cast sender SDK loading', () => {
     expect(localStorage.getItem('bragi.cast.sessionId')).toBeNull()
   })
 
-  it('detects native Cast and does not inject web SDK in Android WebView', async () => {
-    window.BragiNative = {
-      hasNativeCast: () => true,
-      requestCastSession: vi.fn(),
-    }
-    vi.resetModules()
-    castApi = await import('./castApi')
-
-    expect(castApi.isNativeCastAvailable()).toBe(true)
-    const result = await castApi.loadCastSenderSdk()
-    expect(result).toBe(true)
-    expect(document.querySelector('script[data-bragi-cast-sdk="true"]')).toBeNull()
-
-    await castApi.requestCastSession()
-    expect(window.BragiNative.requestCastSession).toHaveBeenCalled()
-
-    delete window.BragiNative
-  })
-
-  it('falls back to BragiNative requestCastSession even if hasNativeCast returns false', async () => {
-    window.BragiNative = {
-      hasNativeCast: () => false,
-      requestCastSession: vi.fn(),
-    }
-    vi.resetModules()
-    castApi = await import('./castApi')
-
-    expect(castApi.isNativeCastAvailable()).toBe(true)
-    await castApi.requestCastSession()
-    expect(window.BragiNative.requestCastSession).toHaveBeenCalled()
-
-    delete window.BragiNative
-  })
 })

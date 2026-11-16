@@ -463,7 +463,7 @@ describe('MobilePlayerSurface gestures', () => {
     expect(layoutWrites.map((spy) => spy.mock.calls.length)).toEqual([
       0, 0, 0, 0,
     ])
-    // Rebuilding the clip on each frame forces WebView to raster the large
+    // Rebuilding the clip on each frame forces browser to raster the large
     // background/shadow throughout the gesture.
     expect(cornerWrites).not.toHaveBeenCalled()
   })

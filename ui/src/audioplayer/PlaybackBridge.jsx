@@ -10,11 +10,9 @@ import { detectBrowserProfile, decisionService } from '../transcode'
 import {
   consumeResumeLocalOnEnd,
   endCastSession,
-  isNativeCastAvailable,
 } from '../cast/castApi'
 import {
   createCastPlaybackTarget,
-  createNativeCastPlaybackTarget,
 } from '../cast/castPlayback'
 import { getCastErrorCode } from '../cast/castDiagnostics'
 import { useCastState } from '../cast/useCastState'
@@ -226,17 +224,10 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
         }
       }
 
-      if (isNativeCastAvailable()) {
-        target = createNativeCastPlaybackTarget({
-          onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
-          onSessionError: handleSessionError,
-        })
-      } else {
-        target = createCastPlaybackTarget({
-          onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
-          onSessionError: handleSessionError,
-        })
-      }
+      target = createCastPlaybackTarget({
+        onPlaybackEvent: (event) => eventHandlerRef.current?.(event),
+        onSessionError: handleSessionError,
+      })
     } catch (error) {
       // If the SDK reports ready before its remote-player classes are usable,
       // keep the failure visible instead of silently losing the Cast target.
@@ -476,89 +467,9 @@ export const usePlaybackBridge = ({ onPlaybackEvent } = {}) => {
       } else {
         engine?.setVolume(normalized)
       }
-      if (typeof window !== 'undefined' && window.BragiNative?.setVolume) {
-        window.BragiNative.setVolume(normalized)
-      }
     },
     [dispatch, engine],
   )
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined
-
-    // If native Android volume is available on startup, sync Redux volume
-    if (window.BragiNative?.getVolume) {
-      try {
-        const initialNativeVol = Number(window.BragiNative.getVolume())
-        if (Number.isFinite(initialNativeVol) && initialNativeVol >= 0) {
-          dispatch(setReduxVolume(initialNativeVol))
-        }
-      } catch {
-        // Native volume bridge not available or failed
-      }
-    }
-
-    // Hardware volume buttons broadcast listener
-    window.__bragiNativeVolumeChanged = (vol) => {
-      const normalized = Math.min(1, Math.max(0, Number(vol) || 0))
-      dispatch(setReduxVolume(normalized))
-      if (activeTargetRef.current === 'local') {
-        engine?.setVolume(normalized * normalized)
-      } else {
-        engine?.setVolume(normalized)
-      }
-    }
-
-    // Hardware/notification media action buttons
-    window.__bragiTogglePlayback = () => engine?.toggle()
-    window.__bragiNextTrack = () => engine?.next()
-    window.__bragiPreviousTrack = () => engine?.previous()
-    window.__bragiSeek = (pos) => {
-      if (typeof pos === 'number') engine?.seek(pos)
-    }
-
-    return () => {
-      window.__bragiNativeVolumeChanged = null
-      window.__bragiTogglePlayback = null
-      window.__bragiNextTrack = null
-      window.__bragiPreviousTrack = null
-      window.__bragiSeek = null
-    }
-  }, [dispatch, engine])
-
-  // Sync notification metadata with native Android PlaybackService
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.BragiNative?.updateMetadata) return
-    const track = snapshot.currentTrack
-    if (!track) return
-    const title = track.title || track.name || ''
-    const artist = track.artist || track.artistName || ''
-    const album = track.album || track.albumName || ''
-    const artworkUrl = track.cover || track.artworkUrl || track.coverArt || ''
-    const duration = Number(snapshot.duration) || Number(track.duration) || 0
-    const position = Number(snapshot.currentTime) || 0
-    window.BragiNative.updateMetadata(
-      title,
-      artist,
-      album,
-      artworkUrl,
-      Boolean(snapshot.playing),
-      duration,
-      position,
-    )
-    // snapshot.currentTime is intentionally excluded to prevent native bridge overhead on every tick
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot.currentTrack, snapshot.playing, snapshot.duration])
-
-  // Keep native PlaybackService active whenever playing
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.BragiNative) return
-    if (snapshot.playing) {
-      window.BragiNative.onPlaybackStarted?.()
-    } else {
-      window.BragiNative.onPlaybackStopped?.()
-    }
-  }, [snapshot.playing])
 
   const commands = useMemo(
     () => ({

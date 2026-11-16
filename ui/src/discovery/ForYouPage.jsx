@@ -159,7 +159,7 @@ export default function ForYouPage() {
   }
 
   const openTrack = async (track) => {
-    const popup = !window.BragiNative ? window.open('', '_blank') : null
+    const popup = window.open('', '_blank')
     let direct
     try {
       direct = await resolveLink(track)
@@ -173,10 +173,7 @@ export default function ForYouPage() {
       return
     }
     const url = direct || searchURL(track)
-    if (window.BragiNative?.openExternalUrl)
-      window.BragiNative.openExternalUrl(url)
-    else if (window.BragiNative) window.location.assign(url)
-    else if (popup) {
+    if (popup) {
       popup.opener = null
       popup.location.href = url
     } else window.open(url, '_blank', 'noopener,noreferrer')
@@ -284,12 +281,6 @@ export default function ForYouPage() {
               target="_blank"
               rel="noopener noreferrer"
               startIcon={<EqualizerIcon />}
-              onClick={(event) => {
-                if (window.BragiNative?.openExternalUrl) {
-                  event.preventDefault()
-                  window.BragiNative.openExternalUrl(event.currentTarget.href)
-                }
-              }}
             >
               Open Stats
             </Button>

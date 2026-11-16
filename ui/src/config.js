@@ -45,30 +45,6 @@ const defaultConfig = {
   enableInspect: true,
 }
 
-const getNativeServerConfig = () => {
-  if (typeof window === 'undefined') return {}
-
-  try {
-    if (window.__BRAGI_SERVER_CONFIG__) {
-      return typeof window.__BRAGI_SERVER_CONFIG__ === 'string'
-        ? JSON.parse(window.__BRAGI_SERVER_CONFIG__)
-        : window.__BRAGI_SERVER_CONFIG__
-    }
-
-    if (
-      window.BragiNative &&
-      typeof window.BragiNative.getServerConfig === 'function'
-    ) {
-      const rawConfig = window.BragiNative.getServerConfig()
-      return rawConfig ? JSON.parse(rawConfig) : {}
-    }
-  } catch (_e) {
-    // Native runtime config is optional; use the embedded config on failure.
-  }
-
-  return {}
-}
-
 let config
 
 try {
@@ -76,83 +52,9 @@ try {
   config = {
     ...defaultConfig,
     ...appConfig,
-    ...getNativeServerConfig(),
   }
 } catch (e) {
-  config = { ...defaultConfig, ...getNativeServerConfig() }
-}
-
-// Bind native Android server address and Cast receiver base if running inside APK wrapper
-if (typeof window !== 'undefined') {
-  let nativeServer = ''
-  let castMediaBase = ''
-  try {
-    if (window.__BRAGI_SERVER_URL__) {
-      nativeServer = window.__BRAGI_SERVER_URL__
-    } else if (
-      window.BragiNative &&
-      typeof window.BragiNative.getServerUrl === 'function'
-    ) {
-      nativeServer = window.BragiNative.getServerUrl()
-    } else if (localStorage.getItem('bragi_server_url')) {
-      nativeServer = localStorage.getItem('bragi_server_url')
-    }
-
-    if (window.__BRAGI_CAST_MEDIA_BASE_URL__) {
-      castMediaBase = window.__BRAGI_CAST_MEDIA_BASE_URL__
-    } else if (
-      window.BragiNative &&
-      typeof window.BragiNative.getCastMediaBaseUrl === 'function'
-    ) {
-      castMediaBase = window.BragiNative.getCastMediaBaseUrl()
-    } else if (localStorage.getItem('bragi_cast_media_base_url')) {
-      castMediaBase = localStorage.getItem('bragi_cast_media_base_url')
-    }
-  } catch (_e) {
-    // localStorage or bridge read error
-  }
-
-  if (nativeServer) {
-    const cleanUrl = nativeServer.trim().replace(/\/+$/, '')
-    config.baseURL = cleanUrl
-    try {
-      localStorage.setItem('bragi_server_url', cleanUrl)
-    } catch (_e) {
-      // localStorage write error
-    }
-  }
-
-  if (castMediaBase) {
-    const cleanCastUrl = castMediaBase.trim().replace(/\/+$/, '')
-    config.castMediaBaseURL = cleanCastUrl
-    try {
-      localStorage.setItem('bragi_cast_media_base_url', cleanCastUrl)
-    } catch (_e) {
-      // localStorage write error
-    }
-  }
-
-  window.__bragiSetCastMediaBaseUrl = (url) => {
-    if (!url) return
-    const clean = url.trim().replace(/\/+$/, '')
-    config.castMediaBaseURL = clean
-    try {
-      localStorage.setItem('bragi_cast_media_base_url', clean)
-    } catch (_e) {
-      // localStorage write error
-    }
-  }
-}
-
-export const setServerUrl = (url) => {
-  if (!url) return
-  const cleanUrl = url.trim().replace(/\/+$/, '')
-  config.baseURL = cleanUrl
-  try {
-    localStorage.setItem('bragi_server_url', cleanUrl)
-  } catch (_e) {
-    // localStorage write error
-  }
+  config = { ...defaultConfig }
 }
 
 export let shareInfo

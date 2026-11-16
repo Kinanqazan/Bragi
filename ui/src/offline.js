@@ -4,15 +4,4 @@ const isNetworkFailure = (error) =>
   error?.message === 'Network request failed' ||
   error?.stack === 'TypeError: Failed to fetch'
 
-export const handleNetworkFailure = (error) => {
-  const failed = isNetworkFailure(error)
-  if (
-    failed &&
-    typeof window !== 'undefined' &&
-    window.BragiNative &&
-    !window.location.pathname.endsWith('/offline.html')
-  ) {
-    window.location.replace('./offline.html')
-  }
-  return failed
-}
+export const handleNetworkFailure = (error) => isNetworkFailure(error)

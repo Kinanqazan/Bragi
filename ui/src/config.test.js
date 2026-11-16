@@ -10,25 +10,12 @@ describe('runtime server configuration', () => {
   afterEach(() => {
     delete window.__APP_CONFIG__
     delete window.__SHARE_INFO__
-    delete window.BragiNative
   })
 
-  it('merges server feature flags exposed by the Android bridge', async () => {
-    window.BragiNative = {
-      getServerUrl: () => 'https://bragi.example',
-      getServerConfig: () =>
-        JSON.stringify({
-          enableMediaFileDeletion: true,
-          enableMediaFileMetadataEditing: true,
-          baseURL: '/music',
-        }),
-    }
-
+  it('loads server feature flags', async () => {
+    window.__APP_CONFIG__ = JSON.stringify({ enableMediaFileDeletion: true, baseURL: '/music' })
     const { default: config } = await import('./config.js')
-
     expect(config.enableMediaFileDeletion).toBe(true)
-    expect(config.enableMediaFileMetadataEditing).toBe(true)
-    // The native server origin still takes precedence for API requests.
-    expect(config.baseURL).toBe('https://bragi.example')
+    expect(config.baseURL).toBe('/music')
   })
 })

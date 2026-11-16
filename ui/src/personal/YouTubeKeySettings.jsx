@@ -97,12 +97,6 @@ export default function YouTubeKeySettings() {
           href="https://developers.google.com/youtube/registering_an_application"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(event) => {
-            if (window.BragiNative?.openExternalUrl) {
-              event.preventDefault()
-              window.BragiNative.openExternalUrl(event.currentTarget.href)
-            }
-          }}
         >
           Get an API key
         </Link>

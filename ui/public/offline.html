@@ -66,30 +66,9 @@
       <h1 id="title">Your music is<br />out of reach</h1>
       <p class="message">Bragi can’t reach your server right now. Check your connection, then try again.</p>
       <div class="actions">
-        <button type="button" onclick="window.BragiNative ? window.location.replace('./index.html') : window.location.reload()">Try again</button>
-        <button id="change-server" class="secondary" type="button" hidden onclick="window.BragiNative?.changeServer?.()">Change server</button>
+        <button type="button" onclick="window.location.reload()">Try again</button>
       </div>
       <p class="hint">Using Tailscale? Check that it’s connected.</p>
     </main>
-    <script>
-      const changeServerButton = document.getElementById('change-server')
-      if (window.BragiNative?.changeServer) {
-        changeServerButton.hidden = false
-        try {
-          const accent = window.BragiNative.getThemeAccentColor?.()
-          if (/^#[\da-f]{6}$/i.test(accent || '')) {
-            document.documentElement.style.setProperty('--accent', accent)
-            const rgb = accent.match(/[\da-f]{2}/gi).map((value) => parseInt(value, 16))
-            const luminance = rgb
-              .map((channel) => channel / 255)
-              .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
-              .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0)
-            document.documentElement.style.setProperty('--accent-text', luminance > 0.179 ? '#101214' : '#ffffff')
-          }
-        } catch (_) {}
-      } else {
-        changeServerButton.hidden = true
-      }
-    </script>
   </body>
 </html>

@@ -5,7 +5,7 @@ on:
     branches:
       - master
     paths:
-      - android/bragi.apk
+      - android-native/bragi.apk
 
 permissions:
   contents: write
@@ -37,8 +37,8 @@ jobs:
           release_tag="android-v1.${next_minor}"
           release_title="Bragi Android v1.${next_minor}"
 
-          gh release create "$release_tag" android/bragi.apk \
+          gh release create "$release_tag" android-native/bragi.apk \
             --title "$release_title" \
-            --notes "Bragi for Android. Install this APK on an Android device, connect it to your Bragi server, and stream your music library with native media controls and Google Cast support." \
+            --notes "Bragi for Android. Play music on your device or connect to your Bragi server, with background playback, media controls and Google Cast for server tracks." \
             --target "$COMMIT_SHA" \
             --latest

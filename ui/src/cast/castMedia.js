@@ -33,23 +33,8 @@ export const toCastReceiverUrl = (url) => {
   const origin =
     typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
   const senderUrl = new URL(url, origin)
-  const receiverBaseValue = String(
-    config.castMediaBaseURL ||
-      (typeof window !== 'undefined' && window.__BRAGI_CAST_MEDIA_BASE_URL__) ||
-      (typeof window !== 'undefined' &&
-        window.BragiNative?.getCastMediaBaseUrl?.()) ||
-      (typeof localStorage !== 'undefined' &&
-        localStorage.getItem('bragi_cast_media_base_url')) ||
-      '',
-  ).trim()
-
-  const isAppAssets = senderUrl.hostname === 'appassets.androidplatform.net'
-  const serverBase =
-    config.baseURL ||
-    (typeof window !== 'undefined' && window.BragiNative?.getServerUrl?.()) ||
-    (typeof localStorage !== 'undefined' &&
-      localStorage.getItem('bragi_server_url')) ||
-    ''
+  const receiverBaseValue = String(config.castMediaBaseURL || '').trim()
+  const serverBase = config.baseURL || ''
 
   let serverOrigin = ''
   if (serverBase) {
@@ -62,13 +47,11 @@ export const toCastReceiverUrl = (url) => {
 
   // A track belongs to this Bragi server if:
   // 1. Its origin matches window.location.origin (e.g. browser or PWA)
-  // 2. Its origin matches serverBase origin (e.g. Android APK wrapper targeting https://bragi.lan)
-  // 3. It was loaded from appassets (offline wrapper)
-  // 4. Its path is a Subsonic rest endpoint (/rest/stream, /rest/getCoverArt, etc.)
+  // 2. Its origin matches the configured server origin
+  // 3. Its path is a Subsonic media endpoint
   const isBragiMedia =
     senderUrl.origin === origin ||
     (serverOrigin && senderUrl.origin === serverOrigin) ||
-    isAppAssets ||
     senderUrl.pathname.includes('/rest/stream') ||
     senderUrl.pathname.includes('/rest/getCoverArt')
 
@@ -80,13 +63,6 @@ export const toCastReceiverUrl = (url) => {
     receiverUrl.search = senderUrl.search
     receiverUrl.hash = ''
     return receiverUrl.href
-  }
-
-  if (isAppAssets && serverBase) {
-    const serverUrl = new URL(serverBase)
-    senderUrl.protocol = serverUrl.protocol
-    senderUrl.host = serverUrl.host
-    return senderUrl.href
   }
 
   return senderUrl.href
