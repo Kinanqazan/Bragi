@@ -34,6 +34,12 @@ class TrackSearchTest {
         assertEquals(listOf(songs[2], songs[0]), songs.filterSongs("", null, "Most played", favoritesOnly = true))
     }
 
+    @Test fun `same named mood and genre filter independently`() {
+        val songs = listOf(tracks[0].copy(moods = listOf("Chill")), tracks[1].copy(genres = listOf("Chill")))
+        assertEquals(listOf(songs[0]), songs.filterSongs("", "chill", "All", mood = true))
+        assertEquals(listOf(songs[1]), songs.filterSongs("", "chill", "All", mood = false))
+    }
+
     @Test fun `recently played excludes unplayed tracks and combines with favorites and search`() {
         val songs = listOf(tracks[0].copy(lastPlayedMs = 10, starred = true),
             tracks[1].copy(lastPlayedMs = 30), tracks[2].copy(lastPlayedMs = 20, starred = true))

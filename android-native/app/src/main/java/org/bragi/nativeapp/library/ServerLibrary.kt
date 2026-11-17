@@ -187,12 +187,16 @@ class ServerLibrary(address: String, private val username: String, private val p
             }
             val status = connection.responseCode
             val response = (if (status in 200..299) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) throw IllegalStateException("Server request failed ($status)")
+            if (status !in 200..299) throw IllegalStateException(response.trim().ifEmpty { "Server request failed ($status)" })
             return JSONObject(response)
         } finally { connection.disconnect() }
     }
 
     private fun apiToken() = apiCall(listOf("auth", "login"), "POST", JSONObject().put("username", username).put("password", password)).getString("token")
+
+    suspend fun deleteSong(id: String) = withContext(Dispatchers.IO) {
+        apiCall(listOf("api", "song", id.removePrefix("server:"), "file"), "DELETE", auth = apiToken())
+    }
 
     suspend fun listeningStats(period: String): JSONObject = withContext(Dispatchers.IO) {
         val result = apiCall(listOf("api", "listening-stats"), auth = apiToken(), query = mapOf("period" to period))

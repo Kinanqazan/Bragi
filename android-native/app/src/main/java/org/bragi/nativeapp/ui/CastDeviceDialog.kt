@@ -108,16 +108,20 @@ fun CastDeviceDialog(currentTrackId: String?, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(24.dp)) {
-                Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     CastDeviceRow("This phone", BragiIcon.Phone, selected = phoneSelected) {
-                        router?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
+                        if (!phoneSelected) router?.unselect(MediaRouter.UNSELECT_REASON_STOPPED)
+                        onDismiss()
                     }
                     if (router == null) Text("Google Cast is unavailable on this device.", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
                     else if (routes.isEmpty()) Text("Looking for Cast devices on your network…", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
                     routes.forEach { route ->
                         CastDeviceRow(route.name, BragiIcon.Cast, selected = route.id in selectedIds,
-                            enabled = currentTrackId?.startsWith("device:") != true) { router?.selectRoute(route) }
+                            enabled = currentTrackId?.startsWith("device:") != true) {
+                            if (route.id !in selectedIds) router?.selectRoute(route)
+                            onDismiss()
+                        }
                     }
                     if (currentTrackId?.startsWith("device:") == true) {
                         Text("Phone files cannot currently be played on Cast devices. Choose a server song to cast.",
@@ -136,8 +140,8 @@ private fun CastDeviceRow(name: String, icon: BragiIcon, selected: Boolean, enab
         color = if (selected) colors.primaryContainer else colors.surfaceVariant.copy(alpha = 0.55f),
         border = if (selected) BorderStroke(1.dp, colors.primary) else null,
         modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = { if (!selected) onClick() })
-            .heightIn(min = 68.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 56.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon.vector, contentDescription = null, modifier = Modifier.size(24.dp),
                 tint = if (selected) colors.primary else colors.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.5f))
             Spacer(Modifier.width(14.dp))

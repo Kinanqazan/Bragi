@@ -95,8 +95,8 @@ internal fun LyricsEditor(track: Track, model: MusicViewModel) {
     }
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     error?.let { Text(it, Modifier.fillMaxWidth().padding(top = 8.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-    if (switching != null) AlertDialog(onDismissRequest = { switching = null }, title = { Text("Discard unsaved lyrics?") }, text = { Text("Changing the destination will discard your current lyrics edits.") }, confirmButton = { TextButton(onClick = { switching?.let { select(it) }; switching = null }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { switching = null }) { Text("Cancel") } })
-    if (deleting) AlertDialog(onDismissRequest = { deleting = false }, title = { Text("Delete lyrics?") }, text = { Text(if (destination == "embedded") "Remove the embedded lyrics from this song? Separate files will remain." else "Delete both separate TXT and LRC lyrics files? Embedded lyrics will remain.") }, confirmButton = {
+    if (switching != null) BragiDialog(onDismissRequest = { switching = null }, title = { Text("Discard unsaved lyrics?") }, text = { Text("Changing the destination will discard your current lyrics edits.") }, confirmButton = { TextButton(onClick = { switching?.let { select(it) }; switching = null }) { Text("Discard") } }, dismissButton = { TextButton(onClick = { switching = null }) { Text("Cancel") } })
+    if (deleting) BragiDialog(onDismissRequest = { deleting = false }, title = { Text("Delete lyrics?") }, text = { Text(if (destination == "embedded") "Remove the embedded lyrics from this song? Separate files will remain." else "Delete both separate TXT and LRC lyrics files? Embedded lyrics will remain.") }, confirmButton = {
         TextButton(onClick = { deleting = false; run {
             val body = if (destination == "embedded") JSONObject().put("content", "").put("expectedVersion", file("embedded").optString("version")) else JSONObject().put("txtVersion", file("txt").optString("version")).put("lrcVersion", file("lrc").optString("version"))
             val updated = JSONObject(model.lyricsRequest(track, if (destination == "embedded") "embedded" else "", if (destination == "embedded") "PUT" else "DELETE", body))
@@ -122,13 +122,13 @@ internal fun LyricsSearchDialog(track: Track, model: MusicViewModel, onDismiss: 
             finally { busy = false }
         }
     }
-    AlertDialog(
+    BragiDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text("Search lyrics") },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true, label = { Text("Song or artist") }, modifier = Modifier.fillMaxWidth(), enabled = !busy)
-                TextButton(onClick = { run { val response = model.lyricsRequest(track, "search", query = query.trim()); results = if (response.trim() == "null") JSONArray() else JSONArray(response) } }, enabled = !busy && query.isNotBlank()) { Text("Search") }
+                FilledTonalButton(onClick = { run { val response = model.lyricsRequest(track, "search", query = query.trim()); results = if (response.trim() == "null") JSONArray() else JSONArray(response) } }, enabled = !busy && query.isNotBlank(), modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp).heightIn(min = 48.dp)) { Text("Search", style = MaterialTheme.typography.labelLarge) }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
@@ -139,10 +139,10 @@ internal fun LyricsSearchDialog(track: Track, model: MusicViewModel, onDismiss: 
                             val synced = result.optString("syncedLyrics")
                             val plain = result.optString("plainLyrics")
                             if (synced.isNotBlank() || plain.isNotBlank()) {
-                                Surface(onClick = { run { onSelect(synced, plain); onDismiss() } }, enabled = !busy, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Surface(onClick = { run { onSelect(synced, plain); onDismiss() } }, enabled = !busy, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
                                     Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                                        Text(result.optString("trackName"), style = MaterialTheme.typography.titleSmall)
-                                        Text(result.optString("artistName") + if (synced.isNotBlank()) " · Synced" else "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(result.optString("trackName"), style = MaterialTheme.typography.bodyLarge)
+                                        Text(result.optString("artistName") + if (synced.isNotBlank()) " · Synced" else "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }

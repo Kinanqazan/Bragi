@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,7 +77,7 @@ fun StatisticsScreen(model: MusicViewModel, source: String, library: List<Track>
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatMetric("Plays", data!!.optLong("plays"), Modifier.weight(1f))
                         StatMetric("Unique tracks", data!!.optLong("uniqueTracks"), Modifier.weight(1f))
-                        StatMetric("Unplayed\nAll time", data!!.optLong("unplayedTrackCount"), Modifier.weight(1f))
+                        StatMetric("Unplayed", data!!.optLong("unplayedTrackCount"), Modifier.weight(1f))
                     }
                 }
                 item { Text("Top tracks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
@@ -89,10 +90,9 @@ fun StatisticsScreen(model: MusicViewModel, source: String, library: List<Track>
                         items(artists, key = { it.id }) { artist ->
                             val image = library.firstOrNull { it.artistId == artist.id }?.artistArtworkUri
                             Column(Modifier.width(120.dp).clickable { onArtist(artist.id) }) {
-                                StatArtwork(image, true)
+                                StatArtwork(image, circle = true, plays = artist.plays)
                                 Spacer(Modifier.height(6.dp))
                                 Text(artist.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
-                                Text("${artist.plays} plays", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -114,10 +114,17 @@ private fun StatMetric(label: String, value: Long, modifier: Modifier) {
 }
 
 @Composable
-private fun StatArtwork(url: String?, circle: Boolean = false) {
-    Box(Modifier.size(120.dp).clip(if (circle) CircleShape else RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-        Icon(BragiIcon.Music.vector, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+private fun StatArtwork(url: String?, circle: Boolean = false, plays: Long? = null) {
+    Box(Modifier.size(120.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().clip(if (circle) CircleShape else RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+            Icon(BragiIcon.Music.vector, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (url != null) AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+        if (plays != null) Text("%,d plays".format(plays),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = if (circle) 12.dp else 7.dp)
+                .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.78f)).padding(horizontal = 9.dp, vertical = 4.dp),
+            color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -128,11 +135,10 @@ private fun StatTrackRow(tracks: List<StatTrack>, byId: Map<String, Track>, show
         items(tracks, key = { it.id }) { track ->
             val song = byId[track.id]
             Column(Modifier.width(120.dp).clickable(enabled = song != null) { song?.let { onPlay(playable, playable.indexOf(it)) } }) {
-                StatArtwork(song?.artworkUri)
+                StatArtwork(song?.artworkUri, plays = track.plays.takeIf { showPlays })
                 Spacer(Modifier.height(6.dp))
                 Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
                 Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (showPlays) Text("${track.plays} plays", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

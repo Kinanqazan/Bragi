@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bragi.nativeapp.library.Track
+import org.bragi.nativeapp.library.SongTag
 import org.bragi.nativeapp.library.ServerLibrary
 import org.bragi.nativeapp.library.ServerTls
 import org.bragi.nativeapp.library.ServerSettings
@@ -91,7 +92,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val settingsMessage = MutableStateFlow<String?>(null)
     val scanBusy = MutableStateFlow(false)
     val genres = MutableStateFlow<List<String>>(emptyList())
-    val selectedGenre = MutableStateFlow<String?>(null)
+    val selectedGenre = MutableStateFlow<SongTag?>(null)
     val songFilter = MutableStateFlow<Set<String>>(emptySet())
     private val localStats = app.getSharedPreferences("local-song-stats", 0)
     private var server: ServerLibrary? = null
@@ -124,7 +125,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
             val tracksById = state.tracks.associateBy { it.id }
             val songs = state.songOrder.mapNotNull(tracksById::get)
-            state.copy(tracks = songs.filterSongs(text, genre, order, favoritesOnly = "Favorites" in filter))
+            state.copy(tracks = songs.filterSongs(text, genre?.name, order, favoritesOnly = "Favorites" in filter, mood = genre?.mood))
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryState(loading = true))
 
@@ -347,6 +348,26 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun lyricsRequest(track: Track, suffix: String = "", method: String = "GET", body: org.json.JSONObject? = null, query: String? = null): String =
         (server ?: throw IllegalStateException("Connect to a server to edit lyrics.")).lyricsRequest(track.id, suffix, method, body, query)
 
+    suspend fun deleteSong(track: Track) {
+        val client = server ?: error("Connect to a server to delete songs.")
+        client.deleteSong(track.id)
+        val remaining = libraryData.value.tracks.filterNot { it.id == track.id }
+        libraryData.value = libraryData.value.copy(tracks = remaining, totalCount = remaining.size,
+            songOrder = libraryData.value.songOrder.filterNot { it == track.id })
+        selectedQueue = emptyList()
+        selectedCastIds = null
+        knownQueueTracks = knownQueueTracks - track.id
+        if (pendingSelection?.id == track.id) clearPendingSelection()
+        controller?.let { player ->
+            for (index in player.mediaItemCount - 1 downTo 0) {
+                if (player.getMediaItemAt(index).mediaId == track.id) player.removeMediaItem(index)
+            }
+            refreshQueue(player)
+            updatePlayback()
+        }
+        refresh()
+    }
+
     suspend fun saveMetadata(track: Track, changes: org.json.JSONObject): String? {
         val client = server ?: throw IllegalStateException("Connect to a server to edit metadata.")
         val warning = client.updateMetadata(track.id, changes)
@@ -423,6 +444,27 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         player.play()
     }
 
+    fun playNext(track: Track) {
+        val player = controller ?: return
+        if (track.id.startsWith("device:") && player.deviceInfo.playbackType == DeviceInfo.PLAYBACK_TYPE_REMOTE) {
+            playbackError = "Phone files cannot be cast yet. Select This phone in the Cast menu to play them."
+            updatePlayback()
+            return
+        }
+        if (player.mediaItemCount == 0) {
+            play(listOf(track))
+            return
+        }
+        playbackError = null
+        knownQueueTracks = knownQueueTracks + (track.id to track)
+        selectedQueue = emptyList()
+        selectedCastIds = null
+        player.shuffleModeEnabled = false
+        player.addMediaItem((player.currentMediaItemIndex + 1).coerceIn(0, player.mediaItemCount), track.toMediaItem())
+        refreshQueue(player)
+        updatePlayback()
+    }
+
     private fun recordLocalPlay(id: String) {
         if (!id.startsWith("device:")) return
         val playedAt = System.currentTimeMillis()
@@ -495,6 +537,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         if (selected != null && player.deviceInfo.playbackType == DeviceInfo.PLAYBACK_TYPE_REMOTE) {
             val ids = castQueueMetadata.receiverIds()
             if (ids == null || ids.size != items.size || ids.any { it == 0 }) selected = null
+            else if (items.size != selectedQueue.size) selectedCastIds = null
             else if (selectedCastIds == null) selectedCastIds = ids
             else if (selectedCastIds != ids) {
                 selectedQueue = emptyList()
@@ -571,12 +614,17 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-internal fun matchingSelectedQueue(selected: List<Track>, timelineIds: List<String>): List<Track>? =
-    selected.takeIf { candidate ->
-        candidate.isNotEmpty() && candidate.size == timelineIds.size &&
-            timelineIds.any { it.isNotBlank() } &&
-            timelineIds.indices.all { timelineIds[it].isBlank() || timelineIds[it] == candidate[it].id }
+internal fun matchingSelectedQueue(selected: List<Track>, timelineIds: List<String>): List<Track>? {
+    if (timelineIds.isEmpty() || timelineIds.size > selected.size || timelineIds.none { it.isNotBlank() }) return null
+    var match = -1
+    for (start in 0..selected.size - timelineIds.size) {
+        if (timelineIds.indices.all { timelineIds[it].isBlank() || timelineIds[it] == selected[start + it].id }) {
+            if (match != -1) return null
+            match = start
+        }
     }
+    return if (match < 0) null else selected.subList(match, match + timelineIds.size)
+}
 
 internal fun keepPlayerDuringTransition(previous: PlaybackState, next: PlaybackState, transferring: Boolean,
     selection: Track? = null): PlaybackState = when {

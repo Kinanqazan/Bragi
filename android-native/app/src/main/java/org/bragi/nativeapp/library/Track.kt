@@ -3,6 +3,7 @@ package org.bragi.nativeapp.library
 data class LyricLine(val text: String, val startMs: Long? = null)
 data class Recommendation(val title: String, val artist: String, val recordingId: String?, val artwork: String?, val libraryId: String?)
 data class Recommendations(val linked: Boolean, val user: String = "", val tracks: List<Recommendation> = emptyList(), val partialError: Boolean = false)
+data class SongTag(val name: String, val mood: Boolean)
 
 data class Track(
     val id: String,
@@ -43,9 +44,12 @@ fun List<Track>.matching(query: String): List<Track> {
     }
 }
 
-fun List<Track>.filterSongs(query: String, tag: String?, filter: String, favoritesOnly: Boolean = false): List<Track> {
+fun List<Track>.filterSongs(query: String, tag: String?, filter: String, favoritesOnly: Boolean = false, mood: Boolean? = null): List<Track> {
     var result = matching(query)
-    if (tag != null) result = result.filter { it.genre.equals(tag, true) || (it.genres + it.moods).any { value -> value.equals(tag, true) } }
+    if (tag != null) result = result.filter { track ->
+        (mood != true && (track.genre.equals(tag, true) || track.genres.any { it.equals(tag, true) })) ||
+            (mood != false && track.moods.any { it.equals(tag, true) })
+    }
     if (favoritesOnly) result = result.filter { it.starred }
     return when (filter) {
         "Favorites" -> result.filter { it.starred }

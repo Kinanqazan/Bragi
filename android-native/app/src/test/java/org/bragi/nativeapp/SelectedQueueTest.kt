@@ -19,6 +19,10 @@ class SelectedQueueTest {
     @Test fun changedOrUnidentifiedQueueDoesNotReuseWrongSongs() {
         assertNull(matchingSelectedQueue(songs, listOf("one", "", "other")))
         assertNull(matchingSelectedQueue(songs, listOf("", "", "")))
-        assertNull(matchingSelectedQueue(songs, listOf("one", "two")))
+        assertNull(matchingSelectedQueue(songs + songs, listOf("one", "two")))
+    }
+
+    @Test fun partialCastQueueReusesKnownSongsWhenItsPositionIsUnambiguous() {
+        assertEquals(songs.subList(1, 3), matchingSelectedQueue(songs, listOf("two", "")))
     }
 }

@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.BragiNative" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#111214</item>
+        <item name="android:colorAccent">#D5E8B5</item>
+        <item name="android:windowSplashScreenBackground">#111214</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+    </style>
+</resources>

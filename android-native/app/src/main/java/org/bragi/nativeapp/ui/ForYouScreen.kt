@@ -55,7 +55,7 @@ fun ForYouScreen(model: MusicViewModel, source: String, library: List<Track>, to
         catch (_: Exception) { error = "Could not load recommendations from ListenBrainz." }
         finally { loading = false }
     }
-    if (showLink) AlertDialog(onDismissRequest = { if (!linking) showLink = false }, title = { Text("Connect ListenBrainz") },
+    if (showLink) BragiDialog(onDismissRequest = { if (!linking) showLink = false }, title = { Text("Connect ListenBrainz") },
         text = { OutlinedTextField(token, { token = it }, label = { Text("ListenBrainz user token") }, singleLine = true) },
         confirmButton = { TextButton(enabled = token.isNotBlank() && !linking, onClick = {
             scope.launch {

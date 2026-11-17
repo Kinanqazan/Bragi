@@ -21,6 +21,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -110,7 +112,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.DrawerValue
@@ -179,6 +181,7 @@ import org.bragi.nativeapp.MusicViewModel
 import org.bragi.nativeapp.PlaybackState
 import org.bragi.nativeapp.hasMusicAccess
 import org.bragi.nativeapp.library.Track
+import org.bragi.nativeapp.library.SongTag
 import org.bragi.nativeapp.library.artworkCacheKey
 import org.bragi.nativeapp.library.LibraryArtist
 import org.bragi.nativeapp.library.LibraryAlbum
@@ -277,8 +280,13 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
     var shortcutName by remember { mutableStateOf(shortcutPreferences.getString("name", "").orEmpty()) }
     var shortcutUrl by remember { mutableStateOf(shortcutPreferences.getString("url", "").orEmpty()) }
     val source by model.source.collectAsStateWithLifecycle()
-    val genres by model.genres.collectAsStateWithLifecycle()
     val genre by model.selectedGenre.collectAsStateWithLifecycle()
+    val tags = remember(allLibrary.tracks) {
+        fun ordered(values: List<String>) = values.filter { it.isNotBlank() }
+            .distinctBy { it.lowercase(Locale.ROOT) }.sortedBy { it.lowercase(Locale.ROOT) }
+        ordered(allLibrary.tracks.flatMap { it.moods }) to
+            ordered(allLibrary.tracks.flatMap { listOfNotNull(it.genre) + it.genres })
+    }
     val filter by model.songFilter.collectAsStateWithLifecycle()
     val phoneFolder by model.phoneFolder.collectAsStateWithLifecycle()
     val settingsMessage by model.settingsMessage.collectAsStateWithLifecycle()
@@ -296,6 +304,8 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
     val listState = rememberLazyListState()
     var page by rememberSaveable { mutableStateOf("Songs") }
     var selectedSongId by rememberSaveable { mutableStateOf<String?>(null) }
+    var songMenu by remember { mutableStateOf<Track?>(null) }
+    var songToDelete by remember { mutableStateOf<Track?>(null) }
     var artistDestination by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedArtist by rememberSaveable(source) { mutableStateOf<String?>(null) }
     var selectedAlbum by rememberSaveable(source) { mutableStateOf<String?>(null) }
@@ -409,7 +419,7 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
             Box(Modifier.fillMaxSize().padding(insets)) {
             if (page == "Song") {
                 val song = allLibrary.tracks.firstOrNull { it.id == selectedSongId } ?: playback.track?.takeIf { it.id == selectedSongId }
-                if (song != null) SongPage(song, model, Modifier.padding(top = topSpace))
+                if (song != null) SongPage(song, model, Modifier.padding(top = topSpace), onDeleted = { page = "Songs" })
             } else if (page == "Settings") SettingsScreen(source, model.savedAddress, model.savedUsername, model.hasSavedPassword, phoneFolder, settingsMessage, folderError, scanBusy, library.error,
                 Modifier.padding(top = topSpace), onPhone = { model.usePhone(context.hasMusicAccess()) }, onServer = { if (model.hasSavedPassword) model.useSavedServer() else showServer = true },
                 onEditServer = { showServer = true }, onFolder = { folderPicker.launch(null) }, onAllFolders = { folderError = null; model.setPhoneFolder("") },
@@ -420,7 +430,7 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
                 })
             else if (page == "Songs") LibraryScreen(library, query, playback.track?.id, playback.connected, playback.error,
                 modifier = Modifier, listState = listState, topSpace = topSpace,
-                source = source, genres = genres, selectedGenre = genre, filter = filter, onFilter = model::toggleSongFilter,
+                source = source, moods = tags.first, genres = tags.second, selectedGenre = genre, filter = filter, onFilter = model::toggleSongFilter,
                 onGenre = { model.selectedGenre.value = if (genre == it) null else it },
                 onQuery = { model.query.value = it },
                 onRefresh = model::refresh,
@@ -433,10 +443,11 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
                 },
                 accessLabel = if (openSettings) "Open settings" else "Allow music access",
                 onPlay = { index -> model.play(library.tracks, index) },
+                onSongMenu = { songMenu = it },
             ) else if (page == "Artists" || page == "Albums") {
                 BrowseLibraryScreen(page, source, allLibrary, query, playback.track?.id, playback.connected,
                     Modifier, topSpace = topSpace, selectedArtist = selectedArtist, onArtistSelected = { selectedArtist = it }, selectedAlbum = selectedAlbum, onAlbumSelected = { selectedAlbum = it }, initialArtist = artistDestination, onArtistConsumed = { artistDestination = null },
-                    onPlay = { tracks, index -> model.play(tracks, index) }, onRefresh = model::refresh)
+                    onPlay = { tracks, index -> model.play(tracks, index) }, onRefresh = model::refresh, onSongMenu = { songMenu = it })
             } else if (page == "Statistics") {
                 StatisticsScreen(model, source, allLibrary.tracks, topSpace, onArtist = { id ->
                     selectedArtist = id; page = "Artists"
@@ -463,7 +474,7 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
             }
             }
         } }
-        if (source == "Setup" && !showServer) AlertDialog(onDismissRequest = {},
+        if (source == "Setup" && !showServer) BragiDialog(onDismissRequest = {},
             title = { Text("Choose your music") },
             text = { Text("Listen to music on this phone or connect to your Bragi server. You can switch sources later in the menu.") },
             confirmButton = { TextButton(onClick = { showServer = true }) { Text("Connect to server") } },
@@ -473,6 +484,27 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
         })
         if (showCast) CastDeviceDialog(playback.track?.id, onDismiss = { showCast = false })
         BackHandler(enabled = showSearch) { showSearch = false; model.query.value = "" }
+        songMenu?.let { song ->
+            Dialog(onDismissRequest = { songMenu = null }) {
+                Surface(modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Artwork(song, Modifier.size(48.dp), 10)
+                            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                Text(song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(song.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                        SongMenuOption("Open song page", BragiIcon.Music) { songMenu = null; selectedSongId = song.id; page = "Song" }
+                        SongMenuOption("Play next", BragiIcon.Queue, enabled = playback.connected) { songMenu = null; model.playNext(song) }
+                        if (song.id.startsWith("server:")) SongMenuOption("Delete", BragiIcon.Delete, destructive = true) { songMenu = null; songToDelete = song }
+                    }
+                }
+            }
+        }
+        songToDelete?.let { song -> DeleteSongDialog(song, model, onDismiss = { songToDelete = null }, onDeleted = { songToDelete = null }) }
         BackHandler(enabled = page == "Song") { page = "Songs" }
         BackHandler(enabled = page == "Settings" && !playerTransitionState.currentState && !playerTransitionState.targetState) { page = "Songs" }
         BackHandler(enabled = playerTransitionState.currentState || playerTransitionState.targetState) { gestures.animateTo(false) }
@@ -528,9 +560,21 @@ fun BragiApp(model: MusicViewModel = viewModel()) {
     }
 }
 
+@Composable
+private fun SongMenuOption(label: String, icon: BragiIcon, enabled: Boolean = true, destructive: Boolean = false, onClick: () -> Unit) {
+    val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = enabled, onClick = onClick)
+        .heightIn(min = 54.dp).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon.vector, contentDescription = null, modifier = Modifier.size(22.dp), tint = color.copy(alpha = if (enabled) 0.85f else 0.4f))
+        Spacer(Modifier.width(16.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+            color = color.copy(alpha = if (enabled) 1f else 0.4f))
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier) {
+private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier, onDeleted: () -> Unit) {
     var editing by rememberSaveable(track.id) { mutableStateOf(false) }
     var title by rememberSaveable(track.id, editing) { mutableStateOf(track.title) }
     var artist by rememberSaveable(track.id, editing) { mutableStateOf(track.artist) }
@@ -538,6 +582,7 @@ private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier) {
     var moods by rememberSaveable(track.id, editing) { mutableStateOf(track.moods.joinToString(", ")) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val library by model.allLibrary.collectAsStateWithLifecycle()
     var choosingTags by remember { mutableStateOf<String?>(null) }
@@ -613,8 +658,12 @@ private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier) {
             Text(if (editing) "Cancel editing" else "Edit metadata")
         }
         if (track.id.startsWith("server:") && !editing) LyricsEditor(track, model)
+        if (track.id.startsWith("server:") && !editing) TextButton(onClick = { deleting = true }, enabled = !busy) {
+            Text("Delete song", color = MaterialTheme.colorScheme.error)
+        }
         Spacer(Modifier.height(32.dp))
     }
+    if (deleting) DeleteSongDialog(track, model, onDismiss = { deleting = false }, onDeleted = onDeleted)
     choosingTags?.let { label ->
         val availableTags = remember(library.tracks, label) {
             library.tracks.flatMap { if (label == "Genres") listOfNotNull(it.genre) + it.genres else it.moods }
@@ -622,7 +671,7 @@ private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier) {
         }
         val value = if (label == "Genres") genres else moods
         val selected = value.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        AlertDialog(onDismissRequest = { choosingTags = null }, title = { Text("Choose $label") }, text = {
+        BragiDialog(onDismissRequest = { choosingTags = null }, title = { Text("Choose $label") }, text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
                     availableTags.forEach { tag ->
                         val checked = selected.any { it.equals(tag, ignoreCase = true) }
@@ -638,6 +687,31 @@ private fun SongPage(track: Track, model: MusicViewModel, modifier: Modifier) {
             }
         }, confirmButton = { TextButton(onClick = { choosingTags = null }) { Text("Done") } })
     }
+}
+
+@Composable
+private fun DeleteSongDialog(track: Track, model: MusicViewModel, onDismiss: () -> Unit, onDeleted: () -> Unit) {
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    BragiDialog(onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text("Delete song permanently?") },
+        text = { Column {
+            Text(track.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            error?.let { Text(it, Modifier.padding(top = 12.dp), color = MaterialTheme.colorScheme.error) }
+        } },
+        confirmButton = { Button(enabled = !busy, modifier = Modifier.height(48.dp),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+            onClick = {
+                busy = true; error = null
+                scope.launch {
+                    try { model.deleteSong(track); onDeleted() }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { error = e.message ?: "Couldn’t delete song." }
+                    finally { busy = false }
+                }
+            }) { Text(if (busy) "Deleting…" else "Delete") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy, modifier = Modifier.height(48.dp)) { Text("Cancel") } })
 }
 
 @Composable
@@ -692,7 +766,7 @@ private fun AppTopBar(showSearch: Boolean, query: String, onMenu: () -> Unit, on
 @Composable
 private fun BrowseLibraryScreen(page: String, source: String, library: LibraryState, search: String, currentId: String?, playerReady: Boolean,
     modifier: Modifier, topSpace: androidx.compose.ui.unit.Dp, selectedArtist: String?, onArtistSelected: (String?) -> Unit, selectedAlbum: String?, onAlbumSelected: (String?) -> Unit,
-    initialArtist: String?, onArtistConsumed: () -> Unit, onPlay: (List<Track>, Int) -> Unit, onRefresh: () -> Unit) {
+    initialArtist: String?, onArtistConsumed: () -> Unit, onPlay: (List<Track>, Int) -> Unit, onRefresh: () -> Unit, onSongMenu: (Track) -> Unit) {
     LaunchedEffect(initialArtist) { if (initialArtist != null) { onArtistSelected(initialArtist); onArtistConsumed() } }
     val groups by produceState<Pair<List<LibraryArtist>, List<LibraryAlbum>>?>(null, library.tracks, page) {
         value = null
@@ -727,7 +801,7 @@ private fun BrowseLibraryScreen(page: String, source: String, library: LibrarySt
                     val songs = album.tracks.matching(search)
                     if (songs.isEmpty()) item { Text("No songs found", Modifier.padding(24.dp)) }
                     itemsIndexed(songs, key = { _, track -> track.id }) { index, track ->
-                        TrackRow(track, currentId == track.id, playerReady) { onPlay(songs, index) }
+                        TrackRow(track, currentId == track.id, playerReady, onLongClick = { onSongMenu(track) }) { onPlay(songs, index) }
                     }
                 } else if (artist != null) {
                     item(key = "artist-header") {
@@ -745,7 +819,7 @@ private fun BrowseLibraryScreen(page: String, source: String, library: LibrarySt
                     val songs = artist.tracks.matching(search)
                     if (songs.isEmpty()) item { Text("No songs found", Modifier.padding(24.dp)) }
                     itemsIndexed(songs, key = { _, track -> track.id }) { index, track ->
-                        TrackRow(track, currentId == track.id, playerReady) { onPlay(songs, index) }
+                        TrackRow(track, currentId == track.id, playerReady, onLongClick = { onSongMenu(track) }) { onPlay(songs, index) }
                     }
                 } else if (page == "Artists") {
                     val matching = artists.filter { it.name.contains(search.trim(), ignoreCase = true) }
@@ -787,18 +861,26 @@ private fun SettingsScreen(source: String, address: String, username: String, ha
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(4.dp))
         Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        SettingsCard("MUSIC SOURCE") {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface)) {
-                listOf("Phone" to onPhone, "Server" to onServer).forEach { (label, action) ->
-                    val selected = source == label
-                    Box(Modifier.weight(1f).padding(4.dp).clip(RoundedCornerShape(10.dp))
-                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                        .selectable(selected = selected, role = Role.RadioButton, onClick = { if (!selected) action() })
-                        .padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("MUSIC SOURCE", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface)) {
+                        listOf("Phone" to onPhone, "Server" to onServer).forEach { (label, action) ->
+                            val selected = source == label
+                            Box(Modifier.weight(1f).fillMaxSize().padding(4.dp).clip(RoundedCornerShape(10.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .selectable(selected = selected, role = Role.RadioButton, onClick = { if (!selected) action() }),
+                                contentAlignment = Alignment.Center) {
+                                Text(label, style = MaterialTheme.typography.labelLarge,
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                            }
+                        }
                     }
                 }
+                EqualizerSettings(Modifier.weight(1f))
             }
         }
         if (source == "Server") {
@@ -862,7 +944,7 @@ private fun SettingsScreen(source: String, address: String, username: String, ha
         var url by rememberSaveable { mutableStateOf(shortcutUrl) }
         val parsed = remember(url) { runCatching { Uri.parse(url.trim()) }.getOrNull() }
         val valid = name.isNotBlank() && parsed != null && parsed.scheme?.lowercase() in listOf("http", "https") && !parsed.host.isNullOrBlank()
-        AlertDialog(onDismissRequest = { editShortcut = false }, title = { Text("Sidebar shortcut") },
+        BragiDialog(onDismissRequest = { editShortcut = false }, title = { Text("Sidebar shortcut") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true)
                 OutlinedTextField(url, { url = it }, label = { Text("Website URL") }, placeholder = { Text("https://example.com") }, singleLine = true)
@@ -871,7 +953,7 @@ private fun SettingsScreen(source: String, address: String, username: String, ha
             confirmButton = { TextButton(enabled = valid, onClick = { onSaveShortcut(name.trim(), url.trim()); editShortcut = false }) { Text("Save") } },
             dismissButton = { TextButton(onClick = { editShortcut = false }) { Text("Cancel") } })
     }
-    if (confirmLogout) AlertDialog(onDismissRequest = { confirmLogout = false }, title = { Text("Log out?") },
+    if (confirmLogout) BragiDialog(onDismissRequest = { confirmLogout = false }, title = { Text("Log out?") },
         text = { Text("Your saved server credentials will be removed from this device.") },
         confirmButton = { TextButton(onClick = { confirmLogout = false; onLogout() }) { Text("Log out") } },
         dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } })
@@ -894,7 +976,7 @@ private fun ServerDialog(savedAddress: String, savedUsername: String, hasSavedPa
     var username by rememberSaveable { mutableStateOf(savedUsername) }
     var password by remember { mutableStateOf("") }
     var allowUntrusted by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Connect to server") },
+    BragiDialog(onDismissRequest = onDismiss, title = { Text("Connect to server") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Enter your Bragi server address and account.")
@@ -915,16 +997,20 @@ private fun ServerDialog(savedAddress: String, savedUsername: String, hasSavedPa
 
 @Composable
 private fun LibraryScreen(library: LibraryState, query: String, currentId: String?, playerReady: Boolean,
-    playerError: String?, modifier: Modifier, listState: LazyListState, topSpace: androidx.compose.ui.unit.Dp, source: String, genres: List<String>, selectedGenre: String?,
+    playerError: String?, modifier: Modifier, listState: LazyListState, topSpace: androidx.compose.ui.unit.Dp, source: String, moods: List<String>, genres: List<String>, selectedGenre: SongTag?,
     filter: Set<String>,
-    onGenre: (String) -> Unit, onQuery: (String) -> Unit, onRefresh: () -> Unit, onAccess: () -> Unit,
-    accessLabel: String, onFilter: (String) -> Unit, onPlay: (Int) -> Unit) {
+    onGenre: (SongTag) -> Unit, onQuery: (String) -> Unit, onRefresh: () -> Unit, onAccess: () -> Unit,
+    accessLabel: String, onFilter: (String) -> Unit, onPlay: (Int) -> Unit, onSongMenu: (Track) -> Unit) {
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(top = topSpace, bottom = 16.dp)) {
             item(key = "header") { Column {
-                if (genres.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    genres.forEach { tag -> androidx.compose.material3.FilterChip(selected = selectedGenre == tag, onClick = { onGenre(tag) }, label = { Text(tag) },
-                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedLabelColor = MaterialTheme.colorScheme.primary)) }
+                if (moods.isNotEmpty() || genres.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    fun tagValues(values: List<String>, isMood: Boolean) = values.map { SongTag(it, isMood) }
+                    (tagValues(moods, true) + tagValues(genres, false)).forEachIndexed { index, tag ->
+                        if (moods.isNotEmpty() && index == moods.size) Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(22.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)))
+                        androidx.compose.material3.FilterChip(selected = selectedGenre == tag, onClick = { onGenre(tag) }, label = { Text(tag.name) },
+                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer, selectedLabelColor = MaterialTheme.colorScheme.primary))
+                    }
                 }
                 if (library.hasPermission) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(Triple("Recently added", BragiIcon.Recent, "Recently added"), Triple("Most played", BragiIcon.Trending, "Most played"), Triple("Recently played", BragiIcon.History, "Recently played"), Triple("Favorites", BragiIcon.Heart, "Favorites")).forEach { (value, icon, label) ->
@@ -942,17 +1028,18 @@ private fun LibraryScreen(library: LibraryState, query: String, currentId: Strin
             else if (library.totalCount == 0 && library.error != null) item { EmptyState(BragiIcon.Warning, "Couldn’t read your music", library.error, Modifier.fillParentMaxHeight(0.65f), "Try again", onRefresh) }
             else if (library.totalCount == 0) item { EmptyState(BragiIcon.Music, "Your library starts here", if (source == "Server") "No songs were found on this server." else "Copy music to your phone’s Music folder, then refresh.", Modifier.fillParentMaxHeight(0.65f), "Refresh library", onRefresh) }
             else if (library.tracks.isEmpty()) item { EmptyState(BragiIcon.Search, "No songs found", "Try a different search or filter.", Modifier.fillParentMaxHeight(0.65f), "Clear filters", { onQuery(""); selectedGenre?.let(onGenre); onFilter("All") }) }
-            else itemsIndexed(library.tracks, key = { _, song -> song.id }, contentType = { _, _ -> "song" }) { index, song -> TrackRow(song, selected = song.id == currentId, enabled = playerReady, onClick = { onPlay(index) }) }
+            else itemsIndexed(library.tracks, key = { _, song -> song.id }, contentType = { _, _ -> "song" }) { index, song -> TrackRow(song, selected = song.id == currentId, enabled = playerReady, onLongClick = { onSongMenu(song) }, onClick = { onPlay(index) }) }
         }
         Box(Modifier.fillMaxWidth().height(18.dp).align(Alignment.TopCenter).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))))
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TrackRow(track: Track, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+private fun TrackRow(track: Track, selected: Boolean, enabled: Boolean = true, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth()
         .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.07f) else Color.Transparent)
-        .clickable(enabled = enabled, onClick = onClick)
+        .combinedClickable(enabled = enabled || onLongClick != null, onLongClick = onLongClick, onClick = { if (enabled) onClick() })
         .padding(horizontal = 24.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
         Artwork(track, Modifier.size(50.dp), radius = 10)
         Spacer(Modifier.width(14.dp))

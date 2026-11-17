@@ -2,6 +2,7 @@ package org.bragi.nativeapp.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioManager
 import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -73,7 +74,9 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         val store = (application as BragiApplication).queueStore
+        val audioSessionId = (getSystemService(AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
         val localPlayer = ExoPlayer.Builder(this).build().apply {
+            if (audioSessionId != 0) setAudioSessionId(audioSessionId)
             setAudioAttributes(AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -81,6 +84,7 @@ class PlaybackService : MediaSessionService() {
             setHandleAudioBecomingNoisy(true)
             setWakeMode(C.WAKE_MODE_LOCAL)
         }
+        (application as BragiApplication).equalizer.attach(audioSessionId)
         player = try {
             val remotePlayer = RemoteCastPlayer.Builder(this).setMediaItemConverter(BragiCastItemConverter()).build()
             val app = application as BragiApplication
@@ -180,6 +184,7 @@ class PlaybackService : MediaSessionService() {
         // Frequent snapshots and pause/seek snapshots avoid doing blocking disk I/O here.
         session?.release()
         (application as BragiApplication).castHandoff.value = false
+        (application as BragiApplication).equalizer.detach()
         player.release()
         saves.close()
         scope.cancel()
